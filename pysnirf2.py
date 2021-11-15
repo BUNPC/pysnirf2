@@ -679,17 +679,20 @@ def ValidateSnirfClass(oneSnirfClass):
     return Decision
 
 def SnirfValidate(Input):
-    if os.path.isfile(Input):
-        if ".snirf" in Input:
-            return ValidateSnirfPath(Input)
-    elif isinstance(Input, SnirfClass):
-            return ValidateSnirfClass(Input)
+    if isinstance(Input, SnirfClass):
+        return ValidateSnirfClass(Input)
+    elif isinstance(Input, str):
+        if os.path.isfile(Input):
+            if ".snirf" in Input:
+                return ValidateSnirfPath(Input)
     else:
-        raise("Invalid Input!")
+        raise TypeError("Invalid Input!")
 
 def main():
     if sys.argv.__len__() > 1:
         filePath = sys.argv[1]
+    else:
+        return
 ########################################################################
     # Load File into a SNIRF class given a directory
     aTestSnirfClass = SnirfLoad(filePath)
@@ -701,10 +704,11 @@ def main():
     Decision = SnirfValidate(aTestSnirfClass)
 
     # Save Snirf file into another directory
-    SnirfSave(snirfObject=aTestSnirfClass,
-              filename='pysnirf2',
-              filePath='/Users/andyzjc/Downloads/SeniorProject/SampleData/Homer3Example',
-              overWrite=True)
+    if Decision:
+        SnirfSave(snirfObject=aTestSnirfClass,
+                filename='pysnirf2',
+                filePath='/Users/andyzjc/Downloads/SeniorProject/SampleData/Homer3Example',
+                overWrite=True)
 ########################################################################
     # Sanity check by reloading the saved SNIRF File
 
