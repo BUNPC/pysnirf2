@@ -5,55 +5,55 @@ import os
 import re
 import sys
 
-class AuxClass:
+class Aux:
     pass
 
-class ProbeClass:
+class Probe:
     pass
 
-class StimClass:
+class Stim:
     pass
 
-class MeasurementListClass:
+class MeasurementList:
     pass
 
-class DataClass:
+class Data:
     pass
 
     def addGroup(self, groupName):
         if "measurementList" in groupName:
-            setattr(self, groupName, MeasurementListClass())
+            setattr(self, groupName, MeasurementList())
         else:
-            print(Fore.RED + 'Please Add a Valid measurementListClass!')
+            print(Fore.RED + 'Please Add a Valid measurementList!')
             return
 
-class MetaDataTagsClass:
+class MetaDataTags:
     pass
 
-class NirsClass:
+class Nirs:
     pass
 
     def addGroup(self, groupName):
         if "aux" in groupName:
-            setattr(self, groupName, AuxClass())
+            setattr(self, groupName, Aux())
         elif "probe" in groupName:
-            setattr(self, groupName, ProbeClass())
+            setattr(self, groupName, Probe())
         elif "stim" in groupName:
-            setattr(self, groupName, StimClass())
+            setattr(self, groupName, Stim())
         elif "data" in groupName:
-            setattr(self, groupName, DataClass())
+            setattr(self, groupName, Data())
         elif "metaDataTags" in groupName:
-            setattr(self, groupName, MetaDataTagsClass())
+            setattr(self, groupName, MetaDataTags())
         else:
             print(Fore.RED + 'Please Add a Valid Group!')
             return
 
-class SnirfClass:
+class Snirf:
     pass
 
     def addGroup(self, groupName):
         if 'nirs' in groupName:
-            setattr(self, groupName, NirsClass())
+            setattr(self, groupName, Nirs())
         else:
             print(Fore.RED + 'Please Add a /Nirs Class!')
             return
@@ -86,7 +86,7 @@ def SnirfLoad(filePath):
                     setattr(oneClass, xx, data)
                 else:
                     if 'measurementList' in xx:
-                        setattr(oneClass, xx, MeasurementListClass())
+                        setattr(oneClass, xx, MeasurementList())
                         newClass = getattr(oneClass, xx)
                         buildDataset(newClass, oneDataset)
                     else:
@@ -100,7 +100,7 @@ def SnirfLoad(filePath):
         return
 
     # generate a SNIRF class
-    oneSnirf = SnirfClass()
+    oneSnirf = Snirf()
     for ii in fileID.keys():
         oneName = fileID[ii]
         if isinstance(oneName, h5py.Group):
@@ -145,7 +145,7 @@ def SnirfSave(snirfObject, filename, filePath,overWrite):
     fileDirectory = filePath + filename + '.snirf'
 
     if hasattr(snirfObject, '__dict__') or hasattr(snirfObject, '__slots__'):
-        if type(snirfObject).__name__ != 'SnirfClass':
+        if type(snirfObject).__name__ != 'Snirf':
             print(Fore.RED + 'Please input a Valid SNIRF Class Object!')
             return
         if os.path.isfile(fileDirectory):
@@ -429,7 +429,7 @@ def ValidateSnirfPath(filePath):
 
     return Decision
 
-def ValidateSnirfClass(oneSnirfClass):
+def ValidateSnirf(oneSnirf):
 
     def getSpec(oneField):
         # check spec dimension
@@ -667,7 +667,7 @@ def ValidateSnirfClass(oneSnirfClass):
     invalidDatasetDimList = []
 
     required = ["formatVersion", "nirs"]
-    checkClass(oneSnirfClass, required, '')
+    checkClass(oneSnirf, required, '')
 
     # print validation details
     Decision = True
@@ -678,15 +678,18 @@ def ValidateSnirfClass(oneSnirfClass):
 
     return Decision
 
-def SnirfValidate(Input):
-    if isinstance(Input, SnirfClass):
-        return ValidateSnirfClass(Input)
-    elif isinstance(Input, str):
-        if os.path.isfile(Input):
-            if ".snirf" in Input:
-                return ValidateSnirfPath(Input)
+def SnirfValidate(arg):
+    if isinstance(arg, Snirf):
+        return ValidateSnirf(arg)
+    elif isinstance(arg, str):
+        if os.path.isfile(arg):
+            return ValidateSnirfPath(arg)
+        elif os.path.isfile(arg + '.snirf'):
+            return ValidateSnirfPath(arg + '.snirf')
+        else:
+            raise FileNotFoundError('could not locate the SNIRF file', arg)
     else:
-        raise TypeError("Invalid Input!")
+        raise TypeError('Input to SnirfValidate must be Snirf object or path to a SNIRF file on disk.')
 
 def main():
     if sys.argv.__len__() > 1:
@@ -695,17 +698,17 @@ def main():
         return
 ########################################################################
     # Load File into a SNIRF class given a directory
-    aTestSnirfClass = SnirfLoad(filePath)
+    aTestSnirf = SnirfLoad(filePath)
 
     # Validate given a directory and return a verbose
     Decision = SnirfValidate(filePath)
 
     # Validate given a defined SNIRF Class and return a verbose
-    Decision = SnirfValidate(aTestSnirfClass)
+    Decision = SnirfValidate(aTestSnirf)
 
     # Save Snirf file into another directory
     if Decision:
-        SnirfSave(snirfObject=aTestSnirfClass,
+        SnirfSave(snirfObject=aTestSnirf,
                 filename='pysnirf2',
                 filePath='/Users/andyzjc/Downloads/SeniorProject/SampleData/Homer3Example',
                 overWrite=True)
