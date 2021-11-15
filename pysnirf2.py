@@ -58,6 +58,9 @@ class SnirfClass:
             print(Fore.RED + 'Please Add a /Nirs Class!')
             return
 
+def SNIRF(filePath):
+    return SnirfLoad(filePath)
+
 def SnirfLoad(filePath):
 
     def getData(gID):
@@ -162,7 +165,7 @@ def SnirfSave(snirfObject, filename, filePath,overWrite):
                 else:
                     f = writeDataset(f, snirfObject, attribute)
 
-def Validate(filePath):
+def ValidateSnirfPath(filePath):
     file = h5py.File(filePath, 'r')
 
     def getSpec(gID):
@@ -245,7 +248,7 @@ def Validate(filePath):
             required = getRequiredDataset(file)
             checkGroupChild(file, required)
         elif isinstance(file, h5py.Dataset):
-            completeDatasetList.append(file.name)
+            # completeDatasetList.append(file.name)
             CheckDataset(file)
         else:
             return 0
@@ -301,43 +304,45 @@ def Validate(filePath):
 
     def printEverything(gID, child, requireFlag):
         if requireFlag:
-            if isinstance(gID[child], h5py.Dataset):
-                if "stim" in gID.name or "aux" in gID.name:
-                    print(Fore.MAGENTA + '\t' + gID.name + '/' + child)
-                    print(Fore.GREEN + '\t\tRequired Dataset When Parent Group ' + gID.name + ' Presents')
-                else:
-                    print(Fore.MAGENTA + '\t' + gID.name + '/' + child)
-                    print(Fore.GREEN + '\t\tRequired Dataset')
-            if isinstance(gID[child], h5py.Group):
-                print(Fore.MAGENTA + gID[child].name)
-                print(Fore.GREEN + '\tRequired Indexed Group')
+            # if isinstance(gID[child], h5py.Dataset):
+            #     if "stim" in gID.name or "aux" in gID.name:
+            #         print(Fore.MAGENTA + '\t' + gID.name + '/' + child)
+            #         print(Fore.GREEN + '\t\tRequired Dataset When Parent Group ' + gID.name + ' Presents')
+            #     else:
+            #         print(Fore.MAGENTA + '\t' + gID.name + '/' + child)
+            #         print(Fore.GREEN + '\t\tRequired Dataset')
+            # if isinstance(gID[child], h5py.Group):
+            #     print(Fore.MAGENTA + gID[child].name)
+            #     print(Fore.GREEN + '\tRequired Indexed Group')
+            pass
         else:
             OptionalFlag = False
             optionalList = getOptional()
             for x in optionalList:
                 if re.match(x, gID[child].name):
                     if isinstance(gID[child], h5py.Dataset):
-                        print(Fore.MAGENTA + '\t' + gID.name + '/' + child)
-                        print(Fore.BLUE + '\t\tOptional Dataset')
+                        # print(Fore.MAGENTA + '\t' + gID.name + '/' + child)
+                        # print(Fore.BLUE + '\t\tOptional Dataset')
                         OptionalFlag = True
                         break
                     if isinstance(gID[child], h5py.Group):
-                        print(Fore.MAGENTA + gID[child].name)
-                        print(Fore.BLUE + '\tOptional Indexed Group')
+                        # print(Fore.MAGENTA + gID[child].name)
+                        # print(Fore.BLUE + '\tOptional Indexed Group')
                         OptionalFlag = True
                         break
             if not OptionalFlag:
                 if isinstance(gID[child], h5py.Dataset):
                     if 'metaDataTags' in gID.name:
-                        print(Fore.MAGENTA + '\t' + gID.name + '/' + child)
-                        print(Fore.YELLOW + '\t\tUser Defined optional Dataset')
+                        # print(Fore.MAGENTA + '\t' + gID.name + '/' + child)
+                        # print(Fore.YELLOW + '\t\tUser Defined optional Dataset')
+                        pass
                     else:
-                        print(Fore.MAGENTA + '\t' + gID.name + '/' + child)
-                        print(Fore.RED + '\t\tInvalid Dataset')
+                        # print(Fore.MAGENTA + '\t' + gID.name + '/' + child)
+                        # print(Fore.RED + '\t\tInvalid Dataset')
                         invalidDatasetNameList.append(gID.name)
                 if isinstance(gID[child], h5py.Group):
-                    print(Fore.MAGENTA + gID.name)
-                    print(Fore.RED + '\tInvalid Indexed Group')
+                    # print(Fore.MAGENTA + gID.name)
+                    # print(Fore.RED + '\tInvalid Indexed Group')
                     invalidGroupNameList.append(gID.name)
 
     def getRequiredDataset(gID):
@@ -370,7 +375,7 @@ def Validate(filePath):
             if childForCheck in required:  # if child in RequiredField, change RequiredIndex
                 requiredIndex[required.index(childForCheck)] = 1
                 requireFlag = True
-            #printEverything(gID, child, requireFlag)
+            printEverything(gID, child, requireFlag)
             getAllNames(gID[child])
         if 0 in requiredIndex:  # check if requiredIndex has 0, if so, append the name
             for i in range(len(required)):
@@ -399,15 +404,9 @@ def Validate(filePath):
 
         # compare actual and spec, and print out correct statement
         if actualType.__name__ != specType.__name__:
-            # print(Fore.RED + '\t\tINVALID Data Type! Expecting: ' + str(specType.__name__) +
-            #       '! But ' + str(np.dtype(gID.dtype.type)) + ' was given.')
             invalidDatasetTypeList.append(gID.name)
         if actualDim != specDim:
-            # print(Fore.RED + '\t\tINVALID Data Dimension! Expecting: ' + str(specDim) +
-            #       '! But ' + str(actualDim) + ' was given.')
             invalidDatasetDimList.append(gID.name)
-
-    completeDatasetList = []
 
     # critical
     missingList = []
@@ -423,34 +422,270 @@ def Validate(filePath):
 
     # print validation details
     Decision = True
-    # if np.size(invalidGroupNameList) > 0:
-    #     print(Fore.YELLOW + "Warning!")
-    #     print(Fore.YELLOW + "Invalid Group Detected: ")
-    #     print(Fore.YELLOW + str(invalidGroupNameList) + '\n')
     if np.size(missingList) > 0:
-        # print(Fore.RED + "Missing Required Dataset/Group Detected: ")
-        # print(Fore.RED + str(missingList) + '\n')
         Decision = False
-    # if np.size(invalidDatasetNameList) > 0:
-    #     print(Fore.YELLOW + "Warning!")
-    #     print(Fore.YELLOW + "Invalid Dateset Detected: ")
-    #     print(Fore.YELLOW + str(invalidDatasetNameList) + '\n')
     if np.size(invalidDatasetTypeList) > 0:
-        # print(Fore.RED + "Invalid Dataset Data Type Detected: ")
-        # print(Fore.RED + str(invalidDatasetTypeList) + '\n')
         Decision = False
-    # if np.size(invalidDatasetDimList) > 0:
-    #     print(Fore.YELLOW + "Warning!")
-    #     print(Fore.YELLOW + "Invalid Dataset Dimension Detected: ")
-    #     print(Fore.YELLOW + str(invalidDatasetDimList) + '\n')
-
-    print(Fore.WHITE + '----------------------------------')
-    if Decision:
-        print(Fore.GREEN + filePath + " is valid!")
-    else:
-        print(Fore.RED + filePath + " is invalid!")
 
     return Decision
+
+def ValidateSnirfClass(oneSnirfClass):
+
+    def getSpec(oneField):
+        # check spec dimension
+        if "Pos2D" in oneField or "Pos3D" in oneField:
+            specDim = 2
+        elif "dataTimeSeries" in oneField:
+            if "aux" in oneField:
+                specDim = 1
+            else:
+                specDim = 2
+        elif "measurementList" in oneField:
+            if "dataTypeLabel" in oneField:
+                specDim = 1
+            else:
+                specDim = 0
+        elif "stim" in oneField and "data" in oneField:
+            if "dataLabels" in oneField:
+                specDim = 1
+            else:
+                specDim = 2
+        else:
+            specDim = 1
+
+        # check spec data type
+        if "metaDataTags" in oneField or 'formatVersion' in oneField:
+            specType = str
+        elif "name" in oneField or "Label" in oneField:
+            specType = str
+        elif "Index" in oneField:
+            specType = int
+        elif "dataType" in oneField:
+            specType = int
+        else:
+            specType = float
+
+        return specType, specDim
+
+    def getActual(data):
+        if "str" in data.dtype.name:
+            actualType = str
+            actualDim = 1
+        elif "int" in data.dtype.name:
+            actualType = int
+            Dimension = data.shape
+            if Dimension[0] == 1:
+                actualDim = 0
+            else:
+                actualDim = data.ndim
+        else:
+            actualType = float
+            if data.ndim == 1:
+                Dimension  = data.shape
+                if Dimension[0] == 1:
+                    actualDim = 0
+                else:
+                    actualDim = data.ndim
+            else:
+                actualDim = data.ndim
+        return actualType, actualDim
+
+    def getOptional():
+        optionalList = ["/nirs\d*/data\w*/measurementList\d*/wavelengthActual",
+                        "/nirs\d*/data\w*/measurementList\d*/wavelengthEmissionActual",
+                        "/nirs\d*/data\d*/measurementList\d*/dataTypeLabel",
+                        "/nirs\d*/data\w*/measurementList\d*/sourcePower",
+                        "/nirs\d*/data\w*/measurementList\d*/detectorGain",
+                        "/nirs\d*/data\w*/measurementList\d*/moduleIndex",
+                        "/nirs\d*/data\w*/measurementList\d*/sourceModuleIndex",
+                        "/nirs\d*/data\w*/measurementList\d*/detectorModuleIndex",
+                        "/nirs\d*/probe/wavelengthsEmission",
+                        "/nirs\d*/probe/frequencies",
+                        "/nirs\d*/probe/timeDelays",
+                        "/nirs\d*/probe/timeDelayWidths",
+                        "/nirs\d*/probe/momentOrders",
+                        "/nirs\d*/probe/correlationTimeDelays",
+                        "/nirs\d*/probe/correlationTimeDelayWidths",
+                        "/nirs\d*/probe/sourceLabels",
+                        "/nirs\d*/probe/detectorLabels",
+                        "/nirs\d*/probe/landmarkPos2D",
+                        "/nirs\d*/probe/landmarkPos3D",
+                        "/nirs\d*/probe/landmarkLabels",
+                        "/nirs\d*/probe/useLocalIndex",
+                        "/nirs\d*/aux\d*/timeOffset",
+                        "/nirs\d*/stim\d*/dataLabels",
+                        "/nirs\d*/stim\d*",
+                        "/nirs\d*/aux\d*"]
+        return optionalList
+
+    def checkSpecialCase(required, requiredIndex, child):
+        if 'sourcePos2D' in child or 'detectorPos2D' in child:
+            if 'sourcePos2D' not in required and 'detectPos2D' not in required:
+                required.append("sourcePos2D")
+                requiredIndex.append(0)
+                required.append("detectorPos2D")
+                requiredIndex.append(0)
+            childForCheck = child
+        elif 'sourcePos3D' in child or 'detectorPos3D' in child:
+            if 'sourcePos3D' not in required and 'detectPos3D' not in required:
+                required.append("sourcePos3D")
+                requiredIndex.append(0)
+                required.append("detectorPos3D")
+                requiredIndex.append(0)
+            childForCheck = child
+        elif 'landmarkPos' in child:
+            childForCheck = child
+        else:
+            childForCheck = ''.join(i for i in child if not i.isdigit())
+        return required, requiredIndex, childForCheck
+
+    def printEverything(oneClass, oneAttr, oneAttrName, requireFlag):
+        oneSubAttr = getattr(oneClass, oneAttr)
+        FieldName = oneAttrName + '/' + oneAttr
+
+        if requireFlag:
+            # if isinstance(gID[child], h5py.Dataset):
+            #     if "stim" in gID.name or "aux" in gID.name:
+            #         print(Fore.MAGENTA + '\t' + gID.name + '/' + child)
+            #         print(Fore.GREEN + '\t\tRequired Dataset When Parent Group ' + gID.name + ' Presents')
+            #     else:
+            #         print(Fore.MAGENTA + '\t' + gID.name + '/' + child)
+            #         print(Fore.GREEN + '\t\tRequired Dataset')
+            # if isinstance(gID[child], h5py.Group):
+            #     print(Fore.MAGENTA + gID[child].name)
+            #     print(Fore.GREEN + '\tRequired Indexed Group')
+            pass
+        else:
+            OptionalFlag = False
+            optionalList = getOptional()
+            for x in optionalList:
+                if re.match(x, FieldName):
+                    # if isinstance(gID[child], h5py.Dataset):
+                    #     print(Fore.MAGENTA + '\t' + gID.name + '/' + child)
+                    #     print(Fore.BLUE + '\t\tOptional Dataset')
+                    #     OptionalFlag = True
+                    #     break
+                    # if isinstance(gID[child], h5py.Group):
+                    #     print(Fore.MAGENTA + gID[child].name)
+                    #     print(Fore.BLUE + '\tOptional Indexed Group')
+                    #     OptionalFlag = True
+                    #     break
+                    OptionalFlag = True
+                    break
+            if not OptionalFlag:
+                # if isinstance(gID[child], h5py.Dataset):
+                #     if 'metaDataTags' in gID.name:
+                #         print(Fore.MAGENTA + '\t' + gID.name + '/' + child)
+                #         print(Fore.YELLOW + '\t\tUser Defined optional Dataset')
+                #     else:
+                #         print(Fore.MAGENTA + '\t' + gID.name + '/' + child)
+                #         print(Fore.RED + '\t\tInvalid Dataset')
+                if hasattr(oneSubAttr, '__dict__') or hasattr(oneSubAttr, '__slots__'):
+                    invalidGroupNameList.append(FieldName)
+                else:
+                    invalidDatasetNameList.append(FieldName)
+
+    def getRequiredDataset(oneAttrName):
+        if 'measurementList' in oneAttrName:
+            required = ["sourceIndex", "detectorIndex", "wavelengthIndex", "dataType", "dataTypeIndex"]
+        elif 'data' in oneAttrName:
+            required = ["dataTimeSeries", "time", "measurementList"]
+        elif 'stim' in oneAttrName:
+            required = ["name", "data"]
+        elif 'aux' in oneAttrName:
+            required = ["name", "dataTimeSeries", "time"]
+        elif 'metaDataTags' in oneAttrName:
+            required = ["SubjectID", "MeasurementDate", "MeasurementTime", "LengthUnit", "TimeUnit", "FrequencyUnit"]
+        elif 'probe' in oneAttrName:
+            required = ["wavelengths"]
+        elif 'nirs' in oneAttrName:
+            required = ["metaDataTags", "data", "probe"]
+        else:
+            return 0
+        return required
+
+    def checkData(oneClass, oneAttr, oneAttrName):
+
+        FieldName = oneAttrName + '/' + oneAttr
+
+        # check spec datatype and dimension
+        specType, specDim = getSpec(FieldName)
+        data = np.array(getattr(oneClass, oneAttr))
+        actualType, actualDim = getActual(data)
+
+        if "metaDataTags" in FieldName and actualType != str:
+            # implies an user defined field since all required datasets are string
+            actualType = specType
+            actualDim = specDim
+
+        # compare actual and spec, and print out correct statement
+        if actualType.__name__ != specType.__name__:
+            # print(Fore.RED + '\t\tINVALID Data Type! Expecting: ' + str(specType.__name__) +
+            #       '! But ' + str(np.dtype(gID.dtype.type)) + ' was given.')
+            invalidDatasetTypeList.append(FieldName)
+        if actualDim != specDim:
+            # print(Fore.RED + '\t\tINVALID Data Dimension! Expecting: ' + str(specDim) +
+            #       '! But ' + str(actualDim) + ' was given.')
+            invalidDatasetDimList.append(FieldName)
+
+    def checkAttribute(oneClass, oneAttr, oneAttrName):
+        oneSubAttr = getattr(oneClass, oneAttr)
+        if hasattr(oneSubAttr, '__dict__') or hasattr(oneSubAttr, '__slots__'):
+            oneClass = oneSubAttr
+            required = getRequiredDataset(oneAttr)
+            checkClass(oneClass, required, oneAttrName + '/' + oneAttr)
+        else:
+            checkData(oneClass, oneAttr, oneAttrName)
+
+    def checkClass(oneClass, required, oneAttrName):
+        global oneAttr
+        requiredIndex = [0] * len(required)
+        for oneAttr in oneClass.__dict__:
+            requireFlag = False
+            if any(chr.isdigit() for chr in oneAttr):
+                [required, requiredIndex, attrForCheck] = checkSpecialCase(required, requiredIndex, oneAttr)
+            else:
+                attrForCheck = oneAttr
+            if attrForCheck in required:  # if child in RequiredField, change RequiredIndex
+                requiredIndex[required.index(attrForCheck)] = 1
+                requireFlag = True
+            printEverything(oneClass, oneAttr, oneAttrName, requireFlag)
+            checkAttribute(oneClass, oneAttr, oneAttrName)
+        if 0 in requiredIndex:  # check if requiredIndex has 0, if so, append the name
+            for i in range(len(required)):
+                if requiredIndex[i] == 0:
+                    FieldName = oneAttrName + '/' + required[i]
+                    missingList.append(FieldName)
+
+    # critical
+    missingList = []
+    invalidDatasetTypeList = []
+
+    # warning
+    invalidGroupNameList = []
+    invalidDatasetNameList = []
+    invalidDatasetDimList = []
+
+    required = ["formatVersion", "nirs"]
+    checkClass(oneSnirfClass, required, '')
+
+    # print validation details
+    Decision = True
+    if np.size(missingList) > 0:
+        Decision = False
+    if np.size(invalidDatasetTypeList) > 0:
+        Decision = False
+
+    return Decision
+
+def SnirfValidate(Input):
+    if os.path.isfile(Input):
+        if ".snirf" in Input:
+            return ValidateSnirfPath(Input)
+    elif isinstance(Input, SnirfClass):
+            return ValidateSnirfClass(Input)
+    else:
+        raise("Invalid Input!")
 
 def main():
     if sys.argv.__len__() > 1:
@@ -460,10 +695,10 @@ def main():
     aTestSnirfClass = SnirfLoad(filePath)
 
     # Validate given a directory and return a verbose
-
+    Decision = SnirfValidate(filePath)
 
     # Validate given a defined SNIRF Class and return a verbose
-
+    Decision = SnirfValidate(aTestSnirfClass)
 
     # Save Snirf file into another directory
     SnirfSave(snirfObject=aTestSnirfClass,
@@ -484,3 +719,4 @@ def main():
 
     # Saved the new Snirf class object
 
+main()
