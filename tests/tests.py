@@ -12,6 +12,7 @@ import time
 from numbers import Number
 from collections import deque
 from collections.abc import Set, Mapping
+import numpy as np
 
 ZERO_DEPTH_BASES = (str, bytes, Number, range, bytearray)
 def getsize(obj_0):
@@ -42,7 +43,22 @@ def getsize(obj_0):
 
 SNIRF_DIRECTORY = r'C:\Users\sstucker\OneDrive\Desktop\pysnirf2\tests\snirf'
 
-s = Snirf(r"C:\Users\sstucker\OneDrive\Desktop\pysnirf2\tests\snirf\Electrical_Stim_2.snirf", dynamic_loading=True)
+TESTPATH = r"C:\Users\sstucker\OneDrive\Desktop\pysnirf2\tests\snirf\out_prune2_mom0.snirf"
+
+f = h5py.File(TESTPATH, 'a')
+
+# %%
+
+#s_static = Snirf(r"C:\Users\sstucker\OneDrive\Desktop\pysnirf2\tests\snirf\Electrical_Stim_2.snirf", dynamic_loading=False)
+#s_dynamic = Snirf(r"C:\Users\sstucker\OneDrive\Desktop\pysnirf2\tests\snirf\Electrical_Stim_2.snirf", dynamic_loading=True)
+s = Snirf(TESTPATH, dynamic_loading=True)
+
+# %%
+print(s.nirs[0].probe)
+s.nirs[0].probe.wavelengths = [960, 480]
+#s.nirs[0].probe.sourceLabels = ['G1', 'G2', 'G3', 'G4', 'G5', 'G6', 'G7', 'G8', 'G9', 'G10', 'G11', 'G12', 'G13', 'G14', 'G15']
+#print(s.nirs[0].probe.wavelengths)
+#s.nirs[0]._save()
 
 # %%
 

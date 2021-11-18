@@ -15,10 +15,10 @@ class SnirfFormatError(Exception):
 
 class SnirfConfig:
     filepath: str = ''
-    dynamic_loading: bool = True  # If False, data is loaded in the constructor, if True, data is loaded on access
+    dynamic_loading: bool = False  # If False, data is loaded in the constructor, if True, data is loaded on access
 
 
-class _Group():
+class _Group(ABC):
 
     def __init__(self, gid: h5py.h5g.GroupID, cfg: SnirfConfig):
         self._id = gid
@@ -26,6 +26,10 @@ class _Group():
             raise TypeError('must initialize with a Group ID, not ' + str(type(gid)))
         self._h = h5py.Group(self._id)
         self._cfg = cfg
+
+    @abstractmethod
+    def _save(self):
+        raise NotImplementedError('_save is an abstract method')
         
     def __repr__(self):
         props = [p for p in dir(self) if '_' not in p]
@@ -85,6 +89,9 @@ class _IndexedGroup(list, ABC):
     @abstractmethod
     def _append_group(self, gid: h5py.h5g.GroupID):
         raise NotImplementedError('_append_group is an abstract method')
+    
+    def _save(self):
+        [element._save() for element in self]
     
     def __getattr__(self, name):
         raise AttributeError(self.__class__.__name__ + ' is an interable list of '

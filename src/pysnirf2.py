@@ -15,10 +15,10 @@ class SnirfFormatError(Exception):
 
 class SnirfConfig:
     filepath: str = ''
-    dynamic_loading: bool = True  # If False, data is loaded in the constructor, if True, data is loaded on access
+    dynamic_loading: bool = False  # If False, data is loaded in the constructor, if True, data is loaded on access
 
 
-class _Group():
+class _Group(ABC):
 
     def __init__(self, gid: h5py.h5g.GroupID, cfg: SnirfConfig):
         self._id = gid
@@ -26,6 +26,10 @@ class _Group():
             raise TypeError('must initialize with a Group ID, not ' + str(type(gid)))
         self._h = h5py.Group(self._id)
         self._cfg = cfg
+
+    @abstractmethod
+    def _save(self):
+        raise NotImplementedError('_save is an abstract method')
         
     def __repr__(self):
         props = [p for p in dir(self) if '_' not in p]
@@ -86,6 +90,9 @@ class _IndexedGroup(list, ABC):
     def _append_group(self, gid: h5py.h5g.GroupID):
         raise NotImplementedError('_append_group is an abstract method')
     
+    def _save(self):
+        [element._save() for element in self]
+    
     def __getattr__(self, name):
         raise AttributeError(self.__class__.__name__ + ' is an interable list of '
                              + str(len(self)) + ' ' + str(self._element)
@@ -112,46 +119,67 @@ class MetaDataTags(_Group):
         super().__init__(gid, cfg)
         if 'SubjectID' in self._h.keys():
             if not self._cfg.dynamic_loading:
-                self._SubjectID = self._h['SubjectID'][0].decode('ascii')  # String
+                if self._h['SubjectID'].ndim > 0:
+                    self._SubjectID = self._h['SubjectID'][0].decode('ascii')
+                else:
+                    self._SubjectID = self._h['SubjectID'][()].decode('ascii')
         else:
             warn(str(self.__class__.__name__) + ' missing required key ' + '"SubjectID"')
 
         if 'MeasurementDate' in self._h.keys():
             if not self._cfg.dynamic_loading:
-                self._MeasurementDate = self._h['MeasurementDate'][0].decode('ascii')  # String
+                if self._h['MeasurementDate'].ndim > 0:
+                    self._MeasurementDate = self._h['MeasurementDate'][0].decode('ascii')
+                else:
+                    self._MeasurementDate = self._h['MeasurementDate'][()].decode('ascii')
         else:
             warn(str(self.__class__.__name__) + ' missing required key ' + '"MeasurementDate"')
 
         if 'MeasurementTime' in self._h.keys():
             if not self._cfg.dynamic_loading:
-                self._MeasurementTime = self._h['MeasurementTime'][0].decode('ascii')  # String
+                if self._h['MeasurementTime'].ndim > 0:
+                    self._MeasurementTime = self._h['MeasurementTime'][0].decode('ascii')
+                else:
+                    self._MeasurementTime = self._h['MeasurementTime'][()].decode('ascii')
         else:
             warn(str(self.__class__.__name__) + ' missing required key ' + '"MeasurementTime"')
 
         if 'LengthUnit' in self._h.keys():
             if not self._cfg.dynamic_loading:
-                self._LengthUnit = self._h['LengthUnit'][0].decode('ascii')  # String
+                if self._h['LengthUnit'].ndim > 0:
+                    self._LengthUnit = self._h['LengthUnit'][0].decode('ascii')
+                else:
+                    self._LengthUnit = self._h['LengthUnit'][()].decode('ascii')
         else:
             warn(str(self.__class__.__name__) + ' missing required key ' + '"LengthUnit"')
 
         if 'TimeUnit' in self._h.keys():
             if not self._cfg.dynamic_loading:
-                self._TimeUnit = self._h['TimeUnit'][0].decode('ascii')  # String
+                if self._h['TimeUnit'].ndim > 0:
+                    self._TimeUnit = self._h['TimeUnit'][0].decode('ascii')
+                else:
+                    self._TimeUnit = self._h['TimeUnit'][()].decode('ascii')
         else:
             warn(str(self.__class__.__name__) + ' missing required key ' + '"TimeUnit"')
 
         if 'FrequencyUnit' in self._h.keys():
             if not self._cfg.dynamic_loading:
-                self._FrequencyUnit = self._h['FrequencyUnit'][0].decode('ascii')  # String
+                if self._h['FrequencyUnit'].ndim > 0:
+                    self._FrequencyUnit = self._h['FrequencyUnit'][0].decode('ascii')
+                else:
+                    self._FrequencyUnit = self._h['FrequencyUnit'][()].decode('ascii')
         else:
             warn(str(self.__class__.__name__) + ' missing required key ' + '"FrequencyUnit"')
 
 
     @property
     def SubjectID(self):
-        if self._cfg.dynamic_loading:
+        if self._cfg.dynamic_loading and self._SubjectID is None:
             if 'SubjectID' in self._h.keys():
-                return self._h['SubjectID'][0].decode('ascii')  # String
+                if self._h['SubjectID'].ndim > 0:
+                    return self._h['SubjectID'][0].decode('ascii')
+                else:
+                    return self._h['SubjectID'][()].decode('ascii')
         return self._SubjectID
 
     @SubjectID.setter
@@ -160,9 +188,12 @@ class MetaDataTags(_Group):
 
     @property
     def MeasurementDate(self):
-        if self._cfg.dynamic_loading:
+        if self._cfg.dynamic_loading and self._MeasurementDate is None:
             if 'MeasurementDate' in self._h.keys():
-                return self._h['MeasurementDate'][0].decode('ascii')  # String
+                if self._h['MeasurementDate'].ndim > 0:
+                    return self._h['MeasurementDate'][0].decode('ascii')
+                else:
+                    return self._h['MeasurementDate'][()].decode('ascii')
         return self._MeasurementDate
 
     @MeasurementDate.setter
@@ -171,9 +202,12 @@ class MetaDataTags(_Group):
 
     @property
     def MeasurementTime(self):
-        if self._cfg.dynamic_loading:
+        if self._cfg.dynamic_loading and self._MeasurementTime is None:
             if 'MeasurementTime' in self._h.keys():
-                return self._h['MeasurementTime'][0].decode('ascii')  # String
+                if self._h['MeasurementTime'].ndim > 0:
+                    return self._h['MeasurementTime'][0].decode('ascii')
+                else:
+                    return self._h['MeasurementTime'][()].decode('ascii')
         return self._MeasurementTime
 
     @MeasurementTime.setter
@@ -182,9 +216,12 @@ class MetaDataTags(_Group):
 
     @property
     def LengthUnit(self):
-        if self._cfg.dynamic_loading:
+        if self._cfg.dynamic_loading and self._LengthUnit is None:
             if 'LengthUnit' in self._h.keys():
-                return self._h['LengthUnit'][0].decode('ascii')  # String
+                if self._h['LengthUnit'].ndim > 0:
+                    return self._h['LengthUnit'][0].decode('ascii')
+                else:
+                    return self._h['LengthUnit'][()].decode('ascii')
         return self._LengthUnit
 
     @LengthUnit.setter
@@ -193,9 +230,12 @@ class MetaDataTags(_Group):
 
     @property
     def TimeUnit(self):
-        if self._cfg.dynamic_loading:
+        if self._cfg.dynamic_loading and self._TimeUnit is None:
             if 'TimeUnit' in self._h.keys():
-                return self._h['TimeUnit'][0].decode('ascii')  # String
+                if self._h['TimeUnit'].ndim > 0:
+                    return self._h['TimeUnit'][0].decode('ascii')
+                else:
+                    return self._h['TimeUnit'][()].decode('ascii')
         return self._TimeUnit
 
     @TimeUnit.setter
@@ -204,9 +244,12 @@ class MetaDataTags(_Group):
 
     @property
     def FrequencyUnit(self):
-        if self._cfg.dynamic_loading:
+        if self._cfg.dynamic_loading and self._FrequencyUnit is None:
             if 'FrequencyUnit' in self._h.keys():
-                return self._h['FrequencyUnit'][0].decode('ascii')  # String
+                if self._h['FrequencyUnit'].ndim > 0:
+                    return self._h['FrequencyUnit'][0].decode('ascii')
+                else:
+                    return self._h['FrequencyUnit'][()].decode('ascii')
         return self._FrequencyUnit
 
     @FrequencyUnit.setter
@@ -214,6 +257,25 @@ class MetaDataTags(_Group):
         self._FrequencyUnit = value
 
 
+    def _save(self):
+        if self._SubjectID is not None:
+            del self._h['SubjectID']
+            self._h.create_dataset('SubjectID', dtype=h5py.string_dtype(encoding='ascii', length=None), data=self._SubjectID)
+        if self._MeasurementDate is not None:
+            del self._h['MeasurementDate']
+            self._h.create_dataset('MeasurementDate', dtype=h5py.string_dtype(encoding='ascii', length=None), data=self._MeasurementDate)
+        if self._MeasurementTime is not None:
+            del self._h['MeasurementTime']
+            self._h.create_dataset('MeasurementTime', dtype=h5py.string_dtype(encoding='ascii', length=None), data=self._MeasurementTime)
+        if self._LengthUnit is not None:
+            del self._h['LengthUnit']
+            self._h.create_dataset('LengthUnit', dtype=h5py.string_dtype(encoding='ascii', length=None), data=self._LengthUnit)
+        if self._TimeUnit is not None:
+            del self._h['TimeUnit']
+            self._h.create_dataset('TimeUnit', dtype=h5py.string_dtype(encoding='ascii', length=None), data=self._TimeUnit)
+        if self._FrequencyUnit is not None:
+            del self._h['FrequencyUnit']
+            self._h.create_dataset('FrequencyUnit', dtype=h5py.string_dtype(encoding='ascii', length=None), data=self._FrequencyUnit)
 
 
 
@@ -242,84 +304,84 @@ class Probe(_Group):
         super().__init__(gid, cfg)
         if 'wavelengths' in self._h.keys():
             if not self._cfg.dynamic_loading:
-                self._wavelengths = np.array(self._h['wavelengths']).astype(float)  # 1D array
+                self._wavelengths = np.array(self._h['wavelengths']).astype(float)  # Array
         else:
             warn(str(self.__class__.__name__) + ' missing required key ' + '"wavelengths"')
 
         if 'wavelengthsEmission' in self._h.keys():
             if not self._cfg.dynamic_loading:
-                self._wavelengthsEmission = np.array(self._h['wavelengthsEmission']).astype(float)  # 1D array
+                self._wavelengthsEmission = np.array(self._h['wavelengthsEmission']).astype(float)  # Array
 
         if 'sourcePos2D' in self._h.keys():
             if not self._cfg.dynamic_loading:
-                self._sourcePos2D = np.array(self._h['sourcePos2D']).astype(float)  # 1D array
+                self._sourcePos2D = np.array(self._h['sourcePos2D']).astype(float)  # Array
 
         if 'sourcePos3D' in self._h.keys():
             if not self._cfg.dynamic_loading:
-                self._sourcePos3D = np.array(self._h['sourcePos3D']).astype(float)  # 1D array
+                self._sourcePos3D = np.array(self._h['sourcePos3D']).astype(float)  # Array
 
         if 'detectorPos2D' in self._h.keys():
             if not self._cfg.dynamic_loading:
-                self._detectorPos2D = np.array(self._h['detectorPos2D']).astype(float)  # 1D array
+                self._detectorPos2D = np.array(self._h['detectorPos2D']).astype(float)  # Array
 
         if 'detectorPos3D' in self._h.keys():
             if not self._cfg.dynamic_loading:
-                self._detectorPos3D = np.array(self._h['detectorPos3D']).astype(float)  # 1D array
+                self._detectorPos3D = np.array(self._h['detectorPos3D']).astype(float)  # Array
 
         if 'frequencies' in self._h.keys():
             if not self._cfg.dynamic_loading:
-                self._frequencies = np.array(self._h['frequencies']).astype(float)  # 1D array
+                self._frequencies = np.array(self._h['frequencies']).astype(float)  # Array
 
         if 'timeDelays' in self._h.keys():
             if not self._cfg.dynamic_loading:
-                self._timeDelays = np.array(self._h['timeDelays']).astype(float)  # 1D array
+                self._timeDelays = np.array(self._h['timeDelays']).astype(float)  # Array
 
         if 'timeDelayWidths' in self._h.keys():
             if not self._cfg.dynamic_loading:
-                self._timeDelayWidths = np.array(self._h['timeDelayWidths']).astype(float)  # 1D array
+                self._timeDelayWidths = np.array(self._h['timeDelayWidths']).astype(float)  # Array
 
         if 'momentOrders' in self._h.keys():
             if not self._cfg.dynamic_loading:
-                self._momentOrders = np.array(self._h['momentOrders']).astype(float)  # 1D array
+                self._momentOrders = np.array(self._h['momentOrders']).astype(float)  # Array
 
         if 'correlationTimeDelays' in self._h.keys():
             if not self._cfg.dynamic_loading:
-                self._correlationTimeDelays = np.array(self._h['correlationTimeDelays']).astype(float)  # 1D array
+                self._correlationTimeDelays = np.array(self._h['correlationTimeDelays']).astype(float)  # Array
 
         if 'correlationTimeDelayWidths' in self._h.keys():
             if not self._cfg.dynamic_loading:
-                self._correlationTimeDelayWidths = np.array(self._h['correlationTimeDelayWidths']).astype(float)  # 1D array
+                self._correlationTimeDelayWidths = np.array(self._h['correlationTimeDelayWidths']).astype(float)  # Array
 
         if 'sourceLabels' in self._h.keys():
             if not self._cfg.dynamic_loading:
-                self._sourceLabels = np.array(self._h['sourceLabels']).astype('<U13')  # 1D array
+                self._sourceLabels = np.array(self._h['sourceLabels']).astype(str)  # Array
 
         if 'detectorLabels' in self._h.keys():
             if not self._cfg.dynamic_loading:
-                self._detectorLabels = np.array(self._h['detectorLabels']).astype('<U13')  # 1D array
+                self._detectorLabels = np.array(self._h['detectorLabels']).astype(str)  # Array
 
         if 'landmarkPos2D' in self._h.keys():
             if not self._cfg.dynamic_loading:
-                self._landmarkPos2D = np.array(self._h['landmarkPos2D']).astype(float)  # 1D array
+                self._landmarkPos2D = np.array(self._h['landmarkPos2D']).astype(float)  # Array
 
         if 'landmarkPos3D' in self._h.keys():
             if not self._cfg.dynamic_loading:
-                self._landmarkPos3D = np.array(self._h['landmarkPos3D']).astype(float)  # 1D array
+                self._landmarkPos3D = np.array(self._h['landmarkPos3D']).astype(float)  # Array
 
         if 'landmarkLabels' in self._h.keys():
             if not self._cfg.dynamic_loading:
-                self._landmarkLabels = np.array(self._h['landmarkLabels']).astype('<U13')  # 1D array
+                self._landmarkLabels = np.array(self._h['landmarkLabels']).astype(str)  # Array
 
         if 'useLocalIndex' in self._h.keys():
             if not self._cfg.dynamic_loading:
-                self._useLocalIndex = int(self._h['useLocalIndex'][0])
+                self._useLocalIndex = int(self._h['useLocalIndex'][()])
 
 
     @property
     def wavelengths(self):
-        if self._cfg.dynamic_loading:
+        if self._cfg.dynamic_loading and self._wavelengths is None:
             if 'wavelengths' in self._h.keys():
-                return np.array(self._h['wavelengths']).astype(float)  # 1D array
+                return np.array(self._h['wavelengths']).astype(float)  # Array
         return self._wavelengths
 
     @wavelengths.setter
@@ -328,9 +390,9 @@ class Probe(_Group):
 
     @property
     def wavelengthsEmission(self):
-        if self._cfg.dynamic_loading:
+        if self._cfg.dynamic_loading and self._wavelengthsEmission is None:
             if 'wavelengthsEmission' in self._h.keys():
-                return np.array(self._h['wavelengthsEmission']).astype(float)  # 1D array
+                return np.array(self._h['wavelengthsEmission']).astype(float)  # Array
         return self._wavelengthsEmission
 
     @wavelengthsEmission.setter
@@ -339,9 +401,9 @@ class Probe(_Group):
 
     @property
     def sourcePos2D(self):
-        if self._cfg.dynamic_loading:
+        if self._cfg.dynamic_loading and self._sourcePos2D is None:
             if 'sourcePos2D' in self._h.keys():
-                return np.array(self._h['sourcePos2D']).astype(float)  # 1D array
+                return np.array(self._h['sourcePos2D']).astype(float)  # Array
         return self._sourcePos2D
 
     @sourcePos2D.setter
@@ -350,9 +412,9 @@ class Probe(_Group):
 
     @property
     def sourcePos3D(self):
-        if self._cfg.dynamic_loading:
+        if self._cfg.dynamic_loading and self._sourcePos3D is None:
             if 'sourcePos3D' in self._h.keys():
-                return np.array(self._h['sourcePos3D']).astype(float)  # 1D array
+                return np.array(self._h['sourcePos3D']).astype(float)  # Array
         return self._sourcePos3D
 
     @sourcePos3D.setter
@@ -361,9 +423,9 @@ class Probe(_Group):
 
     @property
     def detectorPos2D(self):
-        if self._cfg.dynamic_loading:
+        if self._cfg.dynamic_loading and self._detectorPos2D is None:
             if 'detectorPos2D' in self._h.keys():
-                return np.array(self._h['detectorPos2D']).astype(float)  # 1D array
+                return np.array(self._h['detectorPos2D']).astype(float)  # Array
         return self._detectorPos2D
 
     @detectorPos2D.setter
@@ -372,9 +434,9 @@ class Probe(_Group):
 
     @property
     def detectorPos3D(self):
-        if self._cfg.dynamic_loading:
+        if self._cfg.dynamic_loading and self._detectorPos3D is None:
             if 'detectorPos3D' in self._h.keys():
-                return np.array(self._h['detectorPos3D']).astype(float)  # 1D array
+                return np.array(self._h['detectorPos3D']).astype(float)  # Array
         return self._detectorPos3D
 
     @detectorPos3D.setter
@@ -383,9 +445,9 @@ class Probe(_Group):
 
     @property
     def frequencies(self):
-        if self._cfg.dynamic_loading:
+        if self._cfg.dynamic_loading and self._frequencies is None:
             if 'frequencies' in self._h.keys():
-                return np.array(self._h['frequencies']).astype(float)  # 1D array
+                return np.array(self._h['frequencies']).astype(float)  # Array
         return self._frequencies
 
     @frequencies.setter
@@ -394,9 +456,9 @@ class Probe(_Group):
 
     @property
     def timeDelays(self):
-        if self._cfg.dynamic_loading:
+        if self._cfg.dynamic_loading and self._timeDelays is None:
             if 'timeDelays' in self._h.keys():
-                return np.array(self._h['timeDelays']).astype(float)  # 1D array
+                return np.array(self._h['timeDelays']).astype(float)  # Array
         return self._timeDelays
 
     @timeDelays.setter
@@ -405,9 +467,9 @@ class Probe(_Group):
 
     @property
     def timeDelayWidths(self):
-        if self._cfg.dynamic_loading:
+        if self._cfg.dynamic_loading and self._timeDelayWidths is None:
             if 'timeDelayWidths' in self._h.keys():
-                return np.array(self._h['timeDelayWidths']).astype(float)  # 1D array
+                return np.array(self._h['timeDelayWidths']).astype(float)  # Array
         return self._timeDelayWidths
 
     @timeDelayWidths.setter
@@ -416,9 +478,9 @@ class Probe(_Group):
 
     @property
     def momentOrders(self):
-        if self._cfg.dynamic_loading:
+        if self._cfg.dynamic_loading and self._momentOrders is None:
             if 'momentOrders' in self._h.keys():
-                return np.array(self._h['momentOrders']).astype(float)  # 1D array
+                return np.array(self._h['momentOrders']).astype(float)  # Array
         return self._momentOrders
 
     @momentOrders.setter
@@ -427,9 +489,9 @@ class Probe(_Group):
 
     @property
     def correlationTimeDelays(self):
-        if self._cfg.dynamic_loading:
+        if self._cfg.dynamic_loading and self._correlationTimeDelays is None:
             if 'correlationTimeDelays' in self._h.keys():
-                return np.array(self._h['correlationTimeDelays']).astype(float)  # 1D array
+                return np.array(self._h['correlationTimeDelays']).astype(float)  # Array
         return self._correlationTimeDelays
 
     @correlationTimeDelays.setter
@@ -438,9 +500,9 @@ class Probe(_Group):
 
     @property
     def correlationTimeDelayWidths(self):
-        if self._cfg.dynamic_loading:
+        if self._cfg.dynamic_loading and self._correlationTimeDelayWidths is None:
             if 'correlationTimeDelayWidths' in self._h.keys():
-                return np.array(self._h['correlationTimeDelayWidths']).astype(float)  # 1D array
+                return np.array(self._h['correlationTimeDelayWidths']).astype(float)  # Array
         return self._correlationTimeDelayWidths
 
     @correlationTimeDelayWidths.setter
@@ -449,9 +511,9 @@ class Probe(_Group):
 
     @property
     def sourceLabels(self):
-        if self._cfg.dynamic_loading:
+        if self._cfg.dynamic_loading and self._sourceLabels is None:
             if 'sourceLabels' in self._h.keys():
-                return np.array(self._h['sourceLabels']).astype('<U13')  # 1D array
+                return np.array(self._h['sourceLabels']).astype(str)  # Array
         return self._sourceLabels
 
     @sourceLabels.setter
@@ -460,9 +522,9 @@ class Probe(_Group):
 
     @property
     def detectorLabels(self):
-        if self._cfg.dynamic_loading:
+        if self._cfg.dynamic_loading and self._detectorLabels is None:
             if 'detectorLabels' in self._h.keys():
-                return np.array(self._h['detectorLabels']).astype('<U13')  # 1D array
+                return np.array(self._h['detectorLabels']).astype(str)  # Array
         return self._detectorLabels
 
     @detectorLabels.setter
@@ -471,9 +533,9 @@ class Probe(_Group):
 
     @property
     def landmarkPos2D(self):
-        if self._cfg.dynamic_loading:
+        if self._cfg.dynamic_loading and self._landmarkPos2D is None:
             if 'landmarkPos2D' in self._h.keys():
-                return np.array(self._h['landmarkPos2D']).astype(float)  # 1D array
+                return np.array(self._h['landmarkPos2D']).astype(float)  # Array
         return self._landmarkPos2D
 
     @landmarkPos2D.setter
@@ -482,9 +544,9 @@ class Probe(_Group):
 
     @property
     def landmarkPos3D(self):
-        if self._cfg.dynamic_loading:
+        if self._cfg.dynamic_loading and self._landmarkPos3D is None:
             if 'landmarkPos3D' in self._h.keys():
-                return np.array(self._h['landmarkPos3D']).astype(float)  # 1D array
+                return np.array(self._h['landmarkPos3D']).astype(float)  # Array
         return self._landmarkPos3D
 
     @landmarkPos3D.setter
@@ -493,9 +555,9 @@ class Probe(_Group):
 
     @property
     def landmarkLabels(self):
-        if self._cfg.dynamic_loading:
+        if self._cfg.dynamic_loading and self._landmarkLabels is None:
             if 'landmarkLabels' in self._h.keys():
-                return np.array(self._h['landmarkLabels']).astype('<U13')  # 1D array
+                return np.array(self._h['landmarkLabels']).astype(str)  # Array
         return self._landmarkLabels
 
     @landmarkLabels.setter
@@ -504,15 +566,71 @@ class Probe(_Group):
 
     @property
     def useLocalIndex(self):
-        if self._cfg.dynamic_loading:
+        if self._cfg.dynamic_loading and self._useLocalIndex is None:
             if 'useLocalIndex' in self._h.keys():
-                return int(self._h['useLocalIndex'][0])
+                return int(self._h['useLocalIndex'][()])
         return self._useLocalIndex
 
     @useLocalIndex.setter
     def useLocalIndex(self, value):
         self._useLocalIndex = value
 
+
+    def _save(self):
+        if self._wavelengths is not None:
+            del self._h['wavelengths']
+            self._h.create_dataset('wavelengths', dtype='f8', data=np.array(self._wavelengths))
+        if self._wavelengthsEmission is not None:
+            del self._h['wavelengthsEmission']
+            self._h.create_dataset('wavelengthsEmission', dtype='f8', data=np.array(self._wavelengthsEmission))
+        if self._sourcePos2D is not None:
+            del self._h['sourcePos2D']
+            self._h.create_dataset('sourcePos2D', dtype='f8', data=np.array(self._sourcePos2D))
+        if self._sourcePos3D is not None:
+            del self._h['sourcePos3D']
+            self._h.create_dataset('sourcePos3D', dtype='f8', data=np.array(self._sourcePos3D))
+        if self._detectorPos2D is not None:
+            del self._h['detectorPos2D']
+            self._h.create_dataset('detectorPos2D', dtype='f8', data=np.array(self._detectorPos2D))
+        if self._detectorPos3D is not None:
+            del self._h['detectorPos3D']
+            self._h.create_dataset('detectorPos3D', dtype='f8', data=np.array(self._detectorPos3D))
+        if self._frequencies is not None:
+            del self._h['frequencies']
+            self._h.create_dataset('frequencies', dtype='f8', data=np.array(self._frequencies))
+        if self._timeDelays is not None:
+            del self._h['timeDelays']
+            self._h.create_dataset('timeDelays', dtype='f8', data=np.array(self._timeDelays))
+        if self._timeDelayWidths is not None:
+            del self._h['timeDelayWidths']
+            self._h.create_dataset('timeDelayWidths', dtype='f8', data=np.array(self._timeDelayWidths))
+        if self._momentOrders is not None:
+            del self._h['momentOrders']
+            self._h.create_dataset('momentOrders', dtype='f8', data=np.array(self._momentOrders))
+        if self._correlationTimeDelays is not None:
+            del self._h['correlationTimeDelays']
+            self._h.create_dataset('correlationTimeDelays', dtype='f8', data=np.array(self._correlationTimeDelays))
+        if self._correlationTimeDelayWidths is not None:
+            del self._h['correlationTimeDelayWidths']
+            self._h.create_dataset('correlationTimeDelayWidths', dtype='f8', data=np.array(self._correlationTimeDelayWidths))
+        if self._sourceLabels is not None:
+            del self._h['sourceLabels']
+            self._h.create_dataset('sourceLabels', dtype=h5py.string_dtype(encoding='ascii', length=None), data=np.array(self._sourceLabels).astype('O'))
+        if self._detectorLabels is not None:
+            del self._h['detectorLabels']
+            self._h.create_dataset('detectorLabels', dtype=h5py.string_dtype(encoding='ascii', length=None), data=np.array(self._detectorLabels).astype('O'))
+        if self._landmarkPos2D is not None:
+            del self._h['landmarkPos2D']
+            self._h.create_dataset('landmarkPos2D', dtype='f8', data=np.array(self._landmarkPos2D))
+        if self._landmarkPos3D is not None:
+            del self._h['landmarkPos3D']
+            self._h.create_dataset('landmarkPos3D', dtype='f8', data=np.array(self._landmarkPos3D))
+        if self._landmarkLabels is not None:
+            del self._h['landmarkLabels']
+            self._h.create_dataset('landmarkLabels', dtype=h5py.string_dtype(encoding='ascii', length=None), data=np.array(self._landmarkLabels).astype('O'))
+        if self._useLocalIndex is not None:
+            del self._h['useLocalIndex']
+            self._h.create_dataset('useLocalIndex', dtype='i4', data=self._useLocalIndex)
 
 
 
@@ -587,6 +705,12 @@ class NirsElement(_Group):
         self._aux = value
 
 
+    def _save(self):
+        self.metaDataTags._save()
+        self.data._save()
+        self.stim._save()
+        self.probe._save()
+        self.aux._save()
 
 
 class Nirs(_IndexedGroup):
@@ -612,13 +736,13 @@ class DataElement(_Group):
         super().__init__(gid, cfg)
         if 'dataTimeSeries' in self._h.keys():
             if not self._cfg.dynamic_loading:
-                self._dataTimeSeries = np.array(self._h['dataTimeSeries']).astype(float)  # 1D array
+                self._dataTimeSeries = np.array(self._h['dataTimeSeries']).astype(float)  # Array
         else:
             warn(str(self.__class__.__name__) + ' missing required key ' + '"dataTimeSeries"')
 
         if 'time' in self._h.keys():
             if not self._cfg.dynamic_loading:
-                self._time = np.array(self._h['time']).astype(float)  # 1D array
+                self._time = np.array(self._h['time']).astype(float)  # Array
         else:
             warn(str(self.__class__.__name__) + ' missing required key ' + '"time"')
 
@@ -627,9 +751,9 @@ class DataElement(_Group):
 
     @property
     def dataTimeSeries(self):
-        if self._cfg.dynamic_loading:
+        if self._cfg.dynamic_loading and self._dataTimeSeries is None:
             if 'dataTimeSeries' in self._h.keys():
-                return np.array(self._h['dataTimeSeries']).astype(float)  # 1D array
+                return np.array(self._h['dataTimeSeries']).astype(float)  # Array
         return self._dataTimeSeries
 
     @dataTimeSeries.setter
@@ -638,9 +762,9 @@ class DataElement(_Group):
 
     @property
     def time(self):
-        if self._cfg.dynamic_loading:
+        if self._cfg.dynamic_loading and self._time is None:
             if 'time' in self._h.keys():
-                return np.array(self._h['time']).astype(float)  # 1D array
+                return np.array(self._h['time']).astype(float)  # Array
         return self._time
 
     @time.setter
@@ -656,6 +780,14 @@ class DataElement(_Group):
         self._measurementList = value
 
 
+    def _save(self):
+        if self._dataTimeSeries is not None:
+            del self._h['dataTimeSeries']
+            self._h.create_dataset('dataTimeSeries', dtype='f8', data=np.array(self._dataTimeSeries))
+        if self._time is not None:
+            del self._h['time']
+            self._h.create_dataset('time', dtype='f8', data=np.array(self._time))
+        self.measurementList._save()
 
 
 class Data(_IndexedGroup):
@@ -691,72 +823,75 @@ class MeasurementListElement(_Group):
         super().__init__(gid, cfg)
         if 'sourceIndex' in self._h.keys():
             if not self._cfg.dynamic_loading:
-                self._sourceIndex = int(self._h['sourceIndex'][0])
+                self._sourceIndex = int(self._h['sourceIndex'][()])
         else:
             warn(str(self.__class__.__name__) + ' missing required key ' + '"sourceIndex"')
 
         if 'detectorIndex' in self._h.keys():
             if not self._cfg.dynamic_loading:
-                self._detectorIndex = int(self._h['detectorIndex'][0])
+                self._detectorIndex = int(self._h['detectorIndex'][()])
         else:
             warn(str(self.__class__.__name__) + ' missing required key ' + '"detectorIndex"')
 
         if 'wavelengthIndex' in self._h.keys():
             if not self._cfg.dynamic_loading:
-                self._wavelengthIndex = int(self._h['wavelengthIndex'][0])
+                self._wavelengthIndex = int(self._h['wavelengthIndex'][()])
         else:
             warn(str(self.__class__.__name__) + ' missing required key ' + '"wavelengthIndex"')
 
         if 'wavelengthActual' in self._h.keys():
             if not self._cfg.dynamic_loading:
-                self._wavelengthActual = float(self._h['wavelengthActual'][0])
+                self._wavelengthActual = float(self._h['wavelengthActual'][()])
 
         if 'wavelengthEmissionActual' in self._h.keys():
             if not self._cfg.dynamic_loading:
-                self._wavelengthEmissionActual = float(self._h['wavelengthEmissionActual'][0])
+                self._wavelengthEmissionActual = float(self._h['wavelengthEmissionActual'][()])
 
         if 'dataType' in self._h.keys():
             if not self._cfg.dynamic_loading:
-                self._dataType = int(self._h['dataType'][0])
+                self._dataType = int(self._h['dataType'][()])
         else:
             warn(str(self.__class__.__name__) + ' missing required key ' + '"dataType"')
 
         if 'dataTypeLabel' in self._h.keys():
             if not self._cfg.dynamic_loading:
-                self._dataTypeLabel = self._h['dataTypeLabel'][0].decode('ascii')  # String
+                if self._h['dataTypeLabel'].ndim > 0:
+                    self._dataTypeLabel = self._h['dataTypeLabel'][0].decode('ascii')
+                else:
+                    self._dataTypeLabel = self._h['dataTypeLabel'][()].decode('ascii')
 
         if 'dataTypeIndex' in self._h.keys():
             if not self._cfg.dynamic_loading:
-                self._dataTypeIndex = int(self._h['dataTypeIndex'][0])
+                self._dataTypeIndex = int(self._h['dataTypeIndex'][()])
         else:
             warn(str(self.__class__.__name__) + ' missing required key ' + '"dataTypeIndex"')
 
         if 'sourcePower' in self._h.keys():
             if not self._cfg.dynamic_loading:
-                self._sourcePower = float(self._h['sourcePower'][0])
+                self._sourcePower = float(self._h['sourcePower'][()])
 
         if 'detectorGain' in self._h.keys():
             if not self._cfg.dynamic_loading:
-                self._detectorGain = float(self._h['detectorGain'][0])
+                self._detectorGain = float(self._h['detectorGain'][()])
 
         if 'moduleIndex' in self._h.keys():
             if not self._cfg.dynamic_loading:
-                self._moduleIndex = int(self._h['moduleIndex'][0])
+                self._moduleIndex = int(self._h['moduleIndex'][()])
 
         if 'sourceModuleIndex' in self._h.keys():
             if not self._cfg.dynamic_loading:
-                self._sourceModuleIndex = int(self._h['sourceModuleIndex'][0])
+                self._sourceModuleIndex = int(self._h['sourceModuleIndex'][()])
 
         if 'detectorModuleIndex' in self._h.keys():
             if not self._cfg.dynamic_loading:
-                self._detectorModuleIndex = int(self._h['detectorModuleIndex'][0])
+                self._detectorModuleIndex = int(self._h['detectorModuleIndex'][()])
 
 
     @property
     def sourceIndex(self):
-        if self._cfg.dynamic_loading:
+        if self._cfg.dynamic_loading and self._sourceIndex is None:
             if 'sourceIndex' in self._h.keys():
-                return int(self._h['sourceIndex'][0])
+                return int(self._h['sourceIndex'][()])
         return self._sourceIndex
 
     @sourceIndex.setter
@@ -765,9 +900,9 @@ class MeasurementListElement(_Group):
 
     @property
     def detectorIndex(self):
-        if self._cfg.dynamic_loading:
+        if self._cfg.dynamic_loading and self._detectorIndex is None:
             if 'detectorIndex' in self._h.keys():
-                return int(self._h['detectorIndex'][0])
+                return int(self._h['detectorIndex'][()])
         return self._detectorIndex
 
     @detectorIndex.setter
@@ -776,9 +911,9 @@ class MeasurementListElement(_Group):
 
     @property
     def wavelengthIndex(self):
-        if self._cfg.dynamic_loading:
+        if self._cfg.dynamic_loading and self._wavelengthIndex is None:
             if 'wavelengthIndex' in self._h.keys():
-                return int(self._h['wavelengthIndex'][0])
+                return int(self._h['wavelengthIndex'][()])
         return self._wavelengthIndex
 
     @wavelengthIndex.setter
@@ -787,9 +922,9 @@ class MeasurementListElement(_Group):
 
     @property
     def wavelengthActual(self):
-        if self._cfg.dynamic_loading:
+        if self._cfg.dynamic_loading and self._wavelengthActual is None:
             if 'wavelengthActual' in self._h.keys():
-                return float(self._h['wavelengthActual'][0])
+                return float(self._h['wavelengthActual'][()])
         return self._wavelengthActual
 
     @wavelengthActual.setter
@@ -798,9 +933,9 @@ class MeasurementListElement(_Group):
 
     @property
     def wavelengthEmissionActual(self):
-        if self._cfg.dynamic_loading:
+        if self._cfg.dynamic_loading and self._wavelengthEmissionActual is None:
             if 'wavelengthEmissionActual' in self._h.keys():
-                return float(self._h['wavelengthEmissionActual'][0])
+                return float(self._h['wavelengthEmissionActual'][()])
         return self._wavelengthEmissionActual
 
     @wavelengthEmissionActual.setter
@@ -809,9 +944,9 @@ class MeasurementListElement(_Group):
 
     @property
     def dataType(self):
-        if self._cfg.dynamic_loading:
+        if self._cfg.dynamic_loading and self._dataType is None:
             if 'dataType' in self._h.keys():
-                return int(self._h['dataType'][0])
+                return int(self._h['dataType'][()])
         return self._dataType
 
     @dataType.setter
@@ -820,9 +955,12 @@ class MeasurementListElement(_Group):
 
     @property
     def dataTypeLabel(self):
-        if self._cfg.dynamic_loading:
+        if self._cfg.dynamic_loading and self._dataTypeLabel is None:
             if 'dataTypeLabel' in self._h.keys():
-                return self._h['dataTypeLabel'][0].decode('ascii')  # String
+                if self._h['dataTypeLabel'].ndim > 0:
+                    return self._h['dataTypeLabel'][0].decode('ascii')
+                else:
+                    return self._h['dataTypeLabel'][()].decode('ascii')
         return self._dataTypeLabel
 
     @dataTypeLabel.setter
@@ -831,9 +969,9 @@ class MeasurementListElement(_Group):
 
     @property
     def dataTypeIndex(self):
-        if self._cfg.dynamic_loading:
+        if self._cfg.dynamic_loading and self._dataTypeIndex is None:
             if 'dataTypeIndex' in self._h.keys():
-                return int(self._h['dataTypeIndex'][0])
+                return int(self._h['dataTypeIndex'][()])
         return self._dataTypeIndex
 
     @dataTypeIndex.setter
@@ -842,9 +980,9 @@ class MeasurementListElement(_Group):
 
     @property
     def sourcePower(self):
-        if self._cfg.dynamic_loading:
+        if self._cfg.dynamic_loading and self._sourcePower is None:
             if 'sourcePower' in self._h.keys():
-                return float(self._h['sourcePower'][0])
+                return float(self._h['sourcePower'][()])
         return self._sourcePower
 
     @sourcePower.setter
@@ -853,9 +991,9 @@ class MeasurementListElement(_Group):
 
     @property
     def detectorGain(self):
-        if self._cfg.dynamic_loading:
+        if self._cfg.dynamic_loading and self._detectorGain is None:
             if 'detectorGain' in self._h.keys():
-                return float(self._h['detectorGain'][0])
+                return float(self._h['detectorGain'][()])
         return self._detectorGain
 
     @detectorGain.setter
@@ -864,9 +1002,9 @@ class MeasurementListElement(_Group):
 
     @property
     def moduleIndex(self):
-        if self._cfg.dynamic_loading:
+        if self._cfg.dynamic_loading and self._moduleIndex is None:
             if 'moduleIndex' in self._h.keys():
-                return int(self._h['moduleIndex'][0])
+                return int(self._h['moduleIndex'][()])
         return self._moduleIndex
 
     @moduleIndex.setter
@@ -875,9 +1013,9 @@ class MeasurementListElement(_Group):
 
     @property
     def sourceModuleIndex(self):
-        if self._cfg.dynamic_loading:
+        if self._cfg.dynamic_loading and self._sourceModuleIndex is None:
             if 'sourceModuleIndex' in self._h.keys():
-                return int(self._h['sourceModuleIndex'][0])
+                return int(self._h['sourceModuleIndex'][()])
         return self._sourceModuleIndex
 
     @sourceModuleIndex.setter
@@ -886,15 +1024,67 @@ class MeasurementListElement(_Group):
 
     @property
     def detectorModuleIndex(self):
-        if self._cfg.dynamic_loading:
+        if self._cfg.dynamic_loading and self._detectorModuleIndex is None:
             if 'detectorModuleIndex' in self._h.keys():
-                return int(self._h['detectorModuleIndex'][0])
+                return int(self._h['detectorModuleIndex'][()])
         return self._detectorModuleIndex
 
     @detectorModuleIndex.setter
     def detectorModuleIndex(self, value):
         self._detectorModuleIndex = value
 
+
+    def _save(self):
+        if self._sourceIndex is not None:
+            del self._h['sourceIndex']
+            self._h.create_dataset('sourceIndex', dtype='i4', data=self._sourceIndex)
+
+        if self._detectorIndex is not None:
+            del self._h['detectorIndex']
+            self._h.create_dataset('detectorIndex', dtype='i4', data=self._detectorIndex)
+
+        if self._wavelengthIndex is not None:
+            del self._h['wavelengthIndex']
+            self._h.create_dataset('wavelengthIndex', dtype='i4', data=self._wavelengthIndex)
+
+        if self._wavelengthActual is not None:
+            del self._h['wavelengthActual']
+            self._h.create_dataset('wavelengthActual', dtype='f8', data=self._wavelengthActual)
+
+        if self._wavelengthEmissionActual is not None:
+            del self._h['wavelengthEmissionActual']
+            self._h.create_dataset('wavelengthEmissionActual', dtype='f8', data=self._wavelengthEmissionActual)
+
+        if self._dataType is not None:
+            del self._h['dataType']
+            self._h.create_dataset('dataType', dtype='i4', data=self._dataType)
+
+        if self._dataTypeLabel is not None:
+            del self._h['dataTypeLabel']
+            self._h.create_dataset('dataTypeLabel', dtype=h5py.string_dtype(encoding='ascii', length=None), data=self._dataTypeLabel)
+        if self._dataTypeIndex is not None:
+            del self._h['dataTypeIndex']
+            self._h.create_dataset('dataTypeIndex', dtype='i4', data=self._dataTypeIndex)
+
+        if self._sourcePower is not None:
+            del self._h['sourcePower']
+            self._h.create_dataset('sourcePower', dtype='f8', data=self._sourcePower)
+
+        if self._detectorGain is not None:
+            del self._h['detectorGain']
+            self._h.create_dataset('detectorGain', dtype='f8', data=self._detectorGain)
+
+        if self._moduleIndex is not None:
+            del self._h['moduleIndex']
+            self._h.create_dataset('moduleIndex', dtype='i4', data=self._moduleIndex)
+
+        if self._sourceModuleIndex is not None:
+            del self._h['sourceModuleIndex']
+            self._h.create_dataset('sourceModuleIndex', dtype='i4', data=self._sourceModuleIndex)
+
+        if self._detectorModuleIndex is not None:
+            del self._h['detectorModuleIndex']
+            self._h.create_dataset('detectorModuleIndex', dtype='i4', data=self._detectorModuleIndex)
 
 
 
@@ -921,22 +1111,28 @@ class StimElement(_Group):
         super().__init__(gid, cfg)
         if 'name' in self._h.keys():
             if not self._cfg.dynamic_loading:
-                self._name = self._h['name'][0].decode('ascii')  # String
+                if self._h['name'].ndim > 0:
+                    self._name = self._h['name'][0].decode('ascii')
+                else:
+                    self._name = self._h['name'][()].decode('ascii')
 
         if 'data' in self._h.keys():
             if not self._cfg.dynamic_loading:
-                self._data = np.array(self._h['data']).astype(float)  # 1D array
+                self._data = np.array(self._h['data']).astype(float)  # Array
 
         if 'dataLabels' in self._h.keys():
             if not self._cfg.dynamic_loading:
-                self._dataLabels = np.array(self._h['dataLabels']).astype('<U13')  # 1D array
+                self._dataLabels = np.array(self._h['dataLabels']).astype(str)  # Array
 
 
     @property
     def name(self):
-        if self._cfg.dynamic_loading:
+        if self._cfg.dynamic_loading and self._name is None:
             if 'name' in self._h.keys():
-                return self._h['name'][0].decode('ascii')  # String
+                if self._h['name'].ndim > 0:
+                    return self._h['name'][0].decode('ascii')
+                else:
+                    return self._h['name'][()].decode('ascii')
         return self._name
 
     @name.setter
@@ -945,9 +1141,9 @@ class StimElement(_Group):
 
     @property
     def data(self):
-        if self._cfg.dynamic_loading:
+        if self._cfg.dynamic_loading and self._data is None:
             if 'data' in self._h.keys():
-                return np.array(self._h['data']).astype(float)  # 1D array
+                return np.array(self._h['data']).astype(float)  # Array
         return self._data
 
     @data.setter
@@ -956,9 +1152,9 @@ class StimElement(_Group):
 
     @property
     def dataLabels(self):
-        if self._cfg.dynamic_loading:
+        if self._cfg.dynamic_loading and self._dataLabels is None:
             if 'dataLabels' in self._h.keys():
-                return np.array(self._h['dataLabels']).astype('<U13')  # 1D array
+                return np.array(self._h['dataLabels']).astype(str)  # Array
         return self._dataLabels
 
     @dataLabels.setter
@@ -966,6 +1162,16 @@ class StimElement(_Group):
         self._dataLabels = value
 
 
+    def _save(self):
+        if self._name is not None:
+            del self._h['name']
+            self._h.create_dataset('name', dtype=h5py.string_dtype(encoding='ascii', length=None), data=self._name)
+        if self._data is not None:
+            del self._h['data']
+            self._h.create_dataset('data', dtype='f8', data=np.array(self._data))
+        if self._dataLabels is not None:
+            del self._h['dataLabels']
+            self._h.create_dataset('dataLabels', dtype=h5py.string_dtype(encoding='ascii', length=None), data=np.array(self._dataLabels).astype('O'))
 
 
 class Stim(_IndexedGroup):
@@ -992,26 +1198,32 @@ class AuxElement(_Group):
         super().__init__(gid, cfg)
         if 'name' in self._h.keys():
             if not self._cfg.dynamic_loading:
-                self._name = self._h['name'][0].decode('ascii')  # String
+                if self._h['name'].ndim > 0:
+                    self._name = self._h['name'][0].decode('ascii')
+                else:
+                    self._name = self._h['name'][()].decode('ascii')
 
         if 'dataTimeSeries' in self._h.keys():
             if not self._cfg.dynamic_loading:
-                self._dataTimeSeries = np.array(self._h['dataTimeSeries']).astype(float)  # 1D array
+                self._dataTimeSeries = np.array(self._h['dataTimeSeries']).astype(float)  # Array
 
         if 'time' in self._h.keys():
             if not self._cfg.dynamic_loading:
-                self._time = np.array(self._h['time']).astype(float)  # 1D array
+                self._time = np.array(self._h['time']).astype(float)  # Array
 
         if 'timeOffset' in self._h.keys():
             if not self._cfg.dynamic_loading:
-                self._timeOffset = np.array(self._h['timeOffset']).astype(float)  # 1D array
+                self._timeOffset = np.array(self._h['timeOffset']).astype(float)  # Array
 
 
     @property
     def name(self):
-        if self._cfg.dynamic_loading:
+        if self._cfg.dynamic_loading and self._name is None:
             if 'name' in self._h.keys():
-                return self._h['name'][0].decode('ascii')  # String
+                if self._h['name'].ndim > 0:
+                    return self._h['name'][0].decode('ascii')
+                else:
+                    return self._h['name'][()].decode('ascii')
         return self._name
 
     @name.setter
@@ -1020,9 +1232,9 @@ class AuxElement(_Group):
 
     @property
     def dataTimeSeries(self):
-        if self._cfg.dynamic_loading:
+        if self._cfg.dynamic_loading and self._dataTimeSeries is None:
             if 'dataTimeSeries' in self._h.keys():
-                return np.array(self._h['dataTimeSeries']).astype(float)  # 1D array
+                return np.array(self._h['dataTimeSeries']).astype(float)  # Array
         return self._dataTimeSeries
 
     @dataTimeSeries.setter
@@ -1031,9 +1243,9 @@ class AuxElement(_Group):
 
     @property
     def time(self):
-        if self._cfg.dynamic_loading:
+        if self._cfg.dynamic_loading and self._time is None:
             if 'time' in self._h.keys():
-                return np.array(self._h['time']).astype(float)  # 1D array
+                return np.array(self._h['time']).astype(float)  # Array
         return self._time
 
     @time.setter
@@ -1042,9 +1254,9 @@ class AuxElement(_Group):
 
     @property
     def timeOffset(self):
-        if self._cfg.dynamic_loading:
+        if self._cfg.dynamic_loading and self._timeOffset is None:
             if 'timeOffset' in self._h.keys():
-                return np.array(self._h['timeOffset']).astype(float)  # 1D array
+                return np.array(self._h['timeOffset']).astype(float)  # Array
         return self._timeOffset
 
     @timeOffset.setter
@@ -1052,6 +1264,19 @@ class AuxElement(_Group):
         self._timeOffset = value
 
 
+    def _save(self):
+        if self._name is not None:
+            del self._h['name']
+            self._h.create_dataset('name', dtype=h5py.string_dtype(encoding='ascii', length=None), data=self._name)
+        if self._dataTimeSeries is not None:
+            del self._h['dataTimeSeries']
+            self._h.create_dataset('dataTimeSeries', dtype='f8', data=np.array(self._dataTimeSeries))
+        if self._time is not None:
+            del self._h['time']
+            self._h.create_dataset('time', dtype='f8', data=np.array(self._time))
+        if self._timeOffset is not None:
+            del self._h['timeOffset']
+            self._h.create_dataset('timeOffset', dtype='f8', data=np.array(self._timeOffset))
 
 
 class Aux(_IndexedGroup):
@@ -1073,7 +1298,7 @@ class Snirf():
     _formatVersion = None  # "s"*
     _nirs = None  # {i}*
     
-    def __init__(self, argv, dynamic_loading: bool = True):
+    def __init__(self, argv, dynamic_loading: bool = False):
         if not argv.endswith('.snirf'):
             path = argv.join('.snirf')
         else:
@@ -1085,7 +1310,10 @@ class Snirf():
             self._cfg.filepath = path
             if 'formatVersion' in self._h.keys():
                 if not self._cfg.dynamic_loading:
-                    self._formatVersion = self._h['formatVersion'][0].decode('ascii')  # String
+                    if self._h['formatVersion'].ndim > 0:
+                        self._formatVersion = self._h['formatVersion'][0].decode('ascii')
+                    else:
+                        self._formatVersion = self._h['formatVersion'][()].decode('ascii')
             else:
                 warn(str(self.__class__.__name__) + ' missing required key ' + '"formatVersion"')
 
@@ -1096,9 +1324,12 @@ class Snirf():
             raise FileNotFoundError('Unable to find file: name =' + path)
     @property
     def formatVersion(self):
-        if self._cfg.dynamic_loading:
+        if self._cfg.dynamic_loading and self._formatVersion is None:
             if 'formatVersion' in self._h.keys():
-                return self._h['formatVersion'][0].decode('ascii')  # String
+                if self._h['formatVersion'].ndim > 0:
+                    return self._h['formatVersion'][0].decode('ascii')
+                else:
+                    return self._h['formatVersion'][()].decode('ascii')
         return self._formatVersion
 
     @formatVersion.setter
@@ -1117,8 +1348,10 @@ class Snirf():
 
     def __repr__(self):
         props = [p for p in dir(self) if '_' not in p]
-        out = 'Snirf object loaded from ' + self._cfg.filepath
+        out = 'Snirf object loaded from ' + self._cfg.filepath + '\n'
         for prop in props:
             out += prop + ': ' + str(getattr(self, prop)) + '\n'
         return str(out)
-        
+
+    def __del__(self):
+        self._h.close()
