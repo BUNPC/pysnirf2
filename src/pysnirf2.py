@@ -1345,13 +1345,15 @@ class Snirf():
         self._nirs = value
 
 
+    def _save(self):
+        if self._formatVersion is not None:
+            del self._h['formatVersion']
+            self._h.create_dataset('formatVersion', dtype=h5py.string_dtype(encoding='ascii', length=None), data=self._formatVersion)
+        self.nirs._save()
 
-    def __repr__(self):
-        props = [p for p in dir(self) if '_' not in p]
-        out = 'Snirf object loaded from ' + self._cfg.filepath + '\n'
-        for prop in props:
-            out += prop + ': ' + str(getattr(self, prop)) + '\n'
-        return str(out)
+
+    def save(self):
+        self._save()
 
     def __del__(self):
         self._h.close()

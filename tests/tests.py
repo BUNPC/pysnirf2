@@ -56,8 +56,8 @@ s = Snirf(TESTPATH, dynamic_loading=True)
 # %%
 print(s.nirs[0].probe)
 s.nirs[0].probe.wavelengths = [960, 480]
-#s.nirs[0].probe.sourceLabels = ['G1', 'G2', 'G3', 'G4', 'G5', 'G6', 'G7', 'G8', 'G9', 'G10', 'G11', 'G12', 'G13', 'G14', 'G15']
-#print(s.nirs[0].probe.wavelengths)
+s.nirs[0].probe.sourceLabels = ['G1', 'G2', 'G3', 'G4', 'G5', 'G6', 'G7', 'G8', 'G9', 'G10', 'G11', 'G12', 'G13', 'G14', 'G15']
+print(s.nirs[0].probe.wavelengths)
 #s.nirs[0]._save()
 
 # %%
