@@ -16,12 +16,6 @@ saveSnirf(<Snirf object>, <destination filename>)
 <error> = validate(<Snirf object>)
 <error>, <verbose result> = validate
 
-print(<verbose result>)
->> <nice looking string(s) returned by SnirfValidationResult.__repr__()>
-
-print(<Snirf object>)
->> <nice looking string(s) returned by Snirf.__repr__()>
-
 --
 
 Snirf
