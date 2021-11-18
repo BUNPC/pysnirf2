@@ -1,0 +1,5 @@
+**/venv
+**/venv_gen
+**/__pycache__
+.idea
+*.snirf

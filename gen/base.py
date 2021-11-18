@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 import h5py
 import os
 import sys
+import numpy as np
 
 if sys.version_info[0] < 3:
     raise ImportError('pysnirf2 requires Python > 3')
@@ -17,7 +18,7 @@ class _Group():
         self._id = gid
         if not isinstance(gid, h5py.h5g.GroupID):
             raise TypeError('must initialize with a Group ID')
-        self._group = h5py.Group(self._id)
+        self._h = h5py.Group(self._id)
 
     def __repr__(self):
         return str(list(filter(lambda x: not x.startswith('_'), vars(self).keys())))

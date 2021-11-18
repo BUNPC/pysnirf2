@@ -7,11 +7,11 @@ import getpass
 import os
 
 
-from data import TYPELUT, SPEC_SRC, SPEC_VERSION
+from data import TYPELUT, SPEC_SRC, VERSION
 
 """
 Generates SNIRF interface and validator from the summary table of the specification
-hosted at SPEC_MD_RAW_SRC.
+hosted at SPEC_SRC.
 """
 
 env = Environment(
@@ -66,7 +66,7 @@ flat.append({
             'name': '',
             'location': '/',
             'parent': None,
-            'type': None,
+            'type': '/',
             'children': [],
             'required': False
             })
@@ -75,7 +75,7 @@ for i, location in enumerate(locations):
         type_code = type_codes[i]
         name = location.split('/')[-1].split('(')[0]  # Remove (i), (j)
         parent = location.split('/')[-2].split('(')[0]  # Remove (i), (j)
-#        print(name, type_code)
+        print('Importing', location, 'with type', type_code)
         if type_code is not None:
             required = TYPELUT['REQUIRED'] in type_code
         else:
@@ -99,7 +99,10 @@ for i, location in enumerate(locations):
 
 #  Generate data for template
 SNIRF = {
+        'VERSION': VERSION,
+        'SPEC_SRC': SPEC_SRC,
         'BASE': '',
+        'ROOT': flat[0],  # Snirf root '/'
         'TYPES': TYPELUT, 
         'USER': getpass.getuser(),
         'DATE': str(date.today()),
@@ -120,7 +123,10 @@ for node in flat:
 
 # Generate the complete Snirf interface from base.py and the template + data
 dst = os.path.abspath(os.path.join(os.getcwd(), os.pardir))
+output_path = dst + '/src/' + 'pysnirf2.py'
 with open('base.py', 'r') as f_base:
-    with open(dst + '/src/' + 'pysnirf2.py', "w") as f_out:
+    with open(output_path, "w") as f_out:
         SNIRF['BASE'] = f_base.read()
         f_out.write(template.render(SNIRF))
+        
+print('\nWrote script to ' + output_path + '.')
