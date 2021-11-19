@@ -13,9 +13,11 @@ setup(
     license='MPL-2.0',
     packages=['numerov'],
     install_requires=[
-        'click==6.7',
-        'numpy==1.13.1',
-        'pyyaml==3.12',
+        'cached-property==1.5.2',
+        'h5py==3.6.0',
+        'numpy==1.19.5',
+        'pip==21.3.1',
+        'setuptools==40.8.0'
     ],
     scripts=['bin/cooley'],
     include_package_data=True,
