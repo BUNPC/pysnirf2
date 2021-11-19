@@ -1333,7 +1333,7 @@ class Snirf():
 
 
     def save(self, *args):
-        if len(*args) > 0 and type(*args[0]) is str:
+        if len(args) > 0 and type(args[0]) is str:
             path = args[0]
             if not path.endswith('.snirf'):
                 path.join('.snirf')
