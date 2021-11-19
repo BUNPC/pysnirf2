@@ -4,7 +4,8 @@ Created on Tue Nov 16 18:45:12 2021
 
 @author: sstucker
 """
-from pysnirf2 import Snirf
+import pysnirf2
+from pysnirf2 import Snirf, NirsElement
 import h5py
 import os
 import sys
@@ -40,10 +41,15 @@ def getsize(obj_0):
         return size
     return inner(obj_0)
 
+# TODO remove
+def _print_keys(group):
+    for key in group.keys():
+        print(key)
+
 
 SNIRF_DIRECTORY = r'C:\Users\sstucker\OneDrive\Desktop\pysnirf2\tests\snirf'
 
-TESTPATH = r"C:\Users\sstucker\OneDrive\Desktop\pysnirf2\tests\snirf\out_prune2_mom0.snirf"
+TESTPATH = r"C:\Users\sstucker\OneDrive\Desktop\pysnirf2\tests\snirf\out_prune2_mom012.snirf"
 
 f = h5py.File(TESTPATH, 'a')
 
@@ -54,10 +60,10 @@ f = h5py.File(TESTPATH, 'a')
 s = Snirf(TESTPATH, dynamic_loading=True)
 
 # %%
-print(s.nirs[0].probe)
-s.nirs[0].probe.wavelengths = [960, 480]
-s.nirs[0].probe.sourceLabels = ['G1', 'G2', 'G3', 'G4', 'G5', 'G6', 'G7', 'G8', 'G9', 'G10', 'G11', 'G12', 'G13', 'G14', 'G15']
-print(s.nirs[0].probe.wavelengths)
+#print(s.nirs[0].probe)
+#s.nirs[0].probe.wavelengths = [960, 480]
+#s.nirs[0].probe.sourceLabels = ['G1', 'G2', 'G3', 'G4', 'G5', 'G6', 'G7', 'G8', 'G9', 'G10', 'G11', 'G12', 'G13', 'G14', 'G15']
+#print(s.nirs[0].probe.wavelengths)
 #s.nirs[0]._save()
 
 # %%
@@ -78,3 +84,35 @@ print(s.nirs[0].probe.wavelengths)
 #    
 #s = snirfs[2]
 #    
+
+# %%
+
+class Test:
+    
+    def __init__(self):
+        self.foo = 'foo'
+    
+    def hello(self):
+        print('Hello world')
+        
+    def save(self, *args):
+        print(*args)
+        print(len(*args))
+        
+    def __repr__(self):
+        out = ''
+        for prop in dir(self):
+            if '_' not in prop and not callable(prop):
+                out += prop + ': '
+                prepr = str(getattr(self, prop))
+                if len(prepr) < 64:
+                    out += prepr
+                else:
+                    out += '\n' + prepr
+                out += '\n'
+        return str(out[:-1])
+
+
+test = Test()
+
+

@@ -4,9 +4,23 @@ import os
 import sys
 import numpy as np
 from warnings import warn
+from collections import MutableSequence
 
 if sys.version_info[0] < 3:
     raise ImportError('pysnirf2 requires Python > 3')
+
+# -- methods for writing and reading ------
+
+    
+def _read_string(dataset):
+    # Because many SNIRF files are saved with string values in length 1 arrays
+    if dataset.ndim > 0:
+        return dataset[0].decode('ascii')
+    else:
+        return dataset[()].decode('ascii')
+
+
+# -----------------------------------------
 
 
 class SnirfFormatError(Exception):
@@ -28,25 +42,31 @@ class _Group(ABC):
         self._cfg = cfg
 
     @abstractmethod
-    def _save(self):
+    def _save(self, *args):
         raise NotImplementedError('_save is an abstract method')
         
     def __repr__(self):
-        props = [p for p in dir(self) if '_' not in p]
-        out = ''
+        props = [p for p in dir(self) if ('_' not in p and not callable(getattr(self, p)))]
+        out = str(self.__class__.__name__) + ' at ' + str(self._h.name) + '\n'
         for prop in props:
+            attr = getattr(self, prop)
             out += prop + ': '
-            prepr = str(getattr(self, prop))
-            if len(prepr) < 64:
-                out += prepr
+            if type(attr) is np.ndarray or type(attr) is list:
+                if np.size(attr) > 32:
+                    out += '<' + str(np.shape(attr)) + ' array of ' + str(attr.dtype) + '>'
+                else:
+                    out += str(attr)
             else:
-                out += '\n' + prepr
+                prepr = str(attr)
+                if len(prepr) < 64:
+                    out += prepr
+                else:
+                    out += '\n' + prepr
             out += '\n'
-        
-        return str(out[:-1])
+        return out[:-1]
 
 
-class _IndexedGroup(list, ABC):
+class _IndexedGroup(MutableSequence, ABC):
     """
     Represents the "indexed group" which is defined by v1.0 of the SNIRF
     specification as:
@@ -69,40 +89,79 @@ class _IndexedGroup(list, ABC):
             # in order
             self._parent = parent
             self._cfg = cfg
-            i = 1
+            self._list = list()
+            unordered = []
+            indices = []
             for key in self._parent.keys():
-                if key.startswith(self._name):
-#                    print('adding numbered member of indexed group', str(key))
-                    self.append(self._element(self._parent[key].id, self._cfg))
-                    i += 1
-                elif i == 1 and key.endswith(self._name):
-#                    print('adding member of indexed group', str(key))
-                    self.append(self._element(self._parent[key].id, self._cfg))
+                numsplit = key.split(self._name)
+                if len(numsplit) > 1:
+                    if len(numsplit[1]) == len(str(int(numsplit[1]))):
+                        unordered.append(self._element(self._parent[key].id, self._cfg))
+                        indices.append(int(numsplit[1]))
+                elif key.endswith(self._name):
+                    unordered.append(self._element(self._parent[key].id, self._cfg))
+                    indices.append(0)
+            ordered = np.argsort(indices)
+            for i, j in enumerate(ordered):
+                self._list.append(unordered[j])
         else:
             raise TypeError('must initialize _IndexedGroup with a Group or File')
-         
-    def __new__(cls, *args, **kwargs):
-        if cls is _IndexedGroup:
-            raise NotImplementedError('_IndexedGroup is an abstract class')
-        return super().__new__(cls, *args, **kwargs)
-
-    @abstractmethod
-    def _append_group(self, gid: h5py.h5g.GroupID):
-        raise NotImplementedError('_append_group is an abstract method')
     
-    def _save(self):
-        [element._save() for element in self]
+    
+    def __len__(self): return len(self._list)
+
+    def __getitem__(self, i): return self._list[i]
+
+    def __delitem__(self, i): del self._list[i]
+    
+    def __setitem__(self, i, item):
+        self._check_type(item)
+        self._list[i] = item
+        self._order_names
+
+    def insert(self, i, item):
+        self._check_type(item)
+        self._list.insert(i, item)
+
+    def append(self, item):
+        self._check_type(item)
+        self._list.append(item)
+    
+    def _check_type(self, item):
+        if type(item) is not self._element:
+            raise TypeError('elements of ' + str(self.__class__.__name__) +
+                            ' must be ' + str(self._element) + ', not ' +
+                            str(type(item))
+                            )
+        
+    def _order_names(self):
+        for i, element in enumerate(self._list):
+            self._parent.move(element._h.name.split('/')[-1], self._name + str(i + 1))
+            print(element._h.name.split('/')[-1], '--->', self._name + str(i + 1))
+        
+    def _save(self, *args):
+        self._order_names()
+        [element._save(*args) for element in self._list]
     
     def __getattr__(self, name):
-        raise AttributeError(self.__class__.__name__ + ' is an interable list of '
-                             + str(len(self)) + ' ' + str(self._element)
-                             + ', access these with an index')
-        
+        # If user tries to access a member's properties, raise informative exception
+        if name in [p for p in dir(self._element) if ('_' not in p and not callable(getattr(self._element, p)))]:
+            raise AttributeError(self.__class__.__name__ + ' is an interable list of '
+                                + str(len(self)) + ' ' + str(self._element)
+                                + ', access these with an index i.e. '
+                                + str(self._name) + '[0].' + name
+                                )
+
     def __repr__(self):
-        return str('<' + 'iterable of ' + str(len(self)) + ' ' + str(self._element) + '>')
+        return str('<' + 'iterable of ' + str(len(self._list)) + ' ' + str(self._element) + '>')
 
+    def appendGroup(self):
+        'Adds a group to the end of the list'
+        g = self._parent.create_group(self._name + str(len(self._list) + 1))
+        gid = g.id
+        self._list.append(self._element(gid, self._cfg))
 
-# generated by sstucker on 2021-11-18
+# generated by sstucker on 2021-11-19
 # version 1.0 SNIRF specification parsed from https://raw.github.com/fNIRS/snirf/master/snirf_specification.md
 
 
@@ -119,55 +178,37 @@ class MetaDataTags(_Group):
         super().__init__(gid, cfg)
         if 'SubjectID' in self._h.keys():
             if not self._cfg.dynamic_loading:
-                if self._h['SubjectID'].ndim > 0:
-                    self._SubjectID = self._h['SubjectID'][0].decode('ascii')
-                else:
-                    self._SubjectID = self._h['SubjectID'][()].decode('ascii')
+                self._SubjectID = _read_string(self._h['SubjectID'])
         else:
             warn(str(self.__class__.__name__) + ' missing required key ' + '"SubjectID"')
 
         if 'MeasurementDate' in self._h.keys():
             if not self._cfg.dynamic_loading:
-                if self._h['MeasurementDate'].ndim > 0:
-                    self._MeasurementDate = self._h['MeasurementDate'][0].decode('ascii')
-                else:
-                    self._MeasurementDate = self._h['MeasurementDate'][()].decode('ascii')
+                self._MeasurementDate = _read_string(self._h['MeasurementDate'])
         else:
             warn(str(self.__class__.__name__) + ' missing required key ' + '"MeasurementDate"')
 
         if 'MeasurementTime' in self._h.keys():
             if not self._cfg.dynamic_loading:
-                if self._h['MeasurementTime'].ndim > 0:
-                    self._MeasurementTime = self._h['MeasurementTime'][0].decode('ascii')
-                else:
-                    self._MeasurementTime = self._h['MeasurementTime'][()].decode('ascii')
+                self._MeasurementTime = _read_string(self._h['MeasurementTime'])
         else:
             warn(str(self.__class__.__name__) + ' missing required key ' + '"MeasurementTime"')
 
         if 'LengthUnit' in self._h.keys():
             if not self._cfg.dynamic_loading:
-                if self._h['LengthUnit'].ndim > 0:
-                    self._LengthUnit = self._h['LengthUnit'][0].decode('ascii')
-                else:
-                    self._LengthUnit = self._h['LengthUnit'][()].decode('ascii')
+                self._LengthUnit = _read_string(self._h['LengthUnit'])
         else:
             warn(str(self.__class__.__name__) + ' missing required key ' + '"LengthUnit"')
 
         if 'TimeUnit' in self._h.keys():
             if not self._cfg.dynamic_loading:
-                if self._h['TimeUnit'].ndim > 0:
-                    self._TimeUnit = self._h['TimeUnit'][0].decode('ascii')
-                else:
-                    self._TimeUnit = self._h['TimeUnit'][()].decode('ascii')
+                self._TimeUnit = _read_string(self._h['TimeUnit'])
         else:
             warn(str(self.__class__.__name__) + ' missing required key ' + '"TimeUnit"')
 
         if 'FrequencyUnit' in self._h.keys():
             if not self._cfg.dynamic_loading:
-                if self._h['FrequencyUnit'].ndim > 0:
-                    self._FrequencyUnit = self._h['FrequencyUnit'][0].decode('ascii')
-                else:
-                    self._FrequencyUnit = self._h['FrequencyUnit'][()].decode('ascii')
+                self._FrequencyUnit = _read_string(self._h['FrequencyUnit'])
         else:
             warn(str(self.__class__.__name__) + ' missing required key ' + '"FrequencyUnit"')
 
@@ -176,10 +217,7 @@ class MetaDataTags(_Group):
     def SubjectID(self):
         if self._cfg.dynamic_loading and self._SubjectID is None:
             if 'SubjectID' in self._h.keys():
-                if self._h['SubjectID'].ndim > 0:
-                    return self._h['SubjectID'][0].decode('ascii')
-                else:
-                    return self._h['SubjectID'][()].decode('ascii')
+                return _read_string(self._h['SubjectID'])
         return self._SubjectID
 
     @SubjectID.setter
@@ -190,10 +228,7 @@ class MetaDataTags(_Group):
     def MeasurementDate(self):
         if self._cfg.dynamic_loading and self._MeasurementDate is None:
             if 'MeasurementDate' in self._h.keys():
-                if self._h['MeasurementDate'].ndim > 0:
-                    return self._h['MeasurementDate'][0].decode('ascii')
-                else:
-                    return self._h['MeasurementDate'][()].decode('ascii')
+                return _read_string(self._h['MeasurementDate'])
         return self._MeasurementDate
 
     @MeasurementDate.setter
@@ -204,10 +239,7 @@ class MetaDataTags(_Group):
     def MeasurementTime(self):
         if self._cfg.dynamic_loading and self._MeasurementTime is None:
             if 'MeasurementTime' in self._h.keys():
-                if self._h['MeasurementTime'].ndim > 0:
-                    return self._h['MeasurementTime'][0].decode('ascii')
-                else:
-                    return self._h['MeasurementTime'][()].decode('ascii')
+                return _read_string(self._h['MeasurementTime'])
         return self._MeasurementTime
 
     @MeasurementTime.setter
@@ -218,10 +250,7 @@ class MetaDataTags(_Group):
     def LengthUnit(self):
         if self._cfg.dynamic_loading and self._LengthUnit is None:
             if 'LengthUnit' in self._h.keys():
-                if self._h['LengthUnit'].ndim > 0:
-                    return self._h['LengthUnit'][0].decode('ascii')
-                else:
-                    return self._h['LengthUnit'][()].decode('ascii')
+                return _read_string(self._h['LengthUnit'])
         return self._LengthUnit
 
     @LengthUnit.setter
@@ -232,10 +261,7 @@ class MetaDataTags(_Group):
     def TimeUnit(self):
         if self._cfg.dynamic_loading and self._TimeUnit is None:
             if 'TimeUnit' in self._h.keys():
-                if self._h['TimeUnit'].ndim > 0:
-                    return self._h['TimeUnit'][0].decode('ascii')
-                else:
-                    return self._h['TimeUnit'][()].decode('ascii')
+                return _read_string(self._h['TimeUnit'])
         return self._TimeUnit
 
     @TimeUnit.setter
@@ -246,10 +272,7 @@ class MetaDataTags(_Group):
     def FrequencyUnit(self):
         if self._cfg.dynamic_loading and self._FrequencyUnit is None:
             if 'FrequencyUnit' in self._h.keys():
-                if self._h['FrequencyUnit'].ndim > 0:
-                    return self._h['FrequencyUnit'][0].decode('ascii')
-                else:
-                    return self._h['FrequencyUnit'][()].decode('ascii')
+                return _read_string(self._h['FrequencyUnit'])
         return self._FrequencyUnit
 
     @FrequencyUnit.setter
@@ -257,7 +280,7 @@ class MetaDataTags(_Group):
         self._FrequencyUnit = value
 
 
-    def _save(self):
+    def _save(self, *args):
         if self._SubjectID is not None:
             del self._h['SubjectID']
             self._h.create_dataset('SubjectID', dtype=h5py.string_dtype(encoding='ascii', length=None), data=self._SubjectID)
@@ -576,7 +599,7 @@ class Probe(_Group):
         self._useLocalIndex = value
 
 
-    def _save(self):
+    def _save(self, *args):
         if self._wavelengths is not None:
             del self._h['wavelengths']
             self._h.create_dataset('wavelengths', dtype='f8', data=np.array(self._wavelengths))
@@ -705,7 +728,7 @@ class NirsElement(_Group):
         self._aux = value
 
 
-    def _save(self):
+    def _save(self, *args):
         self.metaDataTags._save()
         self.data._save()
         self.stim._save()
@@ -720,10 +743,6 @@ class Nirs(_IndexedGroup):
 
     def __init__(self, h: h5py.File, cfg: SnirfConfig):
         super().__init__(h, cfg)
-
-    # override
-    def _append_group(self, gid):
-        self.append(NirsElement(gid, self._cfg))
 
 
 class DataElement(_Group):
@@ -780,7 +799,7 @@ class DataElement(_Group):
         self._measurementList = value
 
 
-    def _save(self):
+    def _save(self, *args):
         if self._dataTimeSeries is not None:
             del self._h['dataTimeSeries']
             self._h.create_dataset('dataTimeSeries', dtype='f8', data=np.array(self._dataTimeSeries))
@@ -797,10 +816,6 @@ class Data(_IndexedGroup):
 
     def __init__(self, h: h5py.File, cfg: SnirfConfig):
         super().__init__(h, cfg)
-
-    # override
-    def _append_group(self, gid):
-        self.append(DataElement(gid, self._cfg))
 
 
 class MeasurementListElement(_Group):
@@ -855,10 +870,7 @@ class MeasurementListElement(_Group):
 
         if 'dataTypeLabel' in self._h.keys():
             if not self._cfg.dynamic_loading:
-                if self._h['dataTypeLabel'].ndim > 0:
-                    self._dataTypeLabel = self._h['dataTypeLabel'][0].decode('ascii')
-                else:
-                    self._dataTypeLabel = self._h['dataTypeLabel'][()].decode('ascii')
+                self._dataTypeLabel = _read_string(self._h['dataTypeLabel'])
 
         if 'dataTypeIndex' in self._h.keys():
             if not self._cfg.dynamic_loading:
@@ -957,10 +969,7 @@ class MeasurementListElement(_Group):
     def dataTypeLabel(self):
         if self._cfg.dynamic_loading and self._dataTypeLabel is None:
             if 'dataTypeLabel' in self._h.keys():
-                if self._h['dataTypeLabel'].ndim > 0:
-                    return self._h['dataTypeLabel'][0].decode('ascii')
-                else:
-                    return self._h['dataTypeLabel'][()].decode('ascii')
+                return _read_string(self._h['dataTypeLabel'])
         return self._dataTypeLabel
 
     @dataTypeLabel.setter
@@ -1034,7 +1043,7 @@ class MeasurementListElement(_Group):
         self._detectorModuleIndex = value
 
 
-    def _save(self):
+    def _save(self, *args):
         if self._sourceIndex is not None:
             del self._h['sourceIndex']
             self._h.create_dataset('sourceIndex', dtype='i4', data=self._sourceIndex)
@@ -1096,10 +1105,6 @@ class MeasurementList(_IndexedGroup):
     def __init__(self, h: h5py.File, cfg: SnirfConfig):
         super().__init__(h, cfg)
 
-    # override
-    def _append_group(self, gid):
-        self.append(MeasurementListElement(gid, self._cfg))
-
 
 class StimElement(_Group):
 
@@ -1111,10 +1116,7 @@ class StimElement(_Group):
         super().__init__(gid, cfg)
         if 'name' in self._h.keys():
             if not self._cfg.dynamic_loading:
-                if self._h['name'].ndim > 0:
-                    self._name = self._h['name'][0].decode('ascii')
-                else:
-                    self._name = self._h['name'][()].decode('ascii')
+                self._name = _read_string(self._h['name'])
 
         if 'data' in self._h.keys():
             if not self._cfg.dynamic_loading:
@@ -1129,10 +1131,7 @@ class StimElement(_Group):
     def name(self):
         if self._cfg.dynamic_loading and self._name is None:
             if 'name' in self._h.keys():
-                if self._h['name'].ndim > 0:
-                    return self._h['name'][0].decode('ascii')
-                else:
-                    return self._h['name'][()].decode('ascii')
+                return _read_string(self._h['name'])
         return self._name
 
     @name.setter
@@ -1162,7 +1161,7 @@ class StimElement(_Group):
         self._dataLabels = value
 
 
-    def _save(self):
+    def _save(self, *args):
         if self._name is not None:
             del self._h['name']
             self._h.create_dataset('name', dtype=h5py.string_dtype(encoding='ascii', length=None), data=self._name)
@@ -1182,10 +1181,6 @@ class Stim(_IndexedGroup):
     def __init__(self, h: h5py.File, cfg: SnirfConfig):
         super().__init__(h, cfg)
 
-    # override
-    def _append_group(self, gid):
-        self.append(StimElement(gid, self._cfg))
-
 
 class AuxElement(_Group):
 
@@ -1198,10 +1193,7 @@ class AuxElement(_Group):
         super().__init__(gid, cfg)
         if 'name' in self._h.keys():
             if not self._cfg.dynamic_loading:
-                if self._h['name'].ndim > 0:
-                    self._name = self._h['name'][0].decode('ascii')
-                else:
-                    self._name = self._h['name'][()].decode('ascii')
+                self._name = _read_string(self._h['name'])
 
         if 'dataTimeSeries' in self._h.keys():
             if not self._cfg.dynamic_loading:
@@ -1220,10 +1212,7 @@ class AuxElement(_Group):
     def name(self):
         if self._cfg.dynamic_loading and self._name is None:
             if 'name' in self._h.keys():
-                if self._h['name'].ndim > 0:
-                    return self._h['name'][0].decode('ascii')
-                else:
-                    return self._h['name'][()].decode('ascii')
+                return _read_string(self._h['name'])
         return self._name
 
     @name.setter
@@ -1264,7 +1253,7 @@ class AuxElement(_Group):
         self._timeOffset = value
 
 
-    def _save(self):
+    def _save(self, *args):
         if self._name is not None:
             del self._h['name']
             self._h.create_dataset('name', dtype=h5py.string_dtype(encoding='ascii', length=None), data=self._name)
@@ -1287,33 +1276,27 @@ class Aux(_IndexedGroup):
     def __init__(self, h: h5py.File, cfg: SnirfConfig):
         super().__init__(h, cfg)
 
-    # override
-    def _append_group(self, gid):
-        self.append(AuxElement(gid, self._cfg))
-
 
 class Snirf():
     
     _name = '/'
     _formatVersion = None  # "s"*
     _nirs = None  # {i}*
-    
-    def __init__(self, argv, dynamic_loading: bool = False):
-        if not argv.endswith('.snirf'):
-            path = argv.join('.snirf')
-        else:
-            path = argv
-        if os.path.exists(path):
-            self._h = h5py.File(path, 'r+')
+
+    def __init__(self, path, dynamic_loading: bool = False):
+        if type(path) is str:
+            if not path.endswith('.snirf'):
+                path = path.join('.snirf')
+            if os.path.exists(path):
+                self._h = h5py.File(path, 'r+')
+            else:
+                self._h = h5py.File(path, 'a')
             self._cfg = SnirfConfig()
             self._cfg.dynamic_loading = dynamic_loading
             self._cfg.filepath = path
             if 'formatVersion' in self._h.keys():
                 if not self._cfg.dynamic_loading:
-                    if self._h['formatVersion'].ndim > 0:
-                        self._formatVersion = self._h['formatVersion'][0].decode('ascii')
-                    else:
-                        self._formatVersion = self._h['formatVersion'][()].decode('ascii')
+                    self._formatVersion = _read_string(self._h['formatVersion'])
             else:
                 warn(str(self.__class__.__name__) + ' missing required key ' + '"formatVersion"')
 
@@ -1326,10 +1309,7 @@ class Snirf():
     def formatVersion(self):
         if self._cfg.dynamic_loading and self._formatVersion is None:
             if 'formatVersion' in self._h.keys():
-                if self._h['formatVersion'].ndim > 0:
-                    return self._h['formatVersion'][0].decode('ascii')
-                else:
-                    return self._h['formatVersion'][()].decode('ascii')
+                return _read_string(self._h['formatVersion'])
         return self._formatVersion
 
     @formatVersion.setter
@@ -1345,15 +1325,42 @@ class Snirf():
         self._nirs = value
 
 
-    def _save(self):
+    def _save(self, *args):
         if self._formatVersion is not None:
             del self._h['formatVersion']
             self._h.create_dataset('formatVersion', dtype=h5py.string_dtype(encoding='ascii', length=None), data=self._formatVersion)
         self.nirs._save()
 
 
-    def save(self):
-        self._save()
+    def save(self, *args):
+        if len(*args) > 0 and type(*args[0]) is str:
+            path = args[0]
+            if not path.endswith('.snirf'):
+                path.join('.snirf')
+                new_file = h5py.File(path, 'w')
+                self._save(path)
+        else:
+            self._save()
 
     def __del__(self):
         self._h.close()
+
+    def __repr__(self):
+        props = [p for p in dir(self) if ('_' not in p and not callable(getattr(self, p)))]
+        out = str(self.__class__.__name__) + ' at ' + self._cfg.filepath + '\n'
+        for prop in props:
+            attr = getattr(self, prop)
+            out += prop + ': '
+            if type(attr) is np.ndarray or type(attr) is list:
+                if np.size(attr) > 32:
+                    out += '<' + str(np.shape(attr)) + ' array of ' + str(attr.dtype) + '>'
+                else:
+                    out += str(attr)
+            else:
+                prepr = str(attr)
+                if len(prepr) < 64:
+                    out += prepr
+                else:
+                    out += '\n' + prepr
+            out += '\n'
+        return out[:-1]
