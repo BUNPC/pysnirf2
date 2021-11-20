@@ -75,6 +75,10 @@
 {% endmacro %}
 {% macro gen_writer(NODE) %}
     def _save(self, *args):
+        if len(args) > 0 and type(args[0]) is h5py.File:
+            file = args[0]
+        else:
+            file = self._h.file
 {% for CHILD in NODE.children %}
     {% if TYPES.INT_VALUE in CHILD.type %}
         {% set h5_type = "'i4'" %}
@@ -86,22 +90,26 @@
         {% set h5_type = "'f8'" %}
     {% endif %}
     {% if (TYPES.GROUP in CHILD.type) or (TYPES.INDEXED_GROUP in CHILD.type) %}
-        self.{{ CHILD.name }}._save()
+        self.{{ CHILD.name }}._save(*args)
     {% else %}
-        if self._{{ CHILD.name }} is not None:
-            del self._h['{{ CHILD.name }}']
-    {% if (TYPES.ARRAY_1D in CHILD.type) or (TYPES.ARRAY_2D in CHILD.type) %}
+        if '{{ CHILD.name }}' in self._h:
+            name = self._h['{{ CHILD.name }}'].name
+        {% if (TYPES.ARRAY_1D in CHILD.type) or (TYPES.ARRAY_2D in CHILD.type) %}
             {% if TYPES.VARLEN_STRING in CHILD.type %}
-            self._h.create_dataset('{{ CHILD.name }}', dtype={{ h5_type }}, data=np.array(self._{{ CHILD.name }}).astype('O'))
+            data = np.array(self.{{ CHILD.name }}).astype('O')
             {% else %}
-            self._h.create_dataset('{{ CHILD.name }}', dtype={{ h5_type }}, data=np.array(self._{{ CHILD.name }}))
+            data = np.array(self.{{ CHILD.name }})
             {% endif %}
-    {% elif TYPES.VARLEN_STRING in CHILD.type %}
-            self._h.create_dataset('{{ CHILD.name }}', dtype={{ h5_type }}, data=self._{{ CHILD.name }})
-    {% else %}
-            self._h.create_dataset('{{ CHILD.name }}', dtype={{ h5_type }}, data=self._{{ CHILD.name }})
-
-    {% endif %}
+        {% elif TYPES.VARLEN_STRING in CHILD.type %}
+            data = self.{{ CHILD.name }}
+        {% else %}
+            data = self.{{ CHILD.name }}
+        {% endif %}
+            if name in file:
+                print('Deleting', name, 'in', file.filename)
+                del file[name]
+            file.create_dataset(name, dtype={{ h5_type }}, data=data)
+            print('Creating', name, 'in', file.filename)
     {% endif %}
     {% endfor %}
 {% endmacro %}
@@ -163,7 +171,7 @@ class Snirf():
             if os.path.exists(path):
                 self._h = h5py.File(path, 'r+')
             else:
-                self._h = h5py.File(path, 'a')
+                self._h = h5py.File(path, 'w')
             self._cfg = SnirfConfig()
             self._cfg.dynamic_loading = dynamic_loading
             self._cfg.filepath = path
@@ -173,15 +181,31 @@ class Snirf():
 {{ gen_properties(ROOT) }}
 {{ gen_writer(ROOT) }}
 
+    # overload
+    def save(self, path: str):
+        ...
+
     def save(self, *args):
+        '''
+        Save changes you have made to the Snirf object to disk. If a filepath is supplied, the changes will be
+        'saved as' in a new file.
+        '''
         if len(args) > 0 and type(args[0]) is str:
             path = args[0]
             if not path.endswith('.snirf'):
-                path.join('.snirf')
-                new_file = h5py.File(path, 'w')
-                self._save(path)
+                path += '.snirf'
+            new_file = h5py.File(path, 'w')
+            self._save(new_file)
+            new_file.close()
         else:
             self._save()
+
+    @property
+    def filename(self):
+        return self._h.filename
+
+    def close(self):
+        self._h.close()
 
     def __del__(self):
         self._h.close()

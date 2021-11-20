@@ -49,15 +49,29 @@ def _print_keys(group):
 
 SNIRF_DIRECTORY = r'C:\Users\sstucker\OneDrive\Desktop\pysnirf2\tests\snirf'
 
-TESTPATH = r"C:\Users\sstucker\OneDrive\Desktop\pysnirf2\tests\snirf\out_prune2_mom012.snirf"
+TESTPATH = r"C:\Users\sstucker\OneDrive\Desktop\pysnirf2\tests\snirf\subjA_run03.snirf"
 
-f = h5py.File(TESTPATH, 'a')
+#f = h5py.File(TESTPATH, 'a')
 
 # %%
 
 #s_static = Snirf(r"C:\Users\sstucker\OneDrive\Desktop\pysnirf2\tests\snirf\Electrical_Stim_2.snirf", dynamic_loading=False)
 #s_dynamic = Snirf(r"C:\Users\sstucker\OneDrive\Desktop\pysnirf2\tests\snirf\Electrical_Stim_2.snirf", dynamic_loading=True)
 s = Snirf(TESTPATH, dynamic_loading=True)
+
+# %%
+#s.formatVersion = '1.0'
+s.formatVersion = 'v1.0'
+
+for ml in s.nirs[0].data[0].measurementList:
+    ml.wavelengthIndex = 1
+s.save('new_dynamic')
+s.save()
+#s.close()
+#
+#s = Snirf(TESTPATH, dynamic_loading=False)
+#s.save('new_static')
+#s.close()
 
 # %%
 #print(s.nirs[0].probe)
@@ -96,8 +110,9 @@ class Test:
         print('Hello world')
         
     def save(self, *args):
-        print(*args)
-        print(len(*args))
+        if len(args) > 0:
+            if type(args[0]) is str:
+                print('string is', args[0])
         
     def __repr__(self):
         out = ''
