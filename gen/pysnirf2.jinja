@@ -14,24 +14,30 @@
     {% endif %}
     {% if TYPES.INDEXED_GROUP in CHILD.type %}
     self.{{- CHILD.name }} = {{ sentencecase(CHILD.name) }}(self._h, self._cfg)  # Indexed group
+    {% elif TYPES.GROUP in CHILD.type %}
+    if '{{ CHILD.name }}' in self._h.keys():
+        self._{{- CHILD.name }} = {{ sentencecase(CHILD.name) }}(self._h['{{ CHILD.name }}'].id, self._cfg)  # Group
+        {% if TYPES.REQUIRED in CHILD.type %}
+    else:  # Create an empty group
+        self._h.create_group('{{ CHILD.name }}')
+        self._{{ CHILD.name }} = {{ sentencecase(CHILD.name) }}(self._h['{{ CHILD.name }}'].id, self._cfg)  # Group
+        {% endif %}
     {% else %}
     if '{{ CHILD.name }}' in self._h.keys():
-    {% if TYPES.GROUP in CHILD.type %}
-        self._{{- CHILD.name }} = {{ sentencecase(CHILD.name) }}(self._h['{{CHILD.name}}'].id, self._cfg)  # Group
-    {% elif (TYPES.ARRAY_1D in CHILD.type) or (TYPES.ARRAY_2D in CHILD.type) %}
+        {% if (TYPES.ARRAY_1D in CHILD.type) or (TYPES.ARRAY_2D in CHILD.type) %}
         if not self._cfg.dynamic_loading:
-            self._{{- CHILD.name }} = np.array(self._h['{{CHILD.name}}']).astype({{ python_type }})  # Array
-    {% elif TYPES.VARLEN_STRING in CHILD.type %}
+            self._{{- CHILD.name }} = np.array(self._h['{{ CHILD.name }}']).astype({{ python_type }})  # Array
+        {% elif TYPES.VARLEN_STRING in CHILD.type %}
         if not self._cfg.dynamic_loading:
             self._{{- CHILD.name }} = _read_string(self._h['{{ CHILD.name }}'])
-    {% else %}
+        {% else %}
         if not self._cfg.dynamic_loading:
             self._{{- CHILD.name }} = {{ python_type }}(self._h['{{ CHILD.name }}'][()])
-    {% endif %}
-    {% if (TYPES.REQUIRED in CHILD.type) and not ((TYPES.REQUIRED + '1' in CHILD.type) or (TYPES.REQUIRED + '2' in CHILD.type)) %}
+        {% endif %}
+        {% if (TYPES.REQUIRED in CHILD.type) and not ((TYPES.REQUIRED + '1' in CHILD.type) or (TYPES.REQUIRED + '2' in CHILD.type)) %}
     else:
-        warn(str(self.__class__.__name__) + ' missing required key ' + '"{{CHILD.name}}"')
-    {% endif %}
+        warn(str(self.__class__.__name__) + ' missing required key ' + '"{{ CHILD.name }}"')
+        {% endif %}
     {% endif %}
 
     {% endfor %}
@@ -118,7 +124,7 @@
 
 
 {% for GROUP in GROUPS %}
-class {{ sentencecase(GROUP.name) -}}(_Group):
+class {{ sentencecase(GROUP.name) -}}(Group):
 
     {% for CHILD in GROUP.children %}
     _{{ CHILD.name }} = None  # {{ CHILD.type }}
@@ -133,7 +139,7 @@ class {{ sentencecase(GROUP.name) -}}(_Group):
 
 {% endfor %}
 {% for INDEXED_GROUP in INDEXED_GROUPS %}
-class {{ sentencecase(INDEXED_GROUP.name) -}}Element(_Group):
+class {{ sentencecase(INDEXED_GROUP.name) -}}Element(Group):
 
     {% for CHILD in INDEXED_GROUP.children %}
     _{{ CHILD.name }} = None  # {{ CHILD.type }}
@@ -145,10 +151,10 @@ class {{ sentencecase(INDEXED_GROUP.name) -}}Element(_Group):
 {{ gen_properties(INDEXED_GROUP) }}
 {{ gen_writer(INDEXED_GROUP) }}
 
-class {{ sentencecase(INDEXED_GROUP.name) -}}(_IndexedGroup):
+class {{ sentencecase(INDEXED_GROUP.name) -}}(IndexedGroup):
 
     _name: str = '{{ INDEXED_GROUP.name }}'
-    _element: _Group = {{ sentencecase(INDEXED_GROUP.name) -}}Element
+    _element: Group = {{ sentencecase(INDEXED_GROUP.name) -}}Element
 
     def __init__(self, h: h5py.File, cfg: SnirfConfig):
         super().__init__(h, cfg)
@@ -162,20 +168,23 @@ class Snirf():
     _{{ CHILD.name }} = None  # {{ CHILD.type }}
     {% endfor %}
 
-    def __init__(self, path, dynamic_loading: bool = False):
-        if type(path) is str:
-            if not path.endswith('.snirf'):
-                path = path.join('.snirf')
-            if os.path.exists(path):
-                self._h = h5py.File(path, 'r+')
+    def __init__(self, *args, dynamic_loading: bool = False):
+        if len(args) > 0:
+            path = args[0]
+            if type(path) is str:
+                if not path.endswith('.snirf'):
+                    path = path.join('.snirf')
+                if os.path.exists(path):
+                    self._h = h5py.File(path, 'r+')
+                else:
+                    self._h = h5py.File(path, 'w')
             else:
-                self._h = h5py.File(path, 'w')
-            self._cfg = SnirfConfig()
-            self._cfg.dynamic_loading = dynamic_loading
-            self._cfg.filepath = path
-        {{ init_members(ROOT) | indent(8) }}
+                raise TypeError(str(path) + ' is not a valid filename')
         else:
-            raise FileNotFoundError('Unable to find file: name =' + path)
+            self._h = h5py.File(TemporaryFile(), 'w')
+        self._cfg = SnirfConfig()
+        self._cfg.dynamic_loading = dynamic_loading
+    {{ init_members(ROOT) | indent }}
 {{ gen_properties(ROOT) }}
 {{ gen_writer(ROOT) }}
 
@@ -210,7 +219,7 @@ class Snirf():
 
     def __repr__(self):
         props = [p for p in dir(self) if ('_' not in p and not callable(getattr(self, p)))]
-        out = str(self.__class__.__name__) + ' at ' + self._h.name + '\n'
+        out = str(self.__class__.__name__) + ' at /' + '\n'
         for prop in props:
             attr = getattr(self, prop)
             out += prop + ': '

@@ -4,17 +4,22 @@ Dynamically generated Python library for loading, saving, and validating Snirf f
 
 Developed and maintained by the [Boston University Neurophotonics Center]().
 
-pysnirf2 requires Python 3.
+pysnirf2 requires Python > 3 and h5py > 3.6
 
 # Features
 
 ## Load a SNIRF file
+`Snirf(filepath)` loads a SNIRF file from the path or creates a new one if it doesn't exist.
 ```python
 from pysnirf2 import Snirf
 >>> snirf = Snirf(r'some\path\subj1_run01.snirf')
 ```
-
-## View or retrive its contents
+## Create a SNIRF file object
+`Snirf()` with no arguments creates a temporary file which can be written later using `save()`.
+```python
+>>> snirf = Snirf()
+```
+## View or retrieve a file's contents
 ```python
 >>> snirf
 Snirf at /
@@ -65,6 +70,7 @@ wavelengths: [690. 830.]
 wavelengthsEmission: None
 ```
 ## Edit a SNIRF file
+Assign a new value to a field
 ```python
 >>> snirf.nirs[0].metaDataTags.SubjectID = 'subj1'
 >>> snirf.nirs[0].metaDataTags.SubjectID
@@ -89,8 +95,35 @@ array([[   0. ,    0. ],
        [   0. ,   90. ],
        [  60. ,   90. ]])
 ```
+> Note: assignment via slicing is not possible in `dynamic_loading` mode. 
+## Indexed groups
+Indexed groups are defined by the SNIRF file format as groups of the same type which are indexed via their name + a 1-based index, i.e.  `data1`, `data2`, ... or `stim1`, `stim2`, `stim3`, ...
 
+pysnirf2 provides an iterable interface for these groups using Pythonic 0-based indexing, i.e. `data[0]`, `data[1]`, ... or `stim[0]`, `stim[1]]`, `stim[2]`, ...
 
+```python
+>>> snirf.nirs[0].stim
+<iterable of 0 <class 'pysnirf2.StimElement'>>
+>>> len(nirs[0].stim)
+0
+```
+To add an indexed group, use the `appendGroup()` method of any `IndexedGroup` class. Indexed groups are created automatically. `nirs` is an indexed group.
+```python
+>>> snirf.nirs[0].stim.appendGroup()
+>>> len(nirs[0].stim)
+1
+>>> snirf.nirs[0].stim[0]
+StimElement at /nirs/stim2
+data: None
+dataLabels: None
+filename: 
+C:\Users\you\some\path\subj1_run01.snirf
+name: None
+```
+To remove an indexed group
+```python
+>>> del snirf.nirs[0].stim[0]
+```
 ## Save a SNIRF file
 Overwrite the open file
 ```python
@@ -109,7 +142,7 @@ For larger files, it may be useful to load data dynamically: data will only be l
 ```python
 >>> snirf = Snirf(r'some\path\subj1_run01.snirf', dynamic_loading=True)
 ```
-> Warning: in dynamic loading mode, array data cannot be modified with indices like in the example above:
+> Note: in dynamic loading mode, array data cannot be modified with indices like in the example above:
 > ```python
 > >>> snirf = Snirf(TESTPATH, dynamic_loading=True)
 > >>> snirf.nirs[0].probe.sourcePos2D
