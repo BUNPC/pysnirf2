@@ -1521,6 +1521,9 @@ class Snirf():
             file.create_dataset(name, dtype=h5py.string_dtype(encoding='ascii', length=None), data=data)
         self.nirs._save(*args)
 
+    # overload
+    def save(self, path: str):
+        ...
 
     # overload
     def save(self, path: str):
