@@ -165,7 +165,7 @@ class IndexedGroup(MutableSequence, ABC):
     
     def appendGroup(self):
         'Adds a group to the end of the list'
-        g = self._parent.createGroup(self._name + str(len(self._list) + 1))
+        g = self._parent.create_group(self._name + str(len(self._list) + 1))
         gid = g.id
         self._list.append(self._element(gid, self._cfg))
     
