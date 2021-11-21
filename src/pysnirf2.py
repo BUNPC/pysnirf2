@@ -5,6 +5,7 @@ import sys
 import numpy as np
 from warnings import warn
 from collections import MutableSequence
+from tempfile import TemporaryFile
 
 if sys.version_info[0] < 3:
     raise ImportError('pysnirf2 requires Python > 3')
@@ -28,11 +29,10 @@ class SnirfFormatError(Exception):
 
 
 class SnirfConfig:
-    filepath: str = ''
     dynamic_loading: bool = False  # If False, data is loaded in the constructor, if True, data is loaded on access
 
 
-class _Group(ABC):
+class Group(ABC):
 
     def __init__(self, gid: h5py.h5g.GroupID, cfg: SnirfConfig):
         self._id = gid
@@ -87,7 +87,7 @@ class _Group(ABC):
         return out[:-1]
 
 
-class _IndexedGroup(MutableSequence, ABC):
+class IndexedGroup(MutableSequence, ABC):
     """
     Represents the "indexed group" which is defined by v1.0 of the SNIRF
     specification as:
@@ -100,7 +100,7 @@ class _IndexedGroup(MutableSequence, ABC):
     """
     
     _name: str = ''
-    _element: _Group = None
+    _element: Group = None
 
     def __init__(self, parent: (h5py.Group, h5py.File), cfg: SnirfConfig):
         if isinstance(parent, (h5py.Group, h5py.File)):
@@ -126,7 +126,7 @@ class _IndexedGroup(MutableSequence, ABC):
             for i, j in enumerate(ordered):
                 self._list.append(unordered[j])
         else:
-            raise TypeError('must initialize _IndexedGroup with a Group or File')
+            raise TypeError('must initialize IndexedGroup with a Group or File')
     
     
     def __len__(self): return len(self._list)
@@ -165,7 +165,7 @@ class _IndexedGroup(MutableSequence, ABC):
     
     def appendGroup(self):
         'Adds a group to the end of the list'
-        g = self._parent.create_group(self._name + str(len(self._list) + 1))
+        g = self._parent.createGroup(self._name + str(len(self._list) + 1))
         gid = g.id
         self._list.append(self._element(gid, self._cfg))
     
@@ -190,7 +190,7 @@ class _IndexedGroup(MutableSequence, ABC):
 # version 1.0 SNIRF specification parsed from https://raw.github.com/fNIRS/snirf/master/snirf_specification.md
 
 
-class MetaDataTags(_Group):
+class MetaDataTags(Group):
 
     _SubjectID = None  # "s"*
     _MeasurementDate = None  # "s"*
@@ -349,7 +349,7 @@ class MetaDataTags(_Group):
 
 
 
-class Probe(_Group):
+class Probe(Group):
 
     _wavelengths = None  # [<f>,...]*
     _wavelengthsEmission = None  # [<f>,...]
@@ -762,7 +762,7 @@ class Probe(_Group):
 
 
 
-class NirsElement(_Group):
+class NirsElement(Group):
 
     _metaDataTags = None  # {.}*
     _data = None  # {i}*
@@ -774,8 +774,9 @@ class NirsElement(_Group):
         super().__init__(gid, cfg)
         if 'metaDataTags' in self._h.keys():
             self._metaDataTags = MetaDataTags(self._h['metaDataTags'].id, self._cfg)  # Group
-        else:
-            warn(str(self.__class__.__name__) + ' missing required key ' + '"metaDataTags"')
+        else:  # Create an empty group
+            self._h.create_group('metaDataTags')
+            self._metaDataTags = MetaDataTags(self._h['metaDataTags'].id, self._cfg)  # Group
 
         self.data = Data(self._h, self._cfg)  # Indexed group
 
@@ -783,8 +784,9 @@ class NirsElement(_Group):
 
         if 'probe' in self._h.keys():
             self._probe = Probe(self._h['probe'].id, self._cfg)  # Group
-        else:
-            warn(str(self.__class__.__name__) + ' missing required key ' + '"probe"')
+        else:  # Create an empty group
+            self._h.create_group('probe')
+            self._probe = Probe(self._h['probe'].id, self._cfg)  # Group
 
         self.aux = Aux(self._h, self._cfg)  # Indexed group
 
@@ -844,16 +846,16 @@ class NirsElement(_Group):
         self.aux._save(*args)
 
 
-class Nirs(_IndexedGroup):
+class Nirs(IndexedGroup):
 
     _name: str = 'nirs'
-    _element: _Group = NirsElement
+    _element: Group = NirsElement
 
     def __init__(self, h: h5py.File, cfg: SnirfConfig):
         super().__init__(h, cfg)
 
 
-class DataElement(_Group):
+class DataElement(Group):
 
     _dataTimeSeries = None  # [[<f>,...]]*
     _time = None  # [<f>,...]*
@@ -927,16 +929,16 @@ class DataElement(_Group):
         self.measurementList._save(*args)
 
 
-class Data(_IndexedGroup):
+class Data(IndexedGroup):
 
     _name: str = 'data'
-    _element: _Group = DataElement
+    _element: Group = DataElement
 
     def __init__(self, h: h5py.File, cfg: SnirfConfig):
         super().__init__(h, cfg)
 
 
-class MeasurementListElement(_Group):
+class MeasurementListElement(Group):
 
     _sourceIndex = None  # <i>*
     _detectorIndex = None  # <i>*
@@ -1246,16 +1248,16 @@ class MeasurementListElement(_Group):
             file.create_dataset(name, dtype='i4', data=data)
 
 
-class MeasurementList(_IndexedGroup):
+class MeasurementList(IndexedGroup):
 
     _name: str = 'measurementList'
-    _element: _Group = MeasurementListElement
+    _element: Group = MeasurementListElement
 
     def __init__(self, h: h5py.File, cfg: SnirfConfig):
         super().__init__(h, cfg)
 
 
-class StimElement(_Group):
+class StimElement(Group):
 
     _name = None  # "s"+
     _data = None  # [<f>,...]+
@@ -1335,16 +1337,16 @@ class StimElement(_Group):
             file.create_dataset(name, dtype=h5py.string_dtype(encoding='ascii', length=None), data=data)
 
 
-class Stim(_IndexedGroup):
+class Stim(IndexedGroup):
 
     _name: str = 'stim'
-    _element: _Group = StimElement
+    _element: Group = StimElement
 
     def __init__(self, h: h5py.File, cfg: SnirfConfig):
         super().__init__(h, cfg)
 
 
-class AuxElement(_Group):
+class AuxElement(Group):
 
     _name = None  # "s"+
     _dataTimeSeries = None  # [[<f>,...]]+
@@ -1446,10 +1448,10 @@ class AuxElement(_Group):
             file.create_dataset(name, dtype='f8', data=data)
 
 
-class Aux(_IndexedGroup):
+class Aux(IndexedGroup):
 
     _name: str = 'aux'
-    _element: _Group = AuxElement
+    _element: Group = AuxElement
 
     def __init__(self, h: h5py.File, cfg: SnirfConfig):
         super().__init__(h, cfg)
@@ -1461,28 +1463,31 @@ class Snirf():
     _formatVersion = None  # "s"*
     _nirs = None  # {i}*
 
-    def __init__(self, path, dynamic_loading: bool = False):
-        if type(path) is str:
-            if not path.endswith('.snirf'):
-                path = path.join('.snirf')
-            if os.path.exists(path):
-                self._h = h5py.File(path, 'r+')
+    def __init__(self, *args, dynamic_loading: bool = False):
+        if len(args) > 0:
+            path = args[0]
+            if type(path) is str:
+                if not path.endswith('.snirf'):
+                    path = path.join('.snirf')
+                if os.path.exists(path):
+                    self._h = h5py.File(path, 'r+')
+                else:
+                    self._h = h5py.File(path, 'w')
             else:
-                self._h = h5py.File(path, 'w')
-            self._cfg = SnirfConfig()
-            self._cfg.dynamic_loading = dynamic_loading
-            self._cfg.filepath = path
-            if 'formatVersion' in self._h.keys():
-                if not self._cfg.dynamic_loading:
-                    self._formatVersion = _read_string(self._h['formatVersion'])
-            else:
-                warn(str(self.__class__.__name__) + ' missing required key ' + '"formatVersion"')
-
-            self.nirs = Nirs(self._h, self._cfg)  # Indexed group
-
-
+                raise TypeError(str(path) + ' is not a valid filename')
         else:
-            raise FileNotFoundError('Unable to find file: name =' + path)
+            self._h = h5py.File(TemporaryFile(), 'w')
+        self._cfg = SnirfConfig()
+        self._cfg.dynamic_loading = dynamic_loading
+        if 'formatVersion' in self._h.keys():
+            if not self._cfg.dynamic_loading:
+                self._formatVersion = _read_string(self._h['formatVersion'])
+        else:
+            warn(str(self.__class__.__name__) + ' missing required key ' + '"formatVersion"')
+
+        self.nirs = Nirs(self._h, self._cfg)  # Indexed group
+
+
     @property
     def formatVersion(self):
         if self._cfg.dynamic_loading and self._formatVersion is None:

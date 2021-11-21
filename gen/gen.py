@@ -14,15 +14,6 @@ Generates SNIRF interface and validator from the summary table of the specificat
 hosted at SPEC_SRC.
 """
 
-env = Environment(
-    loader=FileSystemLoader(searchpath='./'),
-    autoescape=select_autoescape(),
-    trim_blocks=True,
-    lstrip_blocks=True,    
-    )
-
-template = env.get_template('pysnirf2.jinja')
-
 # Retrieve the SNIRF specification from GitHub and parse it for the summary table
 spec = requests.get(SPEC_SRC)
 table = unidecode(spec.text).split('### SNIRF data format summary')[1].split('In the above table, the used notations are explained below')[0]
@@ -120,6 +111,17 @@ for node in flat:
             SNIRF['GROUPS'].append(node)
         elif TYPELUT['INDEXED_GROUP'] in node['type']:
             SNIRF['INDEXED_GROUPS'].append(node) 
+
+# %%
+
+env = Environment(
+    loader=FileSystemLoader(searchpath='./'),
+    autoescape=select_autoescape(),
+    trim_blocks=True,
+    lstrip_blocks=True,    
+    )
+
+template = env.get_template('pysnirf2.jinja')
 
 # Generate the complete Snirf interface from base.py and the template + data
 dst = os.path.abspath(os.path.join(os.getcwd(), os.pardir))

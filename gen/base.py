@@ -5,6 +5,7 @@ import sys
 import numpy as np
 from warnings import warn
 from collections import MutableSequence
+from tempfile import TemporaryFile
 
 if sys.version_info[0] < 3:
     raise ImportError('pysnirf2 requires Python > 3')
@@ -28,11 +29,10 @@ class SnirfFormatError(Exception):
 
 
 class SnirfConfig:
-    filepath: str = ''
     dynamic_loading: bool = False  # If False, data is loaded in the constructor, if True, data is loaded on access
 
 
-class _Group(ABC):
+class Group(ABC):
 
     def __init__(self, gid: h5py.h5g.GroupID, cfg: SnirfConfig):
         self._id = gid
@@ -87,7 +87,7 @@ class _Group(ABC):
         return out[:-1]
 
 
-class _IndexedGroup(MutableSequence, ABC):
+class IndexedGroup(MutableSequence, ABC):
     """
     Represents the "indexed group" which is defined by v1.0 of the SNIRF
     specification as:
@@ -100,7 +100,7 @@ class _IndexedGroup(MutableSequence, ABC):
     """
     
     _name: str = ''
-    _element: _Group = None
+    _element: Group = None
 
     def __init__(self, parent: (h5py.Group, h5py.File), cfg: SnirfConfig):
         if isinstance(parent, (h5py.Group, h5py.File)):
@@ -126,7 +126,7 @@ class _IndexedGroup(MutableSequence, ABC):
             for i, j in enumerate(ordered):
                 self._list.append(unordered[j])
         else:
-            raise TypeError('must initialize _IndexedGroup with a Group or File')
+            raise TypeError('must initialize IndexedGroup with a Group or File')
     
     
     def __len__(self): return len(self._list)
@@ -165,7 +165,7 @@ class _IndexedGroup(MutableSequence, ABC):
     
     def appendGroup(self):
         'Adds a group to the end of the list'
-        g = self._parent.create_group(self._name + str(len(self._list) + 1))
+        g = self._parent.createGroup(self._name + str(len(self._list) + 1))
         gid = g.id
         self._list.append(self._element(gid, self._cfg))
     
