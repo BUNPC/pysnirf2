@@ -314,50 +314,38 @@ class MetaDataTags(_Group):
             name = self._h['SubjectID'].name
             data = self.SubjectID
             if name in file:
-                print('Deleting', name, 'in', file.filename)
                 del file[name]
             file.create_dataset(name, dtype=h5py.string_dtype(encoding='ascii', length=None), data=data)
-            print('Creating', name, 'in', file.filename)
         if 'MeasurementDate' in self._h:
             name = self._h['MeasurementDate'].name
             data = self.MeasurementDate
             if name in file:
-                print('Deleting', name, 'in', file.filename)
                 del file[name]
             file.create_dataset(name, dtype=h5py.string_dtype(encoding='ascii', length=None), data=data)
-            print('Creating', name, 'in', file.filename)
         if 'MeasurementTime' in self._h:
             name = self._h['MeasurementTime'].name
             data = self.MeasurementTime
             if name in file:
-                print('Deleting', name, 'in', file.filename)
                 del file[name]
             file.create_dataset(name, dtype=h5py.string_dtype(encoding='ascii', length=None), data=data)
-            print('Creating', name, 'in', file.filename)
         if 'LengthUnit' in self._h:
             name = self._h['LengthUnit'].name
             data = self.LengthUnit
             if name in file:
-                print('Deleting', name, 'in', file.filename)
                 del file[name]
             file.create_dataset(name, dtype=h5py.string_dtype(encoding='ascii', length=None), data=data)
-            print('Creating', name, 'in', file.filename)
         if 'TimeUnit' in self._h:
             name = self._h['TimeUnit'].name
             data = self.TimeUnit
             if name in file:
-                print('Deleting', name, 'in', file.filename)
                 del file[name]
             file.create_dataset(name, dtype=h5py.string_dtype(encoding='ascii', length=None), data=data)
-            print('Creating', name, 'in', file.filename)
         if 'FrequencyUnit' in self._h:
             name = self._h['FrequencyUnit'].name
             data = self.FrequencyUnit
             if name in file:
-                print('Deleting', name, 'in', file.filename)
                 del file[name]
             file.create_dataset(name, dtype=h5py.string_dtype(encoding='ascii', length=None), data=data)
-            print('Creating', name, 'in', file.filename)
 
 
 
@@ -667,146 +655,110 @@ class Probe(_Group):
             name = self._h['wavelengths'].name
             data = np.array(self.wavelengths)
             if name in file:
-                print('Deleting', name, 'in', file.filename)
                 del file[name]
             file.create_dataset(name, dtype='f8', data=data)
-            print('Creating', name, 'in', file.filename)
         if 'wavelengthsEmission' in self._h:
             name = self._h['wavelengthsEmission'].name
             data = np.array(self.wavelengthsEmission)
             if name in file:
-                print('Deleting', name, 'in', file.filename)
                 del file[name]
             file.create_dataset(name, dtype='f8', data=data)
-            print('Creating', name, 'in', file.filename)
         if 'sourcePos2D' in self._h:
             name = self._h['sourcePos2D'].name
             data = np.array(self.sourcePos2D)
             if name in file:
-                print('Deleting', name, 'in', file.filename)
                 del file[name]
             file.create_dataset(name, dtype='f8', data=data)
-            print('Creating', name, 'in', file.filename)
         if 'sourcePos3D' in self._h:
             name = self._h['sourcePos3D'].name
             data = np.array(self.sourcePos3D)
             if name in file:
-                print('Deleting', name, 'in', file.filename)
                 del file[name]
             file.create_dataset(name, dtype='f8', data=data)
-            print('Creating', name, 'in', file.filename)
         if 'detectorPos2D' in self._h:
             name = self._h['detectorPos2D'].name
             data = np.array(self.detectorPos2D)
             if name in file:
-                print('Deleting', name, 'in', file.filename)
                 del file[name]
             file.create_dataset(name, dtype='f8', data=data)
-            print('Creating', name, 'in', file.filename)
         if 'detectorPos3D' in self._h:
             name = self._h['detectorPos3D'].name
             data = np.array(self.detectorPos3D)
             if name in file:
-                print('Deleting', name, 'in', file.filename)
                 del file[name]
             file.create_dataset(name, dtype='f8', data=data)
-            print('Creating', name, 'in', file.filename)
         if 'frequencies' in self._h:
             name = self._h['frequencies'].name
             data = np.array(self.frequencies)
             if name in file:
-                print('Deleting', name, 'in', file.filename)
                 del file[name]
             file.create_dataset(name, dtype='f8', data=data)
-            print('Creating', name, 'in', file.filename)
         if 'timeDelays' in self._h:
             name = self._h['timeDelays'].name
             data = np.array(self.timeDelays)
             if name in file:
-                print('Deleting', name, 'in', file.filename)
                 del file[name]
             file.create_dataset(name, dtype='f8', data=data)
-            print('Creating', name, 'in', file.filename)
         if 'timeDelayWidths' in self._h:
             name = self._h['timeDelayWidths'].name
             data = np.array(self.timeDelayWidths)
             if name in file:
-                print('Deleting', name, 'in', file.filename)
                 del file[name]
             file.create_dataset(name, dtype='f8', data=data)
-            print('Creating', name, 'in', file.filename)
         if 'momentOrders' in self._h:
             name = self._h['momentOrders'].name
             data = np.array(self.momentOrders)
             if name in file:
-                print('Deleting', name, 'in', file.filename)
                 del file[name]
             file.create_dataset(name, dtype='f8', data=data)
-            print('Creating', name, 'in', file.filename)
         if 'correlationTimeDelays' in self._h:
             name = self._h['correlationTimeDelays'].name
             data = np.array(self.correlationTimeDelays)
             if name in file:
-                print('Deleting', name, 'in', file.filename)
                 del file[name]
             file.create_dataset(name, dtype='f8', data=data)
-            print('Creating', name, 'in', file.filename)
         if 'correlationTimeDelayWidths' in self._h:
             name = self._h['correlationTimeDelayWidths'].name
             data = np.array(self.correlationTimeDelayWidths)
             if name in file:
-                print('Deleting', name, 'in', file.filename)
                 del file[name]
             file.create_dataset(name, dtype='f8', data=data)
-            print('Creating', name, 'in', file.filename)
         if 'sourceLabels' in self._h:
             name = self._h['sourceLabels'].name
             data = np.array(self.sourceLabels).astype('O')
             if name in file:
-                print('Deleting', name, 'in', file.filename)
                 del file[name]
             file.create_dataset(name, dtype=h5py.string_dtype(encoding='ascii', length=None), data=data)
-            print('Creating', name, 'in', file.filename)
         if 'detectorLabels' in self._h:
             name = self._h['detectorLabels'].name
             data = np.array(self.detectorLabels).astype('O')
             if name in file:
-                print('Deleting', name, 'in', file.filename)
                 del file[name]
             file.create_dataset(name, dtype=h5py.string_dtype(encoding='ascii', length=None), data=data)
-            print('Creating', name, 'in', file.filename)
         if 'landmarkPos2D' in self._h:
             name = self._h['landmarkPos2D'].name
             data = np.array(self.landmarkPos2D)
             if name in file:
-                print('Deleting', name, 'in', file.filename)
                 del file[name]
             file.create_dataset(name, dtype='f8', data=data)
-            print('Creating', name, 'in', file.filename)
         if 'landmarkPos3D' in self._h:
             name = self._h['landmarkPos3D'].name
             data = np.array(self.landmarkPos3D)
             if name in file:
-                print('Deleting', name, 'in', file.filename)
                 del file[name]
             file.create_dataset(name, dtype='f8', data=data)
-            print('Creating', name, 'in', file.filename)
         if 'landmarkLabels' in self._h:
             name = self._h['landmarkLabels'].name
             data = np.array(self.landmarkLabels).astype('O')
             if name in file:
-                print('Deleting', name, 'in', file.filename)
                 del file[name]
             file.create_dataset(name, dtype=h5py.string_dtype(encoding='ascii', length=None), data=data)
-            print('Creating', name, 'in', file.filename)
         if 'useLocalIndex' in self._h:
             name = self._h['useLocalIndex'].name
             data = self.useLocalIndex
             if name in file:
-                print('Deleting', name, 'in', file.filename)
                 del file[name]
             file.create_dataset(name, dtype='i4', data=data)
-            print('Creating', name, 'in', file.filename)
 
 
 
@@ -964,18 +916,14 @@ class DataElement(_Group):
             name = self._h['dataTimeSeries'].name
             data = np.array(self.dataTimeSeries)
             if name in file:
-                print('Deleting', name, 'in', file.filename)
                 del file[name]
             file.create_dataset(name, dtype='f8', data=data)
-            print('Creating', name, 'in', file.filename)
         if 'time' in self._h:
             name = self._h['time'].name
             data = np.array(self.time)
             if name in file:
-                print('Deleting', name, 'in', file.filename)
                 del file[name]
             file.create_dataset(name, dtype='f8', data=data)
-            print('Creating', name, 'in', file.filename)
         self.measurementList._save(*args)
 
 
@@ -1222,106 +1170,80 @@ class MeasurementListElement(_Group):
             name = self._h['sourceIndex'].name
             data = self.sourceIndex
             if name in file:
-                print('Deleting', name, 'in', file.filename)
                 del file[name]
             file.create_dataset(name, dtype='i4', data=data)
-            print('Creating', name, 'in', file.filename)
         if 'detectorIndex' in self._h:
             name = self._h['detectorIndex'].name
             data = self.detectorIndex
             if name in file:
-                print('Deleting', name, 'in', file.filename)
                 del file[name]
             file.create_dataset(name, dtype='i4', data=data)
-            print('Creating', name, 'in', file.filename)
         if 'wavelengthIndex' in self._h:
             name = self._h['wavelengthIndex'].name
             data = self.wavelengthIndex
             if name in file:
-                print('Deleting', name, 'in', file.filename)
                 del file[name]
             file.create_dataset(name, dtype='i4', data=data)
-            print('Creating', name, 'in', file.filename)
         if 'wavelengthActual' in self._h:
             name = self._h['wavelengthActual'].name
             data = self.wavelengthActual
             if name in file:
-                print('Deleting', name, 'in', file.filename)
                 del file[name]
             file.create_dataset(name, dtype='f8', data=data)
-            print('Creating', name, 'in', file.filename)
         if 'wavelengthEmissionActual' in self._h:
             name = self._h['wavelengthEmissionActual'].name
             data = self.wavelengthEmissionActual
             if name in file:
-                print('Deleting', name, 'in', file.filename)
                 del file[name]
             file.create_dataset(name, dtype='f8', data=data)
-            print('Creating', name, 'in', file.filename)
         if 'dataType' in self._h:
             name = self._h['dataType'].name
             data = self.dataType
             if name in file:
-                print('Deleting', name, 'in', file.filename)
                 del file[name]
             file.create_dataset(name, dtype='i4', data=data)
-            print('Creating', name, 'in', file.filename)
         if 'dataTypeLabel' in self._h:
             name = self._h['dataTypeLabel'].name
             data = self.dataTypeLabel
             if name in file:
-                print('Deleting', name, 'in', file.filename)
                 del file[name]
             file.create_dataset(name, dtype=h5py.string_dtype(encoding='ascii', length=None), data=data)
-            print('Creating', name, 'in', file.filename)
         if 'dataTypeIndex' in self._h:
             name = self._h['dataTypeIndex'].name
             data = self.dataTypeIndex
             if name in file:
-                print('Deleting', name, 'in', file.filename)
                 del file[name]
             file.create_dataset(name, dtype='i4', data=data)
-            print('Creating', name, 'in', file.filename)
         if 'sourcePower' in self._h:
             name = self._h['sourcePower'].name
             data = self.sourcePower
             if name in file:
-                print('Deleting', name, 'in', file.filename)
                 del file[name]
             file.create_dataset(name, dtype='f8', data=data)
-            print('Creating', name, 'in', file.filename)
         if 'detectorGain' in self._h:
             name = self._h['detectorGain'].name
             data = self.detectorGain
             if name in file:
-                print('Deleting', name, 'in', file.filename)
                 del file[name]
             file.create_dataset(name, dtype='f8', data=data)
-            print('Creating', name, 'in', file.filename)
         if 'moduleIndex' in self._h:
             name = self._h['moduleIndex'].name
             data = self.moduleIndex
             if name in file:
-                print('Deleting', name, 'in', file.filename)
                 del file[name]
             file.create_dataset(name, dtype='i4', data=data)
-            print('Creating', name, 'in', file.filename)
         if 'sourceModuleIndex' in self._h:
             name = self._h['sourceModuleIndex'].name
             data = self.sourceModuleIndex
             if name in file:
-                print('Deleting', name, 'in', file.filename)
                 del file[name]
             file.create_dataset(name, dtype='i4', data=data)
-            print('Creating', name, 'in', file.filename)
         if 'detectorModuleIndex' in self._h:
             name = self._h['detectorModuleIndex'].name
             data = self.detectorModuleIndex
             if name in file:
-                print('Deleting', name, 'in', file.filename)
                 del file[name]
             file.create_dataset(name, dtype='i4', data=data)
-            print('Creating', name, 'in', file.filename)
 
 
 class MeasurementList(_IndexedGroup):
@@ -1397,26 +1319,20 @@ class StimElement(_Group):
             name = self._h['name'].name
             data = self.name
             if name in file:
-                print('Deleting', name, 'in', file.filename)
                 del file[name]
             file.create_dataset(name, dtype=h5py.string_dtype(encoding='ascii', length=None), data=data)
-            print('Creating', name, 'in', file.filename)
         if 'data' in self._h:
             name = self._h['data'].name
             data = np.array(self.data)
             if name in file:
-                print('Deleting', name, 'in', file.filename)
                 del file[name]
             file.create_dataset(name, dtype='f8', data=data)
-            print('Creating', name, 'in', file.filename)
         if 'dataLabels' in self._h:
             name = self._h['dataLabels'].name
             data = np.array(self.dataLabels).astype('O')
             if name in file:
-                print('Deleting', name, 'in', file.filename)
                 del file[name]
             file.create_dataset(name, dtype=h5py.string_dtype(encoding='ascii', length=None), data=data)
-            print('Creating', name, 'in', file.filename)
 
 
 class Stim(_IndexedGroup):
@@ -1508,34 +1424,26 @@ class AuxElement(_Group):
             name = self._h['name'].name
             data = self.name
             if name in file:
-                print('Deleting', name, 'in', file.filename)
                 del file[name]
             file.create_dataset(name, dtype=h5py.string_dtype(encoding='ascii', length=None), data=data)
-            print('Creating', name, 'in', file.filename)
         if 'dataTimeSeries' in self._h:
             name = self._h['dataTimeSeries'].name
             data = np.array(self.dataTimeSeries)
             if name in file:
-                print('Deleting', name, 'in', file.filename)
                 del file[name]
             file.create_dataset(name, dtype='f8', data=data)
-            print('Creating', name, 'in', file.filename)
         if 'time' in self._h:
             name = self._h['time'].name
             data = np.array(self.time)
             if name in file:
-                print('Deleting', name, 'in', file.filename)
                 del file[name]
             file.create_dataset(name, dtype='f8', data=data)
-            print('Creating', name, 'in', file.filename)
         if 'timeOffset' in self._h:
             name = self._h['timeOffset'].name
             data = np.array(self.timeOffset)
             if name in file:
-                print('Deleting', name, 'in', file.filename)
                 del file[name]
             file.create_dataset(name, dtype='f8', data=data)
-            print('Creating', name, 'in', file.filename)
 
 
 class Aux(_IndexedGroup):
@@ -1604,10 +1512,8 @@ class Snirf():
             name = self._h['formatVersion'].name
             data = self.formatVersion
             if name in file:
-                print('Deleting', name, 'in', file.filename)
                 del file[name]
             file.create_dataset(name, dtype=h5py.string_dtype(encoding='ascii', length=None), data=data)
-            print('Creating', name, 'in', file.filename)
         self.nirs._save(*args)
 
 
@@ -1642,7 +1548,7 @@ class Snirf():
 
     def __repr__(self):
         props = [p for p in dir(self) if ('_' not in p and not callable(getattr(self, p)))]
-        out = str(self.__class__.__name__) + ' at ' + self._cfg.filepath + '\n'
+        out = str(self.__class__.__name__) + ' at ' + self._h.name + '\n'
         for prop in props:
             attr = getattr(self, prop)
             out += prop + ': '

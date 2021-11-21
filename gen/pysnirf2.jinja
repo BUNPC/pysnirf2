@@ -106,10 +106,8 @@
             data = self.{{ CHILD.name }}
         {% endif %}
             if name in file:
-                print('Deleting', name, 'in', file.filename)
                 del file[name]
             file.create_dataset(name, dtype={{ h5_type }}, data=data)
-            print('Creating', name, 'in', file.filename)
     {% endif %}
     {% endfor %}
 {% endmacro %}
@@ -212,7 +210,7 @@ class Snirf():
 
     def __repr__(self):
         props = [p for p in dir(self) if ('_' not in p and not callable(getattr(self, p)))]
-        out = str(self.__class__.__name__) + ' at ' + self._cfg.filepath + '\n'
+        out = str(self.__class__.__name__) + ' at ' + self._h.name + '\n'
         for prop in props:
             attr = getattr(self, prop)
             out += prop + ': '
