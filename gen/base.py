@@ -41,6 +41,27 @@ class _Group(ABC):
         self._h = h5py.Group(self._id)
         self._cfg = cfg
 
+    def save(self, *args):
+        if len(args) > 0:
+            if type(args[0]) is h5py.File:
+                self._save(args[0])
+            elif type(args[0]) is str:
+                path = args[0]
+                if not path.endswith('.snirf'):
+                    path += '.snirf'
+                if os.path.exists(path):
+                    file = h5py.File(path, 'r+')
+                else:
+                    file = h5py.File(path, 'w')
+                self._save(file)
+                file.close()
+        else:
+            self._save()
+
+    @property
+    def filename(self):
+        return self._h.file.filename
+    
     @abstractmethod
     def _save(self, *args):
         raise NotImplementedError('_save is an abstract method')
@@ -94,7 +115,7 @@ class _IndexedGroup(MutableSequence, ABC):
             indices = []
             for key in self._parent.keys():
                 numsplit = key.split(self._name)
-                if len(numsplit) > 1:
+                if len(numsplit) > 1 and len(numsplit[1]) > 0:
                     if len(numsplit[1]) == len(str(int(numsplit[1]))):
                         unordered.append(self._element(self._parent[key].id, self._cfg))
                         indices.append(int(numsplit[1]))
@@ -119,6 +140,18 @@ class _IndexedGroup(MutableSequence, ABC):
         self._list[i] = item
         self._order_names
 
+    def __getattr__(self, name):
+        # If user tries to access an element's properties, raise informative exception
+        if name in [p for p in dir(self._element) if ('_' not in p and not callable(getattr(self._element, p)))]:
+            raise AttributeError(self.__class__.__name__ + ' is an interable list of '
+                                + str(len(self)) + ' ' + str(self._element)
+                                + ', access these with an index i.e. '
+                                + str(self._name) + '[0].' + name
+                                )
+
+    def __repr__(self):
+        return str('<' + 'iterable of ' + str(len(self._list)) + ' ' + str(self._element) + '>')
+
     def insert(self, i, item):
         self._check_type(item)
         self._list.insert(i, item)
@@ -126,6 +159,15 @@ class _IndexedGroup(MutableSequence, ABC):
     def append(self, item):
         self._check_type(item)
         self._list.append(item)
+    
+    def save(self, *args):
+        self._save(*args)
+    
+    def appendGroup(self):
+        'Adds a group to the end of the list'
+        g = self._parent.create_group(self._name + str(len(self._list) + 1))
+        gid = g.id
+        self._list.append(self._element(gid, self._cfg))
     
     def _check_type(self, item):
         if type(item) is not self._element:
@@ -137,26 +179,8 @@ class _IndexedGroup(MutableSequence, ABC):
     def _order_names(self):
         for i, element in enumerate(self._list):
             self._parent.move(element._h.name.split('/')[-1], self._name + str(i + 1))
-            print(element._h.name.split('/')[-1], '--->', self._name + str(i + 1))
+#            print(element._h.name.split('/')[-1], '--->', self._name + str(i + 1))
         
     def _save(self, *args):
         self._order_names()
         [element._save(*args) for element in self._list]
-    
-    def __getattr__(self, name):
-        # If user tries to access a member's properties, raise informative exception
-        if name in [p for p in dir(self._element) if ('_' not in p and not callable(getattr(self._element, p)))]:
-            raise AttributeError(self.__class__.__name__ + ' is an interable list of '
-                                + str(len(self)) + ' ' + str(self._element)
-                                + ', access these with an index i.e. '
-                                + str(self._name) + '[0].' + name
-                                )
-
-    def __repr__(self):
-        return str('<' + 'iterable of ' + str(len(self._list)) + ' ' + str(self._element) + '>')
-
-    def appendGroup(self):
-        'Adds a group to the end of the list'
-        g = self._parent.create_group(self._name + str(len(self._list) + 1))
-        gid = g.id
-        self._list.append(self._element(gid, self._cfg))

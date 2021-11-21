@@ -14,6 +14,7 @@ from numbers import Number
 from collections import deque
 from collections.abc import Set, Mapping
 import numpy as np
+#import property
 
 ZERO_DEPTH_BASES = (str, bytes, Number, range, bytearray)
 def getsize(obj_0):
@@ -47,72 +48,6 @@ def _print_keys(group):
         print(key)
 
 
-SNIRF_DIRECTORY = r'C:\Users\sstucker\OneDrive\Desktop\pysnirf2\tests\snirf'
+TESTPATH = r"C:\Users\sstucker\OneDrive\Desktop\pysnirf2\tests\snirf\subjA_run03.snirf"
 
-TESTPATH = r"C:\Users\sstucker\OneDrive\Desktop\pysnirf2\tests\snirf\out_prune2_mom012.snirf"
-
-f = h5py.File(TESTPATH, 'a')
-
-# %%
-
-#s_static = Snirf(r"C:\Users\sstucker\OneDrive\Desktop\pysnirf2\tests\snirf\Electrical_Stim_2.snirf", dynamic_loading=False)
-#s_dynamic = Snirf(r"C:\Users\sstucker\OneDrive\Desktop\pysnirf2\tests\snirf\Electrical_Stim_2.snirf", dynamic_loading=True)
-s = Snirf(TESTPATH, dynamic_loading=True)
-
-# %%
-#print(s.nirs[0].probe)
-#s.nirs[0].probe.wavelengths = [960, 480]
-#s.nirs[0].probe.sourceLabels = ['G1', 'G2', 'G3', 'G4', 'G5', 'G6', 'G7', 'G8', 'G9', 'G10', 'G11', 'G12', 'G13', 'G14', 'G15']
-#print(s.nirs[0].probe.wavelengths)
-#s.nirs[0]._save()
-
-# %%
-
-#snirfs = []
-#
-#for path in os.listdir(SNIRF_DIRECTORY):
-##    for repeat in range(10):
-#    # raw = h5py.File(PATH, 'r+')
-#    start = time.time()
-#    snirf = Snirf(SNIRF_DIRECTORY + '/' + path, dynamic_loading=True)
-#    elapsed = time.time() - start
-#    print('Loaded', path, 'size', getsize(snirf), 'bytes in', str(elapsed)[0:6], 'seconds')
-#    snirfs.append(snirf)
-#    print(len(snirf.nirs))
-#    
-## %%
-#    
-#s = snirfs[2]
-#    
-
-# %%
-
-class Test:
-    
-    def __init__(self):
-        self.foo = 'foo'
-    
-    def hello(self):
-        print('Hello world')
-        
-    def save(self, *args):
-        print(*args)
-        print(len(*args))
-        
-    def __repr__(self):
-        out = ''
-        for prop in dir(self):
-            if '_' not in prop and not callable(prop):
-                out += prop + ': '
-                prepr = str(getattr(self, prop))
-                if len(prepr) < 64:
-                    out += prepr
-                else:
-                    out += '\n' + prepr
-                out += '\n'
-        return str(out[:-1])
-
-
-test = Test()
-
-
+snirf = Snirf(TESTPATH, dynamic_loading=True)
