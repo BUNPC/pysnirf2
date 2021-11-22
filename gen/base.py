@@ -32,6 +32,16 @@ class SnirfConfig:
     dynamic_loading: bool = False  # If False, data is loaded in the constructor, if True, data is loaded on access
 
 
+class AbsentDataset():    
+    def __repr__(self):
+        return str(None)
+
+
+class AbsentGroup():
+    def __repr__(self):
+        return str(None)
+
+
 class Group(ABC):
 
     def __init__(self, gid: h5py.h5g.GroupID, cfg: SnirfConfig):
@@ -111,20 +121,10 @@ class IndexedGroup(MutableSequence, ABC):
             self._parent = parent
             self._cfg = cfg
             self._list = list()
-            unordered = []
-            indices = []
+            names = self._get_names()
             for key in self._parent.keys():
-                numsplit = key.split(self._name)
-                if len(numsplit) > 1 and len(numsplit[1]) > 0:
-                    if len(numsplit[1]) == len(str(int(numsplit[1]))):
-                        unordered.append(self._element(self._parent[key].id, self._cfg))
-                        indices.append(int(numsplit[1]))
-                elif key.endswith(self._name):
-                    unordered.append(self._element(self._parent[key].id, self._cfg))
-                    indices.append(0)
-            ordered = np.argsort(indices)
-            for i, j in enumerate(ordered):
-                self._list.append(unordered[j])
+                if key in names:
+                    self._list.append(self._element(self._parent[key].id, self._cfg))
         else:
             raise TypeError('must initialize IndexedGroup with a Group or File')
     
@@ -181,6 +181,31 @@ class IndexedGroup(MutableSequence, ABC):
             self._parent.move(element._h.name.split('/')[-1], self._name + str(i + 1))
 #            print(element._h.name.split('/')[-1], '--->', self._name + str(i + 1))
         
+    def _get_names(self):
+        # Return list of parent's keys which match this IndexedList's _name format
+        unordered = []
+        indices = []
+        for key in self._parent.keys():
+            numsplit = key.split(self._name)
+            if len(numsplit) > 1 and len(numsplit[1]) > 0:
+                if len(numsplit[1]) == len(str(int(numsplit[1]))):
+                    unordered.append(key)
+                    indices.append(int(numsplit[1]))
+            elif key.endswith(self._name):
+                unordered.append(key)
+                indices.append(0)
+        order = np.argsort(indices)
+        return [unordered[i] for i in order]
+        
     def _save(self, *args):
         self._order_names()
+        if len(args) > 0 and type(args[0]) is h5py.File:
+            h = args[0]
+        else:
+            h = self._parent.file
+        names = self._get_names()
+        # Saving an indexed group overwrites all the groups with _name
+        for name in names:
+            del h[self._parent.name + '/' + name]
         [element._save(*args) for element in self._list]
+        

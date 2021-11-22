@@ -2,7 +2,7 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 import requests
 from unidecode import unidecode
 from pathlib import Path
-from datetime import date
+from datetime import date, datetime
 import getpass
 import os
 import sys
@@ -16,17 +16,33 @@ hosted at SPEC_SRC.
 
 if __name__ == '__main__':
     
-
-    print('Attempting to retrieve spec from', SPEC_SRC, '...')
+    local_spec = SPEC_SRC.split('/')[-1].split('.')[0] + '_retrieved_'+ datetime.now().strftime('%d_%m_%y') + '.txt'
     
-    # Retrieve the SNIRF specification from GitHub and parse it for the summary table
-    spec = requests.get(SPEC_SRC)
+    if os.path.exists(local_spec):
+        print('Loading specification from local document', local_spec, '...')
+        with open(local_spec, 'r') as f:
+            text = f.read()
+    else:
+        print('Attempting to retrieve spec from', SPEC_SRC, '...')
     
-    if spec.text == '404: Not Found':
-        print(spec.text)
-        sys.exit('The Snirf specification could not be found at ' + SPEC_SRC)
-    
-    table = unidecode(spec.text).split(TABLE_DELIM_START)[1].split(TABLE_DELIM_END)[0]
+        # Retrieve the SNIRF specification from GitHub and parse it for the summary table
+        spec = requests.get(SPEC_SRC)
+        
+        if spec.text == '404: Not Found':
+            print(spec.text)
+            sys.exit('The Snirf specification could not be found at ' + SPEC_SRC)
+        
+        text = unidecode(spec.text)
+        
+        for file in os.listdir():
+            if file.startswith(SPEC_SRC.split('/')[-1].split('.')[0] + '_retrieved_') and file.endswith('.txt'):
+                os.remove(file)
+        
+        with open(local_spec, 'w') as f:
+            f.write(text)
+            
+        
+    table = text.split(TABLE_DELIM_START)[1].split(TABLE_DELIM_END)[0]
     
     rows = table.split('\n')
     while '' in rows:
@@ -52,7 +68,7 @@ if __name__ == '__main__':
     print('Found', len(type_codes), 'types in the table...')
     
     # Parse headings in spec for complete HDF style locations with which to build tree
-    definitions = unidecode(spec.text).split(DEFINITIONS_DELIM_START)[1].split(DEFINITIONS_DELIM_END)[0]
+    definitions = unidecode(text).split(DEFINITIONS_DELIM_START)[1].split(DEFINITIONS_DELIM_END)[0]
     lines = definitions.split('\n')
     while '' in lines:
         lines.remove('')

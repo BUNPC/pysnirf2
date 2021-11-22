@@ -48,6 +48,30 @@ def _print_keys(group):
         print(key)
 
 
-TESTPATH = r"C:\Users\sstucker\OneDrive\Desktop\pysnirf2\tests\snirf\subjA_run03.snirf"
+TESTPATH = r"C:\Users\sstucker\OneDrive\Desktop\pysnirf2\tests\snirf\subjA_run02.snirf"
 
-snirf = Snirf(TESTPATH, dynamic_loading=True)
+snirf = Snirf(TESTPATH, dynamic_loading=False)
+
+# %%
+
+
+class Test():
+    
+    def __init__(self):
+        self._z = 'z'
+        
+        
+    @property
+    def z(self):
+        return self._z
+    
+    @z.setter
+    def z(self, value):
+        self._z = value
+        
+    @z.deleter
+    def z(self):
+        print('z deleted!')
+        self._z = None
+
+test = Test()
