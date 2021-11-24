@@ -72,9 +72,9 @@ class Group(ABC):
                 if not path.endswith('.snirf'):
                     path += '.snirf'
                 if os.path.exists(path):
-                    file = h5py.File(path, 'r+')
-                else:
                     file = h5py.File(path, 'w')
+                else:
+                    raise FileNotFoundError("No such SNIRF file '" + path + "'. Create a SNIRF file before attempting to save a Group to it.")
                 self._save(file)
                 file.close()
         else:

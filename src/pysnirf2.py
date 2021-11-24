@@ -72,9 +72,9 @@ class Group(ABC):
                 if not path.endswith('.snirf'):
                     path += '.snirf'
                 if os.path.exists(path):
-                    file = h5py.File(path, 'r+')
-                else:
                     file = h5py.File(path, 'w')
+                else:
+                    raise FileNotFoundError("No such SNIRF file '" + path + "'. Create a SNIRF file before attempting to save a Group to it.")
                 self._save(file)
                 file.close()
         else:
@@ -437,7 +437,7 @@ class MetaDataTags(Group):
             file = args[0]
         else:
             file = self._h.file
-        print('Saving', self.__class__.__name__, 'to', file)
+        # print('Saving', self.__class__.__name__, 'to', file)
         if 'SubjectID' in self._h.keys():
             name = self._h['SubjectID'].name
         else:
@@ -446,7 +446,7 @@ class MetaDataTags(Group):
         if name in file.keys():
             del file[name]
         if type(data) is not AbsentDataset and data is not None:
-            # print('Saving', name, 'data is', type(data), data, 'being cast to', h5py.string_dtype(encoding='ascii', length=None))
+            # # print('Saving', name, 'data is', type(data), data, 'being cast to', h5py.string_dtype(encoding='ascii', length=None))
             file.create_dataset(name, dtype=h5py.string_dtype(encoding='ascii', length=None), data=data)
         if 'MeasurementDate' in self._h.keys():
             name = self._h['MeasurementDate'].name
@@ -456,7 +456,7 @@ class MetaDataTags(Group):
         if name in file.keys():
             del file[name]
         if type(data) is not AbsentDataset and data is not None:
-            # print('Saving', name, 'data is', type(data), data, 'being cast to', h5py.string_dtype(encoding='ascii', length=None))
+            # # print('Saving', name, 'data is', type(data), data, 'being cast to', h5py.string_dtype(encoding='ascii', length=None))
             file.create_dataset(name, dtype=h5py.string_dtype(encoding='ascii', length=None), data=data)
         if 'MeasurementTime' in self._h.keys():
             name = self._h['MeasurementTime'].name
@@ -466,7 +466,7 @@ class MetaDataTags(Group):
         if name in file.keys():
             del file[name]
         if type(data) is not AbsentDataset and data is not None:
-            # print('Saving', name, 'data is', type(data), data, 'being cast to', h5py.string_dtype(encoding='ascii', length=None))
+            # # print('Saving', name, 'data is', type(data), data, 'being cast to', h5py.string_dtype(encoding='ascii', length=None))
             file.create_dataset(name, dtype=h5py.string_dtype(encoding='ascii', length=None), data=data)
         if 'LengthUnit' in self._h.keys():
             name = self._h['LengthUnit'].name
@@ -476,7 +476,7 @@ class MetaDataTags(Group):
         if name in file.keys():
             del file[name]
         if type(data) is not AbsentDataset and data is not None:
-            # print('Saving', name, 'data is', type(data), data, 'being cast to', h5py.string_dtype(encoding='ascii', length=None))
+            # # print('Saving', name, 'data is', type(data), data, 'being cast to', h5py.string_dtype(encoding='ascii', length=None))
             file.create_dataset(name, dtype=h5py.string_dtype(encoding='ascii', length=None), data=data)
         if 'TimeUnit' in self._h.keys():
             name = self._h['TimeUnit'].name
@@ -486,7 +486,7 @@ class MetaDataTags(Group):
         if name in file.keys():
             del file[name]
         if type(data) is not AbsentDataset and data is not None:
-            # print('Saving', name, 'data is', type(data), data, 'being cast to', h5py.string_dtype(encoding='ascii', length=None))
+            # # print('Saving', name, 'data is', type(data), data, 'being cast to', h5py.string_dtype(encoding='ascii', length=None))
             file.create_dataset(name, dtype=h5py.string_dtype(encoding='ascii', length=None), data=data)
         if 'FrequencyUnit' in self._h.keys():
             name = self._h['FrequencyUnit'].name
@@ -496,7 +496,7 @@ class MetaDataTags(Group):
         if name in file.keys():
             del file[name]
         if type(data) is not AbsentDataset and data is not None:
-            # print('Saving', name, 'data is', type(data), data, 'being cast to', h5py.string_dtype(encoding='ascii', length=None))
+            # # print('Saving', name, 'data is', type(data), data, 'being cast to', h5py.string_dtype(encoding='ascii', length=None))
             file.create_dataset(name, dtype=h5py.string_dtype(encoding='ascii', length=None), data=data)
 
 
@@ -929,7 +929,7 @@ class Probe(Group):
             file = args[0]
         else:
             file = self._h.file
-        print('Saving', self.__class__.__name__, 'to', file)
+        # print('Saving', self.__class__.__name__, 'to', file)
         if 'wavelengths' in self._h.keys():
             name = self._h['wavelengths'].name
         else:
@@ -940,7 +940,7 @@ class Probe(Group):
         if name in file.keys():
             del file[name]
         if type(data) is not AbsentDataset and data is not None:
-            # print('Saving', name, 'data is', type(data), data, 'being cast to', 'f8')
+            # # print('Saving', name, 'data is', type(data), data, 'being cast to', 'f8')
             file.create_dataset(name, dtype='f8', data=data)
         if 'wavelengthsEmission' in self._h.keys():
             name = self._h['wavelengthsEmission'].name
@@ -952,7 +952,7 @@ class Probe(Group):
         if name in file.keys():
             del file[name]
         if type(data) is not AbsentDataset and data is not None:
-            # print('Saving', name, 'data is', type(data), data, 'being cast to', 'f8')
+            # # print('Saving', name, 'data is', type(data), data, 'being cast to', 'f8')
             file.create_dataset(name, dtype='f8', data=data)
         if 'sourcePos2D' in self._h.keys():
             name = self._h['sourcePos2D'].name
@@ -964,7 +964,7 @@ class Probe(Group):
         if name in file.keys():
             del file[name]
         if type(data) is not AbsentDataset and data is not None:
-            # print('Saving', name, 'data is', type(data), data, 'being cast to', 'f8')
+            # # print('Saving', name, 'data is', type(data), data, 'being cast to', 'f8')
             file.create_dataset(name, dtype='f8', data=data)
         if 'sourcePos3D' in self._h.keys():
             name = self._h['sourcePos3D'].name
@@ -976,7 +976,7 @@ class Probe(Group):
         if name in file.keys():
             del file[name]
         if type(data) is not AbsentDataset and data is not None:
-            # print('Saving', name, 'data is', type(data), data, 'being cast to', 'f8')
+            # # print('Saving', name, 'data is', type(data), data, 'being cast to', 'f8')
             file.create_dataset(name, dtype='f8', data=data)
         if 'detectorPos2D' in self._h.keys():
             name = self._h['detectorPos2D'].name
@@ -988,7 +988,7 @@ class Probe(Group):
         if name in file.keys():
             del file[name]
         if type(data) is not AbsentDataset and data is not None:
-            # print('Saving', name, 'data is', type(data), data, 'being cast to', 'f8')
+            # # print('Saving', name, 'data is', type(data), data, 'being cast to', 'f8')
             file.create_dataset(name, dtype='f8', data=data)
         if 'detectorPos3D' in self._h.keys():
             name = self._h['detectorPos3D'].name
@@ -1000,7 +1000,7 @@ class Probe(Group):
         if name in file.keys():
             del file[name]
         if type(data) is not AbsentDataset and data is not None:
-            # print('Saving', name, 'data is', type(data), data, 'being cast to', 'f8')
+            # # print('Saving', name, 'data is', type(data), data, 'being cast to', 'f8')
             file.create_dataset(name, dtype='f8', data=data)
         if 'frequencies' in self._h.keys():
             name = self._h['frequencies'].name
@@ -1012,7 +1012,7 @@ class Probe(Group):
         if name in file.keys():
             del file[name]
         if type(data) is not AbsentDataset and data is not None:
-            # print('Saving', name, 'data is', type(data), data, 'being cast to', 'f8')
+            # # print('Saving', name, 'data is', type(data), data, 'being cast to', 'f8')
             file.create_dataset(name, dtype='f8', data=data)
         if 'timeDelays' in self._h.keys():
             name = self._h['timeDelays'].name
@@ -1024,7 +1024,7 @@ class Probe(Group):
         if name in file.keys():
             del file[name]
         if type(data) is not AbsentDataset and data is not None:
-            # print('Saving', name, 'data is', type(data), data, 'being cast to', 'f8')
+            # # print('Saving', name, 'data is', type(data), data, 'being cast to', 'f8')
             file.create_dataset(name, dtype='f8', data=data)
         if 'timeDelayWidths' in self._h.keys():
             name = self._h['timeDelayWidths'].name
@@ -1036,7 +1036,7 @@ class Probe(Group):
         if name in file.keys():
             del file[name]
         if type(data) is not AbsentDataset and data is not None:
-            # print('Saving', name, 'data is', type(data), data, 'being cast to', 'f8')
+            # # print('Saving', name, 'data is', type(data), data, 'being cast to', 'f8')
             file.create_dataset(name, dtype='f8', data=data)
         if 'momentOrders' in self._h.keys():
             name = self._h['momentOrders'].name
@@ -1048,7 +1048,7 @@ class Probe(Group):
         if name in file.keys():
             del file[name]
         if type(data) is not AbsentDataset and data is not None:
-            # print('Saving', name, 'data is', type(data), data, 'being cast to', 'f8')
+            # # print('Saving', name, 'data is', type(data), data, 'being cast to', 'f8')
             file.create_dataset(name, dtype='f8', data=data)
         if 'correlationTimeDelays' in self._h.keys():
             name = self._h['correlationTimeDelays'].name
@@ -1060,7 +1060,7 @@ class Probe(Group):
         if name in file.keys():
             del file[name]
         if type(data) is not AbsentDataset and data is not None:
-            # print('Saving', name, 'data is', type(data), data, 'being cast to', 'f8')
+            # # print('Saving', name, 'data is', type(data), data, 'being cast to', 'f8')
             file.create_dataset(name, dtype='f8', data=data)
         if 'correlationTimeDelayWidths' in self._h.keys():
             name = self._h['correlationTimeDelayWidths'].name
@@ -1072,7 +1072,7 @@ class Probe(Group):
         if name in file.keys():
             del file[name]
         if type(data) is not AbsentDataset and data is not None:
-            # print('Saving', name, 'data is', type(data), data, 'being cast to', 'f8')
+            # # print('Saving', name, 'data is', type(data), data, 'being cast to', 'f8')
             file.create_dataset(name, dtype='f8', data=data)
         if 'sourceLabels' in self._h.keys():
             name = self._h['sourceLabels'].name
@@ -1084,7 +1084,7 @@ class Probe(Group):
         if name in file.keys():
             del file[name]
         if type(data) is not AbsentDataset and data is not None:
-            # print('Saving', name, 'data is', type(data), data, 'being cast to', h5py.string_dtype(encoding='ascii', length=None))
+            # # print('Saving', name, 'data is', type(data), data, 'being cast to', h5py.string_dtype(encoding='ascii', length=None))
             file.create_dataset(name, dtype=h5py.string_dtype(encoding='ascii', length=None), data=data)
         if 'detectorLabels' in self._h.keys():
             name = self._h['detectorLabels'].name
@@ -1096,7 +1096,7 @@ class Probe(Group):
         if name in file.keys():
             del file[name]
         if type(data) is not AbsentDataset and data is not None:
-            # print('Saving', name, 'data is', type(data), data, 'being cast to', h5py.string_dtype(encoding='ascii', length=None))
+            # # print('Saving', name, 'data is', type(data), data, 'being cast to', h5py.string_dtype(encoding='ascii', length=None))
             file.create_dataset(name, dtype=h5py.string_dtype(encoding='ascii', length=None), data=data)
         if 'landmarkPos2D' in self._h.keys():
             name = self._h['landmarkPos2D'].name
@@ -1108,7 +1108,7 @@ class Probe(Group):
         if name in file.keys():
             del file[name]
         if type(data) is not AbsentDataset and data is not None:
-            # print('Saving', name, 'data is', type(data), data, 'being cast to', 'f8')
+            # # print('Saving', name, 'data is', type(data), data, 'being cast to', 'f8')
             file.create_dataset(name, dtype='f8', data=data)
         if 'landmarkPos3D' in self._h.keys():
             name = self._h['landmarkPos3D'].name
@@ -1120,7 +1120,7 @@ class Probe(Group):
         if name in file.keys():
             del file[name]
         if type(data) is not AbsentDataset and data is not None:
-            # print('Saving', name, 'data is', type(data), data, 'being cast to', 'f8')
+            # # print('Saving', name, 'data is', type(data), data, 'being cast to', 'f8')
             file.create_dataset(name, dtype='f8', data=data)
         if 'landmarkLabels' in self._h.keys():
             name = self._h['landmarkLabels'].name
@@ -1132,7 +1132,7 @@ class Probe(Group):
         if name in file.keys():
             del file[name]
         if type(data) is not AbsentDataset and data is not None:
-            # print('Saving', name, 'data is', type(data), data, 'being cast to', h5py.string_dtype(encoding='ascii', length=None))
+            # # print('Saving', name, 'data is', type(data), data, 'being cast to', h5py.string_dtype(encoding='ascii', length=None))
             file.create_dataset(name, dtype=h5py.string_dtype(encoding='ascii', length=None), data=data)
         if 'useLocalIndex' in self._h.keys():
             name = self._h['useLocalIndex'].name
@@ -1142,7 +1142,7 @@ class Probe(Group):
         if name in file.keys():
             del file[name]
         if type(data) is not AbsentDataset and data is not None:
-            # print('Saving', name, 'data is', type(data), data, 'being cast to', 'i4')
+            # # print('Saving', name, 'data is', type(data), data, 'being cast to', 'i4')
             file.create_dataset(name, dtype='i4', data=data)
 
 
@@ -1239,10 +1239,10 @@ class NirsElement(Group):
             file = args[0]
         else:
             file = self._h.file
-        print('Saving', self.__class__.__name__, 'to', file)
+        # print('Saving', self.__class__.__name__, 'to', file)
         if type(self._metaDataTags) is AbsentGroup:
             if 'metaDataTags' in file.keys():
-                print('Deleting group metaDataTags from', file)
+                # print('Deleting group metaDataTags from', file)
                 del file['metaDataTags']
         else:
             self.metaDataTags._save(*args)
@@ -1250,7 +1250,7 @@ class NirsElement(Group):
         self.stim._save(*args)
         if type(self._probe) is AbsentGroup:
             if 'probe' in file.keys():
-                print('Deleting group probe from', file)
+                # print('Deleting group probe from', file)
                 del file['probe']
         else:
             self.probe._save(*args)
@@ -1342,7 +1342,7 @@ class DataElement(Group):
             file = args[0]
         else:
             file = self._h.file
-        print('Saving', self.__class__.__name__, 'to', file)
+        # print('Saving', self.__class__.__name__, 'to', file)
         if 'dataTimeSeries' in self._h.keys():
             name = self._h['dataTimeSeries'].name
         else:
@@ -1353,7 +1353,7 @@ class DataElement(Group):
         if name in file.keys():
             del file[name]
         if type(data) is not AbsentDataset and data is not None:
-            # print('Saving', name, 'data is', type(data), data, 'being cast to', 'f8')
+            # # print('Saving', name, 'data is', type(data), data, 'being cast to', 'f8')
             file.create_dataset(name, dtype='f8', data=data)
         if 'time' in self._h.keys():
             name = self._h['time'].name
@@ -1365,7 +1365,7 @@ class DataElement(Group):
         if name in file.keys():
             del file[name]
         if type(data) is not AbsentDataset and data is not None:
-            # print('Saving', name, 'data is', type(data), data, 'being cast to', 'f8')
+            # # print('Saving', name, 'data is', type(data), data, 'being cast to', 'f8')
             file.create_dataset(name, dtype='f8', data=data)
         self.measurementList._save(*args)
 
@@ -1700,7 +1700,7 @@ class MeasurementListElement(Group):
             file = args[0]
         else:
             file = self._h.file
-        print('Saving', self.__class__.__name__, 'to', file)
+        # print('Saving', self.__class__.__name__, 'to', file)
         if 'sourceIndex' in self._h.keys():
             name = self._h['sourceIndex'].name
         else:
@@ -1709,7 +1709,7 @@ class MeasurementListElement(Group):
         if name in file.keys():
             del file[name]
         if type(data) is not AbsentDataset and data is not None:
-            # print('Saving', name, 'data is', type(data), data, 'being cast to', 'i4')
+            # # print('Saving', name, 'data is', type(data), data, 'being cast to', 'i4')
             file.create_dataset(name, dtype='i4', data=data)
         if 'detectorIndex' in self._h.keys():
             name = self._h['detectorIndex'].name
@@ -1719,7 +1719,7 @@ class MeasurementListElement(Group):
         if name in file.keys():
             del file[name]
         if type(data) is not AbsentDataset and data is not None:
-            # print('Saving', name, 'data is', type(data), data, 'being cast to', 'i4')
+            # # print('Saving', name, 'data is', type(data), data, 'being cast to', 'i4')
             file.create_dataset(name, dtype='i4', data=data)
         if 'wavelengthIndex' in self._h.keys():
             name = self._h['wavelengthIndex'].name
@@ -1729,7 +1729,7 @@ class MeasurementListElement(Group):
         if name in file.keys():
             del file[name]
         if type(data) is not AbsentDataset and data is not None:
-            # print('Saving', name, 'data is', type(data), data, 'being cast to', 'i4')
+            # # print('Saving', name, 'data is', type(data), data, 'being cast to', 'i4')
             file.create_dataset(name, dtype='i4', data=data)
         if 'wavelengthActual' in self._h.keys():
             name = self._h['wavelengthActual'].name
@@ -1739,7 +1739,7 @@ class MeasurementListElement(Group):
         if name in file.keys():
             del file[name]
         if type(data) is not AbsentDataset and data is not None:
-            # print('Saving', name, 'data is', type(data), data, 'being cast to', 'f8')
+            # # print('Saving', name, 'data is', type(data), data, 'being cast to', 'f8')
             file.create_dataset(name, dtype='f8', data=data)
         if 'wavelengthEmissionActual' in self._h.keys():
             name = self._h['wavelengthEmissionActual'].name
@@ -1749,7 +1749,7 @@ class MeasurementListElement(Group):
         if name in file.keys():
             del file[name]
         if type(data) is not AbsentDataset and data is not None:
-            # print('Saving', name, 'data is', type(data), data, 'being cast to', 'f8')
+            # # print('Saving', name, 'data is', type(data), data, 'being cast to', 'f8')
             file.create_dataset(name, dtype='f8', data=data)
         if 'dataType' in self._h.keys():
             name = self._h['dataType'].name
@@ -1759,7 +1759,7 @@ class MeasurementListElement(Group):
         if name in file.keys():
             del file[name]
         if type(data) is not AbsentDataset and data is not None:
-            # print('Saving', name, 'data is', type(data), data, 'being cast to', 'i4')
+            # # print('Saving', name, 'data is', type(data), data, 'being cast to', 'i4')
             file.create_dataset(name, dtype='i4', data=data)
         if 'dataTypeLabel' in self._h.keys():
             name = self._h['dataTypeLabel'].name
@@ -1769,7 +1769,7 @@ class MeasurementListElement(Group):
         if name in file.keys():
             del file[name]
         if type(data) is not AbsentDataset and data is not None:
-            # print('Saving', name, 'data is', type(data), data, 'being cast to', h5py.string_dtype(encoding='ascii', length=None))
+            # # print('Saving', name, 'data is', type(data), data, 'being cast to', h5py.string_dtype(encoding='ascii', length=None))
             file.create_dataset(name, dtype=h5py.string_dtype(encoding='ascii', length=None), data=data)
         if 'dataTypeIndex' in self._h.keys():
             name = self._h['dataTypeIndex'].name
@@ -1779,7 +1779,7 @@ class MeasurementListElement(Group):
         if name in file.keys():
             del file[name]
         if type(data) is not AbsentDataset and data is not None:
-            # print('Saving', name, 'data is', type(data), data, 'being cast to', 'i4')
+            # # print('Saving', name, 'data is', type(data), data, 'being cast to', 'i4')
             file.create_dataset(name, dtype='i4', data=data)
         if 'sourcePower' in self._h.keys():
             name = self._h['sourcePower'].name
@@ -1789,7 +1789,7 @@ class MeasurementListElement(Group):
         if name in file.keys():
             del file[name]
         if type(data) is not AbsentDataset and data is not None:
-            # print('Saving', name, 'data is', type(data), data, 'being cast to', 'f8')
+            # # print('Saving', name, 'data is', type(data), data, 'being cast to', 'f8')
             file.create_dataset(name, dtype='f8', data=data)
         if 'detectorGain' in self._h.keys():
             name = self._h['detectorGain'].name
@@ -1799,7 +1799,7 @@ class MeasurementListElement(Group):
         if name in file.keys():
             del file[name]
         if type(data) is not AbsentDataset and data is not None:
-            # print('Saving', name, 'data is', type(data), data, 'being cast to', 'f8')
+            # # print('Saving', name, 'data is', type(data), data, 'being cast to', 'f8')
             file.create_dataset(name, dtype='f8', data=data)
         if 'moduleIndex' in self._h.keys():
             name = self._h['moduleIndex'].name
@@ -1809,7 +1809,7 @@ class MeasurementListElement(Group):
         if name in file.keys():
             del file[name]
         if type(data) is not AbsentDataset and data is not None:
-            # print('Saving', name, 'data is', type(data), data, 'being cast to', 'i4')
+            # # print('Saving', name, 'data is', type(data), data, 'being cast to', 'i4')
             file.create_dataset(name, dtype='i4', data=data)
         if 'sourceModuleIndex' in self._h.keys():
             name = self._h['sourceModuleIndex'].name
@@ -1819,7 +1819,7 @@ class MeasurementListElement(Group):
         if name in file.keys():
             del file[name]
         if type(data) is not AbsentDataset and data is not None:
-            # print('Saving', name, 'data is', type(data), data, 'being cast to', 'i4')
+            # # print('Saving', name, 'data is', type(data), data, 'being cast to', 'i4')
             file.create_dataset(name, dtype='i4', data=data)
         if 'detectorModuleIndex' in self._h.keys():
             name = self._h['detectorModuleIndex'].name
@@ -1829,7 +1829,7 @@ class MeasurementListElement(Group):
         if name in file.keys():
             del file[name]
         if type(data) is not AbsentDataset and data is not None:
-            # print('Saving', name, 'data is', type(data), data, 'being cast to', 'i4')
+            # # print('Saving', name, 'data is', type(data), data, 'being cast to', 'i4')
             file.create_dataset(name, dtype='i4', data=data)
 
 
@@ -1923,7 +1923,7 @@ class StimElement(Group):
             file = args[0]
         else:
             file = self._h.file
-        print('Saving', self.__class__.__name__, 'to', file)
+        # print('Saving', self.__class__.__name__, 'to', file)
         if 'name' in self._h.keys():
             name = self._h['name'].name
         else:
@@ -1932,7 +1932,7 @@ class StimElement(Group):
         if name in file.keys():
             del file[name]
         if type(data) is not AbsentDataset and data is not None:
-            # print('Saving', name, 'data is', type(data), data, 'being cast to', h5py.string_dtype(encoding='ascii', length=None))
+            # # print('Saving', name, 'data is', type(data), data, 'being cast to', h5py.string_dtype(encoding='ascii', length=None))
             file.create_dataset(name, dtype=h5py.string_dtype(encoding='ascii', length=None), data=data)
         if 'data' in self._h.keys():
             name = self._h['data'].name
@@ -1944,7 +1944,7 @@ class StimElement(Group):
         if name in file.keys():
             del file[name]
         if type(data) is not AbsentDataset and data is not None:
-            # print('Saving', name, 'data is', type(data), data, 'being cast to', 'f8')
+            # # print('Saving', name, 'data is', type(data), data, 'being cast to', 'f8')
             file.create_dataset(name, dtype='f8', data=data)
         if 'dataLabels' in self._h.keys():
             name = self._h['dataLabels'].name
@@ -1956,7 +1956,7 @@ class StimElement(Group):
         if name in file.keys():
             del file[name]
         if type(data) is not AbsentDataset and data is not None:
-            # print('Saving', name, 'data is', type(data), data, 'being cast to', h5py.string_dtype(encoding='ascii', length=None))
+            # # print('Saving', name, 'data is', type(data), data, 'being cast to', h5py.string_dtype(encoding='ascii', length=None))
             file.create_dataset(name, dtype=h5py.string_dtype(encoding='ascii', length=None), data=data)
 
 
@@ -2073,7 +2073,7 @@ class AuxElement(Group):
             file = args[0]
         else:
             file = self._h.file
-        print('Saving', self.__class__.__name__, 'to', file)
+        # print('Saving', self.__class__.__name__, 'to', file)
         if 'name' in self._h.keys():
             name = self._h['name'].name
         else:
@@ -2082,7 +2082,7 @@ class AuxElement(Group):
         if name in file.keys():
             del file[name]
         if type(data) is not AbsentDataset and data is not None:
-            # print('Saving', name, 'data is', type(data), data, 'being cast to', h5py.string_dtype(encoding='ascii', length=None))
+            # # print('Saving', name, 'data is', type(data), data, 'being cast to', h5py.string_dtype(encoding='ascii', length=None))
             file.create_dataset(name, dtype=h5py.string_dtype(encoding='ascii', length=None), data=data)
         if 'dataTimeSeries' in self._h.keys():
             name = self._h['dataTimeSeries'].name
@@ -2094,7 +2094,7 @@ class AuxElement(Group):
         if name in file.keys():
             del file[name]
         if type(data) is not AbsentDataset and data is not None:
-            # print('Saving', name, 'data is', type(data), data, 'being cast to', 'f8')
+            # # print('Saving', name, 'data is', type(data), data, 'being cast to', 'f8')
             file.create_dataset(name, dtype='f8', data=data)
         if 'time' in self._h.keys():
             name = self._h['time'].name
@@ -2106,7 +2106,7 @@ class AuxElement(Group):
         if name in file.keys():
             del file[name]
         if type(data) is not AbsentDataset and data is not None:
-            # print('Saving', name, 'data is', type(data), data, 'being cast to', 'f8')
+            # # print('Saving', name, 'data is', type(data), data, 'being cast to', 'f8')
             file.create_dataset(name, dtype='f8', data=data)
         if 'timeOffset' in self._h.keys():
             name = self._h['timeOffset'].name
@@ -2118,7 +2118,7 @@ class AuxElement(Group):
         if name in file.keys():
             del file[name]
         if type(data) is not AbsentDataset and data is not None:
-            # print('Saving', name, 'data is', type(data), data, 'being cast to', 'f8')
+            # # print('Saving', name, 'data is', type(data), data, 'being cast to', 'f8')
             file.create_dataset(name, dtype='f8', data=data)
 
 
@@ -2200,7 +2200,7 @@ class Snirf():
             file = args[0]
         else:
             file = self._h.file
-        print('Saving', self.__class__.__name__, 'to', file)
+        # print('Saving', self.__class__.__name__, 'to', file)
         if 'formatVersion' in self._h.keys():
             name = self._h['formatVersion'].name
         else:
@@ -2209,7 +2209,7 @@ class Snirf():
         if name in file.keys():
             del file[name]
         if type(data) is not AbsentDataset and data is not None:
-            # print('Saving', name, 'data is', type(data), data, 'being cast to', h5py.string_dtype(encoding='ascii', length=None))
+            # # print('Saving', name, 'data is', type(data), data, 'being cast to', h5py.string_dtype(encoding='ascii', length=None))
             file.create_dataset(name, dtype=h5py.string_dtype(encoding='ascii', length=None), data=data)
         self.nirs._save(*args)
 
@@ -2236,6 +2236,10 @@ class Snirf():
     @property
     def filename(self):
         return self._h.filename
+
+    @property
+    def location(self):
+        return self._h.name
 
     def close(self):
         self._h.close()

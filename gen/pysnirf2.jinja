@@ -98,7 +98,7 @@
             file = args[0]
         else:
             file = self._h.file
-        print('Saving', self.__class__.__name__, 'to', file)
+        # print('Saving', self.__class__.__name__, 'to', file)
 {% for CHILD in NODE.children %}
     {% if TYPES.INT_VALUE in CHILD.type %}
         {% set h5_type = "'i4'" %}
@@ -114,7 +114,7 @@
     {% elif TYPES.GROUP in CHILD.type %}
         if type(self._{{ CHILD.name }}) is AbsentGroup:
             if '{{ CHILD.name }}' in file.keys():
-                print('Deleting group {{ CHILD.name }} from', file)
+                # print('Deleting group {{ CHILD.name }} from', file)
                 del file['{{ CHILD.name }}']
         else:
             self.{{ CHILD.name }}._save(*args)
@@ -139,7 +139,7 @@
         if name in file.keys():
             del file[name]
         if type(data) is not AbsentDataset and data is not None:
-            # print('Saving', name, 'data is', type(data), data, 'being cast to', {{ h5_type }})
+            # # print('Saving', name, 'data is', type(data), data, 'being cast to', {{ h5_type }})
             file.create_dataset(name, dtype={{ h5_type }}, data=data)
     {% endif %}
     {% endfor %}
@@ -240,6 +240,10 @@ class Snirf():
     @property
     def filename(self):
         return self._h.filename
+
+    @property
+    def location(self):
+        return self._h.name
 
     def close(self):
         self._h.close()
