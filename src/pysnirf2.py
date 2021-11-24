@@ -183,7 +183,21 @@ class IndexedGroup(MutableSequence, ABC):
         self._list.append(item)
     
     def save(self, *args):
-        self._save(*args)
+        if len(args) > 0:
+            if type(args[0]) is h5py.File:
+                self._save(args[0])
+            elif type(args[0]) is str:
+                path = args[0]
+                if not path.endswith('.snirf'):
+                    path += '.snirf'
+                if os.path.exists(path):
+                    file = h5py.File(path, 'w')
+                else:
+                    raise FileNotFoundError("No such SNIRF file '" + path + "'. Create a SNIRF file before attempting to save an IndexedGroup to it.")
+                self._save(file)
+                file.close()
+        else:
+            self._save()
 
     def insertGroup(self):
         'Adds a group to the end of the list'
