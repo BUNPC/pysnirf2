@@ -83,7 +83,11 @@ class Group(ABC):
     @property
     def filename(self):
         return self._h.file.filename
-    
+
+    @property
+    def location(self):
+        return self._h.name
+
     @abstractmethod
     def _save(self, *args):
         raise NotImplementedError('_save is an abstract method')
@@ -121,8 +125,8 @@ class IndexedGroup(MutableSequence, ABC):
         denotes the 2nd element, and so on.
     """
     
-    _name: str = ''
-    _element: Group = None
+    _name: str = ''  # The specified prefix to this indexed group's members, i.e. nirs, data, stim, aux, measurementList
+    _element: Group = None  # The type of Group which belongs to this IndexedGroup
 
     def __init__(self, parent: (h5py.Group, h5py.File), cfg: SnirfConfig):
         if isinstance(parent, (h5py.Group, h5py.File)):
@@ -134,9 +138,9 @@ class IndexedGroup(MutableSequence, ABC):
             self._cfg = cfg
             self._list = list()
             names = self._get_matching_keys()
-            for key in self._parent.keys():
-                if key in names:
-                    self._list.append(self._element(self._parent[key].id, self._cfg))
+            for name in names:
+                if name in self._parent.keys():
+                    self._list.append(self._element(self._parent[name].id, self._cfg))
         else:
             raise TypeError('must initialize IndexedGroup with a Group or File')
     
@@ -178,7 +182,13 @@ class IndexedGroup(MutableSequence, ABC):
     
     def save(self, *args):
         self._save(*args)
-    
+
+    def insertGroup(self):
+        'Adds a group to the end of the list'
+        g = self._parent.create_group(self._name + str(len(self._list) + 1))
+        gid = g.id
+        self._list.append(self._element(gid, self._cfg))
+
     def appendGroup(self):
         'Adds a group to the end of the list'
         g = self._parent.create_group(self._name + str(len(self._list) + 1))
@@ -192,16 +202,37 @@ class IndexedGroup(MutableSequence, ABC):
                             str(type(item))
                             )
         
-    def _order_names(self):
-        for i, element in enumerate(self._list):
-            self._parent.move(element._h.name.split('/')[-1], self._name + str(i + 1))
-#            print(element._h.name.split('/')[-1], '--->', self._name + str(i + 1))
+    def _order_names(self, h=None):
+        '''
+        Enforce the format of the names of HDF5 groups within a group or file on disk. i.e. IndexedGroup stim's elements
+        will be renamed, in order, /stim1, /stim2, /stim3. This is expensive but can be avoided by save()ing individual groups
+        within the IndexedGroup
+        '''
+        if h is None:
+            h = self._parent
+        if not [int(e._h.name.split('/' + self._name)[-1]) for e in self._list] == list(range(1, len(self._list) + 1)):
+            # if list is not already ordered propertly
+            for i, e in enumerate(self._list):
+                # To avoid assignment to an existing name, move all
+                h.move(e.location,
+                       '/'.join(e.location.split('/')[:-1]) + '/' + self._name + str(i + 1) + '_tmp')
+                print(e.location, '--->',
+                      '/'.join(e.location.split('/')[:-1]) + '/' + self._name + str(i + 1) + '_tmp')
+            for i, element in enumerate(self._list):
+                h.move('/'.join(e.location.split('/')[:-1]) + '/' + self._name + str(i + 1) + '_tmp',
+                       '/'.join(e.location.split('/')[:-1]) + '/' + self._name + str(i + 1))
+                print('/'.join(e.location.split('/')[:-1]) + '/' + self._name + str(i + 1) + '_tmp', '--->',
+                      '/'.join(e.location.split('/')[:-1]) + '/' + self._name + str(i + 1))
         
-    def _get_matching_keys(self):
-        # Return sorted list of parent's keys which match this IndexedList's _name format
+    def _get_matching_keys(self, h=None):
+        '''
+        Return sorted list of a group or file's keys which match this IndexedList's _name format
+        '''
+        if h is None:
+            h = self._parent
         unordered = []
         indices = []
-        for key in self._parent.keys():
+        for key in h:
             numsplit = key.split(self._name)
             if len(numsplit) > 1 and len(numsplit[1]) > 0:
                 if len(numsplit[1]) == len(str(int(numsplit[1]))):
@@ -214,13 +245,12 @@ class IndexedGroup(MutableSequence, ABC):
         return [unordered[i] for i in order]
         
     def _save(self, *args):
-#        self._order_names()
         if len(args) > 0 and type(args[0]) is h5py.File:
             h = args[0]
         else:
             h = self._parent.file
-        names_in_file = self._get_matching_keys()  # List of all names in the file on disk
-        names_to_save = [e._h.name.split('/')[-1] for e in self._list]  # List of names in the wrapper
+        names_in_file = self._get_matching_keys(h=h)  # List of all names in the file on disk
+        names_to_save = [e.location.split('/')[-1] for e in self._list]  # List of names in the wrapper
         print('Saving indexed group', self.__class__.__name__)
         print('names to save: ', names_to_save)
         print('names in file: ', names_in_file)
@@ -230,4 +260,5 @@ class IndexedGroup(MutableSequence, ABC):
                 print('Deleting', self._parent.name + '/' + name, 'while overwriting indexed group', self.__class__.__name__, 'as it has been deleted from the file')
                 del h[self._parent.name + '/' + name]  # Remove the actual data from the hdf5 file.
         [element._save(*args) for element in self._list]
-        
+        self._order_names(h=h)  # Enforce order in the group names
+

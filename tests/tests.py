@@ -4,8 +4,8 @@ Created on Tue Nov 16 18:45:12 2021
 
 @author: sstucker
 """
-import pysnirf2
-from pysnirf2 import Snirf, NirsElement
+import src.pysnirf2
+from src.pysnirf2 import Snirf, NirsElement, StimElement
 import h5py
 import os
 import sys
@@ -49,8 +49,10 @@ def _print_keys(group):
 
 
 FILENAME = 'subjA_run01.snirf'
-SNIRF_DIR = r"C:\Users\sstucker\OneDrive\Desktop\pysnirf2\tests\snirf"
-WD = r"C:\Users\sstucker\OneDrive\Desktop\pysnirf2\tests\snirf\wd"
+SNIRF_DIR = 'testdata'  # Sample data source
+WD = 'wd'  # Working directory for testing
+print('Deleting all files in', WD)
+
 for file in os.listdir(WD):
     os.remove(WD + '\\' + file)
 
@@ -61,6 +63,25 @@ time.sleep(1)  # Sleep while os exectues copy operation
 # %%
 
 snirf = Snirf(path, dynamic_loading=False)
+print('Loaded snirf from', path)
+print(snirf)
+print()
+print('Adding some stim groups to stim...')
+for i in range(5):
+    snirf.nirs[0].stim.appendGroup()
+print('Deleting one...')
+del snirf.nirs[0].stim[3]
+snirf.nirs[0].stim[3].name = 'assigned'
+print(snirf.nirs[0].stim)
+snirf.save('wd/two_new_stim.snirf')
+snirf.close()
+
+snirf2 = Snirf('wd/two_new_stim.snirf')
+print('Loaded snirf from', 'wd/two_new_stim.snirf')
+print(snirf2.nirs[0].stim)
+for stim in snirf2.nirs[0].stim:
+    print(stim)
+snirf2.close()
 
 # %%
 

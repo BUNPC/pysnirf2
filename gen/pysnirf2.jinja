@@ -98,7 +98,7 @@
             file = args[0]
         else:
             file = self._h.file
-        print('Saving', self.__class__.__name__, 'to', file, 'at', file.name)
+        print('Saving', self.__class__.__name__, 'to', file)
 {% for CHILD in NODE.children %}
     {% if TYPES.INT_VALUE in CHILD.type %}
         {% set h5_type = "'i4'" %}
@@ -123,7 +123,6 @@
             name = self._h['{{ CHILD.name }}'].name
         else:
             name = self._h.name + '/{{ CHILD.name }}'
-        print('Saving', name)
         {% if (TYPES.ARRAY_1D in CHILD.type) or (TYPES.ARRAY_2D in CHILD.type) %}
             {% if TYPES.VARLEN_STRING in CHILD.type %}
         data = np.array(self.{{ CHILD.name }}).astype('O')
@@ -139,8 +138,8 @@
         {% endif %}
         if name in file.keys():
             del file[name]
-        if type(data) is not AbsentDataset:
-            print('Data is', type(data), data, 'being cast to', {{ h5_type }})
+        if type(data) is not AbsentDataset and data is not None:
+            # print('Saving', name, 'data is', type(data), data, 'being cast to', {{ h5_type }})
             file.create_dataset(name, dtype={{ h5_type }}, data=data)
     {% endif %}
     {% endfor %}
@@ -244,6 +243,12 @@ class Snirf():
 
     def close(self):
         self._h.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self):
+        self.close()
 
     def __del__(self):
         self._h.close()
