@@ -98,6 +98,7 @@
             file = args[0]
         else:
             file = self._h.file
+        print('Saving', self.__class__.__name__, 'to', file, 'at', file.name)
 {% for CHILD in NODE.children %}
     {% if TYPES.INT_VALUE in CHILD.type %}
         {% set h5_type = "'i4'" %}
@@ -112,28 +113,34 @@
         self.{{ CHILD.name }}._save(*args)
     {% elif TYPES.GROUP in CHILD.type %}
         if type(self._{{ CHILD.name }}) is AbsentGroup:
-            del self._h[{{ CHILD.name }}]
+            if '{{ CHILD.name }}' in file.keys():
+                print('Deleting group {{ CHILD.name }} from', file)
+                del file['{{ CHILD.name }}']
         else:
             self.{{ CHILD.name }}._save(*args)
     {% else %}
-        if '{{ CHILD.name }}' in self._h:
+        if '{{ CHILD.name }}' in self._h.keys():
             name = self._h['{{ CHILD.name }}'].name
         else:
             name = self._h.name + '/{{ CHILD.name }}'
+        print('Saving', name)
         {% if (TYPES.ARRAY_1D in CHILD.type) or (TYPES.ARRAY_2D in CHILD.type) %}
             {% if TYPES.VARLEN_STRING in CHILD.type %}
         data = np.array(self.{{ CHILD.name }}).astype('O')
             {% else %}
         data = np.array(self.{{ CHILD.name }})
             {% endif %}
+        if data.size is 0 or data.any() is None:
+            data = AbsentDataset()  # Do not save empty or "None" NumPy arrays
         {% elif TYPES.VARLEN_STRING in CHILD.type %}
         data = self.{{ CHILD.name }}
         {% else %}
         data = self.{{ CHILD.name }}
         {% endif %}
-        if name in file:
+        if name in file.keys():
             del file[name]
         if type(data) is not AbsentDataset:
+            print('Data is', type(data), data, 'being cast to', {{ h5_type }})
             file.create_dataset(name, dtype={{ h5_type }}, data=data)
     {% endif %}
     {% endfor %}
@@ -196,12 +203,15 @@ class Snirf():
                 if not path.endswith('.snirf'):
                     path = path.join('.snirf')
                 if os.path.exists(path):
+                    print('Loading from file', path)
                     self._h = h5py.File(path, 'r+')
                 else:
+                    print('Creating new file at', path)
                     self._h = h5py.File(path, 'w')
             else:
                 raise TypeError(str(path) + ' is not a valid filename')
         else:
+            print('Snirf based on tempfile')
             self._h = h5py.File(TemporaryFile(), 'w')
         self._cfg = SnirfConfig()
         self._cfg.dynamic_loading = dynamic_loading

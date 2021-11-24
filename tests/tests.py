@@ -48,9 +48,19 @@ def _print_keys(group):
         print(key)
 
 
-TESTPATH = r"C:\Users\sstucker\OneDrive\Desktop\pysnirf2\tests\snirf\subjA_run02.snirf"
+FILENAME = 'subjA_run01.snirf'
+SNIRF_DIR = r"C:\Users\sstucker\OneDrive\Desktop\pysnirf2\tests\snirf"
+WD = r"C:\Users\sstucker\OneDrive\Desktop\pysnirf2\tests\snirf\wd"
+for file in os.listdir(WD):
+    os.remove(WD + '\\' + file)
 
-snirf = Snirf(TESTPATH, dynamic_loading=False)
+path = WD + '\\' + FILENAME
+os.popen('copy ' + SNIRF_DIR + '\\' + FILENAME + ' ' + path)
+time.sleep(1)  # Sleep while os exectues copy operation
+
+# %%
+
+snirf = Snirf(path, dynamic_loading=False)
 
 # %%
 

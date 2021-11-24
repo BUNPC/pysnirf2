@@ -6,6 +6,18 @@ import numpy as np
 from warnings import warn
 from collections import MutableSequence
 from tempfile import TemporaryFile
+import logging
+
+def _create_logger(name, log_file, level=logging.INFO):
+    handler = logging.FileHandler(log_file)
+    handler.setFormatter(logging.Formatter('%(asctime)s | %(message)s'))
+    logger = logging.getLogger(name)
+    logger.setLevel(level)
+    logger.addHandler(handler)
+    return logger
+
+# Package wide logger that can superseded in files
+_logger = _create_logger('pysnirf2', 'pysnirf2.log')
 
 if sys.version_info[0] < 3:
     raise ImportError('pysnirf2 requires Python > 3')
@@ -121,14 +133,18 @@ class IndexedGroup(MutableSequence, ABC):
             self._parent = parent
             self._cfg = cfg
             self._list = list()
-            names = self._get_names()
+            names = self._get_matching_keys()
             for key in self._parent.keys():
                 if key in names:
                     self._list.append(self._element(self._parent[key].id, self._cfg))
         else:
             raise TypeError('must initialize IndexedGroup with a Group or File')
     
-    
+
+    @property
+    def filename(self):
+        return self._parent.file.filename
+
     def __len__(self): return len(self._list)
 
     def __getitem__(self, i): return self._list[i]
@@ -181,8 +197,8 @@ class IndexedGroup(MutableSequence, ABC):
             self._parent.move(element._h.name.split('/')[-1], self._name + str(i + 1))
 #            print(element._h.name.split('/')[-1], '--->', self._name + str(i + 1))
         
-    def _get_names(self):
-        # Return list of parent's keys which match this IndexedList's _name format
+    def _get_matching_keys(self):
+        # Return sorted list of parent's keys which match this IndexedList's _name format
         unordered = []
         indices = []
         for key in self._parent.keys():
@@ -198,14 +214,20 @@ class IndexedGroup(MutableSequence, ABC):
         return [unordered[i] for i in order]
         
     def _save(self, *args):
-        self._order_names()
+#        self._order_names()
         if len(args) > 0 and type(args[0]) is h5py.File:
             h = args[0]
         else:
             h = self._parent.file
-        names = self._get_names()
-        # Saving an indexed group overwrites all the groups with _name
-        for name in names:
-            del h[self._parent.name + '/' + name]
+        names_in_file = self._get_matching_keys()  # List of all names in the file on disk
+        names_to_save = [e._h.name.split('/')[-1] for e in self._list]  # List of names in the wrapper
+        print('Saving indexed group', self.__class__.__name__)
+        print('names to save: ', names_to_save)
+        print('names in file: ', names_in_file)
+        # Remove groups which remain on disk after being removed from the wrapper
+        for name in names_in_file:
+            if name not in names_to_save:
+                print('Deleting', self._parent.name + '/' + name, 'while overwriting indexed group', self.__class__.__name__, 'as it has been deleted from the file')
+                del h[self._parent.name + '/' + name]  # Remove the actual data from the hdf5 file.
         [element._save(*args) for element in self._list]
         
