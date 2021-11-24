@@ -79,7 +79,7 @@ class Group(ABC):
                 file.close()
         else:
             self._save()
-
+            
     @property
     def filename(self):
         return self._h.file.filename
@@ -157,8 +157,10 @@ class IndexedGroup(MutableSequence, ABC):
     
     def __setitem__(self, i, item):
         self._check_type(item)
-        self._list[i] = item
-        self._order_names
+        if not item.location in [e.location for e in self._list]:
+            self._list[i] = item
+        else:
+            raise SnirfFormatError(item.location + ' already an element of ' + self.__class__.__name__)
 
     def __getattr__(self, name):
         # If user tries to access an element's properties, raise informative exception
@@ -216,13 +218,13 @@ class IndexedGroup(MutableSequence, ABC):
                 # To avoid assignment to an existing name, move all
                 h.move(e.location,
                        '/'.join(e.location.split('/')[:-1]) + '/' + self._name + str(i + 1) + '_tmp')
-                print(e.location, '--->',
-                      '/'.join(e.location.split('/')[:-1]) + '/' + self._name + str(i + 1) + '_tmp')
-            for i, element in enumerate(self._list):
+#                print(e.location, '--->',
+#                      '/'.join(e.location.split('/')[:-1]) + '/' + self._name + str(i + 1) + '_tmp')
+            for i, e in enumerate(self._list):
                 h.move('/'.join(e.location.split('/')[:-1]) + '/' + self._name + str(i + 1) + '_tmp',
                        '/'.join(e.location.split('/')[:-1]) + '/' + self._name + str(i + 1))
-                print('/'.join(e.location.split('/')[:-1]) + '/' + self._name + str(i + 1) + '_tmp', '--->',
-                      '/'.join(e.location.split('/')[:-1]) + '/' + self._name + str(i + 1))
+#                print('/'.join(e.location.split('/')[:-1]) + '/' + self._name + str(i + 1) + '_tmp', '--->',
+#                      '/'.join(e.location.split('/')[:-1]) + '/' + self._name + str(i + 1))
         
     def _get_matching_keys(self, h=None):
         '''
@@ -259,6 +261,11 @@ class IndexedGroup(MutableSequence, ABC):
             if name not in names_to_save:
                 print('Deleting', self._parent.name + '/' + name, 'while overwriting indexed group', self.__class__.__name__, 'as it has been deleted from the file')
                 del h[self._parent.name + '/' + name]  # Remove the actual data from the hdf5 file.
-        [element._save(*args) for element in self._list]
+        
+        for e in self._list:
+            if e.location not in h:
+                print('Creating group', e.location, 'in', h)
+                h.create_group(e.location)
+            e._save(*args)
         self._order_names(h=h)  # Enforce order in the group names
 
