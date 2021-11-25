@@ -8,18 +8,15 @@ from collections import MutableSequence
 from tempfile import TemporaryFile
 import logging
 
-_loggers = {}
-def _create_logger(name, log_file):
-    if name in _loggers.keys():
-        return _loggers[name]
+def _create_logger(name, log_file, level=logging.INFO):
     handler = logging.FileHandler(log_file)
-    handler.setFormatter(logging.Formatter('%(asctime)s | %(levelname)s | %(message)s'))
+    handler.setFormatter(logging.Formatter('%(asctime)s | %(message)s'))
     logger = logging.getLogger(name)
+    logger.setLevel(level)
     logger.addHandler(handler)
-    _loggers[name] = logger
     return logger
 
-# Libray-wide logger
+# Package wide logger that can superseded in files
 _logger = _create_logger('pysnirf2', 'pysnirf2.log')
 
 if sys.version_info[0] < 3:
@@ -45,7 +42,6 @@ class SnirfFormatError(Exception):
 
 class SnirfConfig:
     dynamic_loading: bool = False  # If False, data is loaded in the constructor, if True, data is loaded on access
-    logger: logging.Logger = _logger  # Will be a file parallel to the SNIRF file or the master pysnirf2.log file depending on config
 
 
 class AbsentDataset():    
@@ -60,12 +56,18 @@ class AbsentGroup():
 
 class Group(ABC):
 
-    def __init__(self, gid: h5py.h5g.GroupID, cfg: SnirfConfig):
-        self._id = gid
-        if not isinstance(gid, h5py.h5g.GroupID):
-            raise TypeError('must initialize with a Group ID, not ' + str(type(gid)))
-        self._h = h5py.Group(self._id)
+    def __init__(self, varg, cfg: SnirfConfig):
         self._cfg = cfg
+        if type(varg) is str:  # If a Group wrapper is created prior to a save to HDF Group object
+            self._id = None
+            self._h = None
+            self._location = varg
+        elif isinstance(varg, h5py.h5g.GroupID):  # If Group is created based on an HDF Group object
+            self._id = varg
+            self._h = h5py.Group(self._id)
+            self._location = self._h.name
+        else:
+            raise TypeError('must initialize ' + self.__class__.__name__ + ' with a Group ID or string, not ' + str(type(varg)))
 
     def save(self, *args):
         if len(args) > 0:
@@ -86,11 +88,17 @@ class Group(ABC):
             
     @property
     def filename(self):
-        return self._h.file.filename
+        if self._h is not None:
+            return self._h.file.filename
+        else:
+            return None
 
     @property
     def location(self):
-        return self._h.name
+        if self._h is not None:
+            return self._h.name
+        else:
+            return self._location
 
     @abstractmethod
     def _save(self, *args):
@@ -203,17 +211,9 @@ class IndexedGroup(MutableSequence, ABC):
         else:
             self._save()
 
-    def insertGroup(self):
-        'Adds a group to the end of the list'
-        g = self._parent.create_group(self._name + str(len(self._list) + 1))
-        gid = g.id
-        self._list.append(self._element(gid, self._cfg))
-
     def appendGroup(self):
         'Adds a group to the end of the list'
-        g = self._parent.create_group(self._name + str(len(self._list) + 1))
-        gid = g.id
-        self._list.append(self._element(gid, self._cfg))
+        self._list.append(self._element(self._name + str(len(self._list) + 1, self._cfg))
     
     def _check_type(self, item):
         if type(item) is not self._element:
@@ -230,19 +230,20 @@ class IndexedGroup(MutableSequence, ABC):
         '''
         if h is None:
             h = self._parent
-        if not [int(e._h.name.split('/' + self._name)[-1]) for e in self._list] == list(range(1, len(self._list) + 1)):
-            # if list is not already ordered propertly
-            for i, e in enumerate(self._list):
-                # To avoid assignment to an existing name, move all
-                h.move(e.location,
-                       '/'.join(e.location.split('/')[:-1]) + '/' + self._name + str(i + 1) + '_tmp')
-#                print(e.location, '--->',
-#                      '/'.join(e.location.split('/')[:-1]) + '/' + self._name + str(i + 1) + '_tmp')
-            for i, e in enumerate(self._list):
-                h.move('/'.join(e.location.split('/')[:-1]) + '/' + self._name + str(i + 1) + '_tmp',
-                       '/'.join(e.location.split('/')[:-1]) + '/' + self._name + str(i + 1))
-#                print('/'.join(e.location.split('/')[:-1]) + '/' + self._name + str(i + 1) + '_tmp', '--->',
-#                      '/'.join(e.location.split('/')[:-1]) + '/' + self._name + str(i + 1))
+        if all([len(e._h.name.split('/' + self._name)[-1]) > 0 for e in self._list]):
+            if not [int(e._h.name.split('/' + self._name)[-1]) for e in self._list] == list(range(1, len(self._list) + 1)):
+                # if list is not already ordered propertly
+                for i, e in enumerate(self._list):
+                    # To avoid assignment to an existing name, move all
+                    h.move(e.location,
+                           '/'.join(e.location.split('/')[:-1]) + '/' + self._name + str(i + 1) + '_tmp')
+    #                print(e.location, '--->',
+    #                      '/'.join(e.location.split('/')[:-1]) + '/' + self._name + str(i + 1) + '_tmp')
+                for i, e in enumerate(self._list):
+                    h.move('/'.join(e.location.split('/')[:-1]) + '/' + self._name + str(i + 1) + '_tmp',
+                           '/'.join(e.location.split('/')[:-1]) + '/' + self._name + str(i + 1))
+    #                print('/'.join(e.location.split('/')[:-1]) + '/' + self._name + str(i + 1) + '_tmp', '--->',
+    #                      '/'.join(e.location.split('/')[:-1]) + '/' + self._name + str(i + 1))
         
     def _get_matching_keys(self, h=None):
         '''

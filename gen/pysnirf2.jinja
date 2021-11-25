@@ -18,9 +18,8 @@
     if '{{ CHILD.name }}' in self._h.keys():
         self._{{- CHILD.name }} = {{ sentencecase(CHILD.name) }}(self._h['{{ CHILD.name }}'].id, self._cfg)  # Group
         {% if TYPES.REQUIRED in CHILD.type %}
-    else:  # Create an empty group
-        self._h.create_group('{{ CHILD.name }}')
-        self._{{ CHILD.name }} = {{ sentencecase(CHILD.name) }}(self._h['{{ CHILD.name }}'].id, self._cfg)  # Group
+    else:
+        self._{{ CHILD.name }} = {{ sentencecase(CHILD.name) }}(self.location + '/' + '{{ CHILD.name }}', self._cfg)  # Group wrapper
         {% endif %}
     {% else %}
     if '{{ CHILD.name }}' in self._h.keys():
@@ -98,6 +97,8 @@
             file = args[0]
         else:
             file = self._h.file
+        if self.location not in file:
+            file.create_group(self.location)
         # print('Saving', self.__class__.__name__, 'to', file)
 {% for CHILD in NODE.children %}
     {% if TYPES.INT_VALUE in CHILD.type %}

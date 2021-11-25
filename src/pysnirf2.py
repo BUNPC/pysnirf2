@@ -455,6 +455,8 @@ class MetaDataTags(Group):
             file = args[0]
         else:
             file = self._h.file
+        if self.location not in file:
+            file.create_group(self.location)
         # print('Saving', self.__class__.__name__, 'to', file)
         if 'SubjectID' in self._h.keys():
             name = self._h['SubjectID'].name
@@ -947,6 +949,8 @@ class Probe(Group):
             file = args[0]
         else:
             file = self._h.file
+        if self.location not in file:
+            file.create_group(self.location)
         # print('Saving', self.__class__.__name__, 'to', file)
         if 'wavelengths' in self._h.keys():
             name = self._h['wavelengths'].name
@@ -1177,16 +1181,14 @@ class NirsElement(Group):
         super().__init__(gid, cfg)
         if 'metaDataTags' in self._h.keys():
             self._metaDataTags = MetaDataTags(self._h['metaDataTags'].id, self._cfg)  # Group
-        else:  # Create an empty group
-            self._h.create_group('metaDataTags')
-            self._metaDataTags = MetaDataTags(self._h['metaDataTags'].id, self._cfg)  # Group
+        else:
+            self._metaDataTags = MetaDataTags(self.location + '/' + 'metaDataTags', self._cfg)  # Group wrapper
         self.data = Data(self._h, self._cfg)  # Indexed group
         self.stim = Stim(self._h, self._cfg)  # Indexed group
         if 'probe' in self._h.keys():
             self._probe = Probe(self._h['probe'].id, self._cfg)  # Group
-        else:  # Create an empty group
-            self._h.create_group('probe')
-            self._probe = Probe(self._h['probe'].id, self._cfg)  # Group
+        else:
+            self._probe = Probe(self.location + '/' + 'probe', self._cfg)  # Group wrapper
         self.aux = Aux(self._h, self._cfg)  # Indexed group
 
     @property
@@ -1257,6 +1259,8 @@ class NirsElement(Group):
             file = args[0]
         else:
             file = self._h.file
+        if self.location not in file:
+            file.create_group(self.location)
         # print('Saving', self.__class__.__name__, 'to', file)
         if type(self._metaDataTags) is AbsentGroup:
             if 'metaDataTags' in file.keys():
@@ -1360,6 +1364,8 @@ class DataElement(Group):
             file = args[0]
         else:
             file = self._h.file
+        if self.location not in file:
+            file.create_group(self.location)
         # print('Saving', self.__class__.__name__, 'to', file)
         if 'dataTimeSeries' in self._h.keys():
             name = self._h['dataTimeSeries'].name
@@ -1718,6 +1724,8 @@ class MeasurementListElement(Group):
             file = args[0]
         else:
             file = self._h.file
+        if self.location not in file:
+            file.create_group(self.location)
         # print('Saving', self.__class__.__name__, 'to', file)
         if 'sourceIndex' in self._h.keys():
             name = self._h['sourceIndex'].name
@@ -1941,6 +1949,8 @@ class StimElement(Group):
             file = args[0]
         else:
             file = self._h.file
+        if self.location not in file:
+            file.create_group(self.location)
         # print('Saving', self.__class__.__name__, 'to', file)
         if 'name' in self._h.keys():
             name = self._h['name'].name
@@ -2091,6 +2101,8 @@ class AuxElement(Group):
             file = args[0]
         else:
             file = self._h.file
+        if self.location not in file:
+            file.create_group(self.location)
         # print('Saving', self.__class__.__name__, 'to', file)
         if 'name' in self._h.keys():
             name = self._h['name'].name
@@ -2224,6 +2236,8 @@ class Snirf():
             file = args[0]
         else:
             file = self._h.file
+        if self.location not in file:
+            file.create_group(self.location)
         # print('Saving', self.__class__.__name__, 'to', file)
         if 'formatVersion' in self._h.keys():
             name = self._h['formatVersion'].name

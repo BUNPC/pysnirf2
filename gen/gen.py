@@ -85,6 +85,15 @@ if __name__ == '__main__':
 
     print('Found', len(locations), 'locations...')
     
+    # Write locations to file
+    if os.path.exists('locations.txt'):
+        os.remove('locations.txt')
+    with open('locations.txt', 'w') as f:
+        for location in locations:
+            f.write(location.replace('(i)', '').replace('(j)', '').replace('(k)', '') + '\n')
+    print('Wrote to locations.txt')
+    
+    
     if len(locations) != len(type_codes):
         sys.exit('Parsed ' + str(len(type_codes)) + ' type codes from the summary table but '
                  + str(len(locations)) + ' names from the definitions: the specification hosted at '
