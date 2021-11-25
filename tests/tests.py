@@ -84,14 +84,14 @@ while len(snirf.nirs[0].data[0].measurementList) > 0:
 snirf.save('wd/new_stim.snirf')
 snirf.close()
 
-snirf2 = Snirf('wd/new_stim.snirf')
+snirf2 = Snirf('wd/new_stim.snirf', logfile=True)
 print('\n\n\n\nLoaded snirf from', 'wd/new_stim.snirf')
 print(snirf2.nirs[0].stim)
 for stim in snirf2.nirs[0].stim:
     print(stim)
 snirf2.close()
 
-snirf2 = Snirf('wd/new_stim.snirf')
+snirf2 = Snirf('wd/new_stim.snirf', logfile=True)
 print('\n\n\n\nLoaded snirf from', 'wd/new_stim.snirf')
 print('Renaming and saving out of order boys at 0, 1')
 snirf2.nirs[0].stim[0].name = '4'
@@ -100,14 +100,14 @@ snirf2.nirs[0].stim[1].name = '3'
 snirf2.nirs[0].stim[1].save()
 snirf2.close()
 
-snirf2 = Snirf('wd/new_stim.snirf')
+snirf2 = Snirf('wd/new_stim.snirf', logfile=True)
 print('\n\n\n\nLoaded snirf from', 'wd/new_stim.snirf')
 print(snirf2.nirs[0].stim)
 for stim in snirf2.nirs[0].stim:
     print(stim)
 snirf2.close()
 
-snirf2 = Snirf('wd/new_stim.snirf')
+snirf2 = Snirf('wd/new_stim.snirf', logfile=True)
 print('\n\n\n\nLoaded snirf from', 'wd/new_stim.snirf')
 print('Deleting all but one stim...')
 while len(snirf2.nirs[0].stim) > 1:
@@ -117,12 +117,12 @@ print(len(snirf2.nirs[0].stim), 'stim left')
 snirf2.save('wd/del_stim')
 snirf2.close()
 
-snirf2 = Snirf('wd/del_stim.snirf')
+snirf2 = Snirf('wd/del_stim.snirf', logfile=True)
 print('\n\n\n\nLoaded snirf from', 'wd/del_stim.snirf')
 print(snirf2.nirs[0].stim)
 for stim in snirf2.nirs[0].stim:
     print(stim)
-snirf2.close()
+# snirf2.close()
 
 
 # %%

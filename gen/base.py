@@ -8,15 +8,18 @@ from collections import MutableSequence
 from tempfile import TemporaryFile
 import logging
 
-def _create_logger(name, log_file, level=logging.INFO):
+_loggers = {}
+def _create_logger(name, log_file):
+    if name in _loggers.keys():
+        return _loggers[name]
     handler = logging.FileHandler(log_file)
-    handler.setFormatter(logging.Formatter('%(asctime)s | %(message)s'))
+    handler.setFormatter(logging.Formatter('%(asctime)s | %(levelname)s | %(message)s'))
     logger = logging.getLogger(name)
-    logger.setLevel(level)
     logger.addHandler(handler)
+    _loggers[name] = logger
     return logger
 
-# Package wide logger that can superseded in files
+# Libray-wide logger
 _logger = _create_logger('pysnirf2', 'pysnirf2.log')
 
 if sys.version_info[0] < 3:
@@ -42,6 +45,7 @@ class SnirfFormatError(Exception):
 
 class SnirfConfig:
     dynamic_loading: bool = False  # If False, data is loaded in the constructor, if True, data is loaded on access
+    logger: logging.Logger = _logger  # Will be a file parallel to the SNIRF file or the master pysnirf2.log file depending on config
 
 
 class AbsentDataset():    

@@ -195,25 +195,31 @@ class Snirf():
     _{{ CHILD.name }} = AbsentDataset()  # {{ CHILD.type }}
     {% endfor %}
 
-    def __init__(self, *args, dynamic_loading: bool = False):
+    def __init__(self, *args, dynamic_loading: bool = False, logfile: bool = False):
+        self._cfg = SnirfConfig()
+        self._cfg.dynamic_loading = dynamic_loading
         if len(args) > 0:
             path = args[0]
             if type(path) is str:
                 if not path.endswith('.snirf'):
                     path = path.join('.snirf')
+                if logfile:
+                    self._cfg.logger = _create_logger(path, path.split('.')[0] + '.log')
+                else:
+                    self._cfg.logger = _logger  # Use global logger
                 if os.path.exists(path):
-                    print('Loading from file', path)
+                    self._cfg.logger.info('Loading from file ' + path)
                     self._h = h5py.File(path, 'r+')
                 else:
-                    print('Creating new file at', path)
+                    self._cfg.logger.info('Creating new file at ' + path)
                     self._h = h5py.File(path, 'w')
             else:
                 raise TypeError(str(path) + ' is not a valid filename')
         else:
-            print('Snirf based on tempfile')
+            self._cfg.logger = _logger
+            self._cfg.logger.info('Created Snirf object based on tempfile')
+            path = None
             self._h = h5py.File(TemporaryFile(), 'w')
-        self._cfg = SnirfConfig()
-        self._cfg.dynamic_loading = dynamic_loading
     {{ init_members(ROOT) | indent }}
 {{ gen_properties(ROOT) }}
 {{ gen_writer(ROOT) }}
@@ -246,6 +252,7 @@ class Snirf():
         return self._h.name
 
     def close(self):
+        self._cfg.logger.handlers.clear()
         self._h.close()
 
     def __enter__(self):
@@ -255,7 +262,7 @@ class Snirf():
         self.close()
 
     def __del__(self):
-        self._h.close()
+        self.close()
 
     def __repr__(self):
         props = [p for p in dir(self) if ('_' not in p and not callable(getattr(self, p)))]
