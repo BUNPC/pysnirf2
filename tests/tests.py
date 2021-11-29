@@ -5,7 +5,7 @@ Created on Tue Nov 16 18:45:12 2021
 @author: sstucker
 """
 import pysnirf2
-from pysnirf2 import Snirf, NirsElement, StimElement
+from pysnirf2 import Snirf, NirsElement, StimElement, MetaDataTags
 import h5py
 import os
 import sys
@@ -69,6 +69,7 @@ def compare_snirf(snirf_path_1, snirf_path_2):
                 eq = eq.all()   
             results[location] = bool(eq)
     return results
+
         
 def get_all_dataset_locations(h):
     '''
@@ -88,11 +89,23 @@ def _print_keys(group):
     for key in group.keys():
         print(key)
 
+
 def test_load(filename):
     snirf = Snirf(filename)
     snirf.close()
     print('Load PASSED')
     return True
+
+
+def add_and_remove_stim_condition(snirf):
+    snirf.nirs[0].stim.appendGroup()
+    snirf.nirs[0].stim[-1].name = 'appended'
+    snirf.nirs[0].stim[-1].data = [0, 0, 0]
+    del snirf.nirs[0].stim[-1]
+
+
+# -- Test functions -----------------------------------------------------------
+
 
 def test_dynamic(filenames, verbose=True):
     times = [-1, -1]
@@ -117,6 +130,7 @@ def test_dynamic(filenames, verbose=True):
         if verbose:
             print('Dynamic loading FAILED')
         return False
+
 
 def test_loading_saving(filenames, spec_locations, verbose=True, fn=None):
     """
@@ -169,9 +183,10 @@ def test_loading_saving(filenames, spec_locations, verbose=True, fn=None):
                 print('The following keys were not equivalent:')
                 print(false_keys)
 #            if any([key in spec_locations and not ('metaDataTags' in key or 'stim0' in key or 'measurementList0' in key or 'data0' in key or 'aux0' in key or 'nirs0' in key) for key in none_keys]):
-            if not any([('metaDataTags' in key or 'stim0' in key or 'measurementList0' in key or 'data0' in key or 'aux0' in key or 'nirs0' in key) for key in none_keys]):
+            missing = np.array([('metaDataTags' in key or 'stim0' in key or 'measurementList0' in key or 'data0' in key or 'aux0' in key or 'nirs0' in key) for key in none_keys]).astype(bool)
+            if not missing.all():
                 if verbose:
-                    print('Specified dataset', key, 'not found in both SNIRF files! Test FAILED!')
+                    print('Specified datasets', np.array(none_keys)[np.invert(missing)], 'not found in both SNIRF files! Test FAILED!')
                 return False
             elif len(false_keys) > 0:
                 if verbose:
@@ -183,13 +198,71 @@ def test_loading_saving(filenames, spec_locations, verbose=True, fn=None):
     if verbose:
         print('All specified fields equivalent in all files. Test PASSED.')
     return True
-                
 
-def add_stim_condition(snirf):
-    snirf.nirs[0].stim.appendGroup()
-    snirf.nirs[0].stim[-1].name = 'appended'
-    snirf.nirs[0].stim[-1].data = [0, 0, 0]
 
+def test_create_a_file(filename_in, filename_out, verbose=True):
+    
+    print(filename_out)
+    src_data = Snirf(filename_in)
+    dst_data = Snirf(filename_out)
+    
+    h5snirf = h5py.File(filename_out, 'w')
+    h5snirf['nirs1/metaDataTags/SubjectID'] = src_data.nirs[0].metaDataTags.SubjectID 
+    h5snirf['nirs1/metaDataTags/MeasurementDate'] = src_data.nirs[0].metaDataTags.MeasurementDate
+    h5snirf['nirs1/metaDataTags/MeasurementTime'] = src_data.nirs[0].metaDataTags.MeasurementTime
+    h5snirf['nirs1/metaDataTags/LengthUnit'] = src_data.nirs[0].metaDataTags.LengthUnit
+    h5snirf['nirs1/metaDataTags/TimeUnit'] = src_data.nirs[0].metaDataTags.TimeUnit
+    
+    dst_data.nirs.appendGroup()
+    
+    # metaDataTags   
+    
+    dst_data.nirs[0].metaDataTags.SubjectID = src_data.nirs[0].metaDataTags.SubjectID
+    dst_data.nirs[0].metaDataTags.MeasurementDate = src_data.nirs[0].metaDataTags.MeasurementDate
+    dst_data.nirs[0].metaDataTags.MeasurementTime = src_data.nirs[0].metaDataTags.MeasurementTime
+    dst_data.nirs[0].metaDataTags.LengthUnit = src_data.nirs[0].metaDataTags.LengthUnit
+    dst_data.nirs[0].metaDataTags.TimeUnit = src_data.nirs[0].metaDataTags.TimeUnit
+    
+    # data
+    h5snirf['nirs1/data1/time'] = src_data.nirs[0].data[0].time 
+    h5snirf['nirs1/data1/dataTimeSeries'] = src_data.nirs[0].data[0].dataTimeSeries
+    
+    dst_data.nirs[0].data.appendGroup()
+    dst_data.nirs[0].data[0].time = src_data.nirs[0].data[0].time 
+    dst_data.nirs[0].data[0].dataTimeSeries = src_data.nirs[0].data[0].dataTimeSeries
+    
+    # measurementList
+    h5snirf['nirs1/data1/measurementList1/sourceIndex'] = src_data.nirs[0].data[0].measurementList[0].sourceIndex
+    h5snirf['nirs1/data1/measurementList1/detectorIndex'] = src_data.nirs[0].data[0].measurementList[0].detectorIndex
+    h5snirf['nirs1/data1/measurementList1/wavelengthIndex'] = src_data.nirs[0].data[0].measurementList[0].wavelengthIndex
+    h5snirf['nirs1/data1/measurementList1/dataType'] = src_data.nirs[0].data[0].measurementList[0].dataType
+    h5snirf['nirs1/data1/measurementList1/dataTypeIndex'] = src_data.nirs[0].data[0].measurementList[0].dataTypeIndex
+    
+    dst_data.nirs[0].data[0].measurementList.appendGroup()
+    dst_data.nirs[0].data[0].measurementList[0].sourceIndex = src_data.nirs[0].data[0].measurementList[0].sourceIndex
+    dst_data.nirs[0].data[0].measurementList[0].detectorIndex = src_data.nirs[0].data[0].measurementList[0].detectorIndex
+    dst_data.nirs[0].data[0].measurementList[0].wavelengthIndex = src_data.nirs[0].data[0].measurementList[0].wavelengthIndex
+    dst_data.nirs[0].data[0].measurementList[0].dataType = src_data.nirs[0].data[0].measurementList[0].dataType
+    dst_data.nirs[0].data[0].measurementList[0].dataTypeIndex = src_data.nirs[0].data[0].measurementList[0].dataTypeIndex
+    
+    # probe
+    h5snirf['nirs1/probe/wavelengths'] = src_data.nirs[0].probe.wavelengths
+    h5snirf['nirs1/probe/sourcePos2D'] = src_data.nirs[0].probe.sourcePos2D
+    h5snirf['nirs1/probe/detectorPos2D'] = src_data.nirs[0].probe.sourcePos2D
+    
+    dst_data.nirs[0].probe.wavelengths = src_data.nirs[0].probe.wavelengths
+    dst_data.nirs[0].probe.wavelengths = src_data.nirs[0].probe.sourcePos2D
+    dst_data.nirs[0].probe.wavelengths = src_data.nirs[0].probe.sourcePos2D
+    
+    dst_data.save()
+    
+    src_data.close()
+    dst_data.close()
+    h5snirf.close()
+    
+
+
+# -----------------------------------------------------------------------------
 
 SNIRF_DIR = 'testdata'  # Sample data source
 WD = 'wd'  # Working directory for testing
@@ -208,9 +281,11 @@ time.sleep(1)  # Sleep while os exectues copy operation
 # %% Tests
 
 vb = True
-test_files = [WD + '/' + file for file in os.listdir(WD)[0:1]]
+test_files = [WD + '/' + file for file in os.listdir(WD)[0:2]]
 
 print(test_files)
+
+s = Snirf(test_files[-1])
 
 # %%
 
@@ -228,13 +303,15 @@ if test_loading_saving(test_files, spec_locations, verbose=vb):
 else:
     print('Load and resave without editing FAILED')
     
-if test_loading_saving(test_files, spec_locations, verbose=vb, fn=add_stim_condition):
+if test_loading_saving(test_files, spec_locations, verbose=vb, fn=add_and_remove_stim_condition):
     print('Load and resave with added stim PASSED')
 else:
     print('Load and resave with added stim FAILED')
 
 # %% Save
 
+if test_create_a_file(test_files[0], test_files[0].split('.')[0] + '_created', verbose=vb):
+    print('Create a file PASSED')
 
 
 # %% Edit
@@ -243,3 +320,30 @@ else:
 
 # %%
 
+class Test():
+    
+    def __init__(self):
+        self._namelist = ['foo']
+    
+    def __getitem__(self, key):
+        print(key)
+        
+#    def __setattr__(self, name, value):
+#        if self._namelist is not None:
+#            if name in self._namelist:
+#                print(name, value)
+#        
+#    def __getattr__(self, name):
+#        print('got', name)
+
+    def foo(self):
+        print('bar')
+
+
+class Test(Test):
+    
+    def foo(self):
+        super().foo()
+        print('bar2')
+        
+test = Test()

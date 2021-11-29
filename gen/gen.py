@@ -132,7 +132,8 @@ if __name__ == '__main__':
     SNIRF = {
             'VERSION': VERSION,
             'SPEC_SRC': SPEC_SRC,
-            'BASE': '',
+            'HEADER': '',
+            'FOOTER': '',
             'ROOT': flat[0],  # Snirf root '/'
             'TYPES': TYPELUT, 
             'USER': getpass.getuser(),
@@ -168,10 +169,13 @@ if __name__ == '__main__':
     # Generate the complete Snirf interface from base.py and the template + data
     dst = os.path.abspath(os.path.join(os.getcwd(), os.pardir))
     output_path = dst + '/src/' + 'pysnirf2.py'
-    with open(HEADER, 'r') as f_base:
-        print('Loading base class definitions and file header from', HEADER)
-        with open(output_path, "w") as f_out:
-            SNIRF['BASE'] = f_base.read()
-            f_out.write(template.render(SNIRF))
+    with open(HEADER, 'r') as f_header:
+        with open(FOOTER, 'r') as f_footer:
+            print('Loading base class definitions and file header from', HEADER)
+            print('Loading file footer from', FOOTER)
+            with open(output_path, "w") as f_out:
+                SNIRF['HEADER'] = f_header.read()
+                SNIRF['FOOTER'] = f_footer.read()
+                f_out.write(template.render(SNIRF))
             
     print('\nWrote script to ' + output_path + '.')
