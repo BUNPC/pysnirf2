@@ -17,8 +17,9 @@ class MetaDataTags(MetaDataTags):
             file = args[0]
         else:
             file = self._h.file
-        print(self.__class__.__name__ + ' saving misc datasets: ', self.__other)
         for key in self.__other:
-            print('Writing misc dataset to', self.location + '/' + key, 'in', file)
-            file[self.location + '/' + key]
+            print(self.__class__.__name__, 'writing misc dataset to', self.location + '/' + key, 'in', file, 'with value', getattr(self, key))
+            if key in file:
+                del file[key]
+            file.create_dataset(self.location + '/' + key, data=getattr(self, key))
                 
