@@ -57,19 +57,26 @@ class AbsentGroup():
 class Group(ABC):
 
     def __init__(self, varg, cfg: SnirfConfig):
+        """
+        Wrapper for an HDF5 Group element defined by SNIRF. Must be created with a
+        Group ID or string specifying a complete path relative to file root--in
+        the latter case, the wrapper will not correspond to a real HDF5 group on
+        disk until _save() (with no arguments) is executed for the first time
+        """
         self._cfg = cfg
         if type(varg) is str:  # If a Group wrapper is created prior to a save to HDF Group object
-            self._id = None
-            self._h = None
+            self._h = {}
             self._location = varg
         elif isinstance(varg, h5py.h5g.GroupID):  # If Group is created based on an HDF Group object
-            self._id = varg
-            self._h = h5py.Group(self._id)
+            self._h = h5py.Group(varg)
             self._location = self._h.name
         else:
             raise TypeError('must initialize ' + self.__class__.__name__ + ' with a Group ID or string, not ' + str(type(varg)))
 
     def save(self, *args):
+        """
+        Entry to Group-level save
+        """
         if len(args) > 0:
             if type(args[0]) is h5py.File:
                 self._save(args[0])
@@ -84,29 +91,37 @@ class Group(ABC):
                 self._save(file)
                 file.close()
         else:
-            self._save()
+            if self._h != {}:
+                file = self._h.file
+            self._save(file)
             
     @property
     def filename(self):
-        if self._h is not None:
+        """
+        Returns None if the wrapper is not associated with a Group on disk        
+        """
+        if self._h != {}:
             return self._h.file.filename
         else:
             return None
 
     @property
     def location(self):
-        if self._h is not None:
+        if self._h != {}:
             return self._h.name
         else:
             return self._location
-
+    
     @abstractmethod
     def _save(self, *args):
+        """
+        args is path or empty
+        """
         raise NotImplementedError('_save is an abstract method')
         
     def __repr__(self):
         props = [p for p in dir(self) if ('_' not in p and not callable(getattr(self, p)))]
-        out = str(self.__class__.__name__) + ' at ' + str(self._h.name) + '\n'
+        out = str(self.__class__.__name__) + ' at ' + str(self.location) + '\n'
         for prop in props:
             attr = getattr(self, prop)
             out += prop + ': '
@@ -124,6 +139,16 @@ class Group(ABC):
             out += '\n'
         return out[:-1]
 
+    def __getitem__(self, key):
+        if self._h != {}:
+            if key in self._h:
+                return self._h[key]
+        else:
+            return None
+
+    def __contains__(self, key):
+        return key in self._h;
+
 
 class IndexedGroup(MutableSequence, ABC):
     """
@@ -140,26 +165,18 @@ class IndexedGroup(MutableSequence, ABC):
     _name: str = ''  # The specified prefix to this indexed group's members, i.e. nirs, data, stim, aux, measurementList
     _element: Group = None  # The type of Group which belongs to this IndexedGroup
 
-    def __init__(self, parent: (h5py.Group, h5py.File), cfg: SnirfConfig):
-        if isinstance(parent, (h5py.Group, h5py.File)):
-            # Because the indexed group is not a true HDF5 group but rather an
-            # iterable list of HDF5 groups, it takes a base group or file and
-            # searches its keys, appending the appropriate elements to itself
-            # in order
-            self._parent = parent
-            self._cfg = cfg
-            self._list = list()
-            names = self._get_matching_keys()
-            for name in names:
-                if name in self._parent.keys():
-                    self._list.append(self._element(self._parent[name].id, self._cfg))
-        else:
-            raise TypeError('must initialize IndexedGroup with a Group or File')
+    def __init__(self, parent: Group, cfg: SnirfConfig):
+        # Because the indexed group is not a true HDF5 group but rather an
+        # iterable list of HDF5 groups, it takes a base group or file and
+        # searches its keys, appending the appropriate elements to itself
+        # in order
+        self._parent = parent
+        self._cfg = cfg
+        self._populate_list()
     
-
     @property
     def filename(self):
-        return self._parent.file.filename
+        return self._parent.filename
 
     def __len__(self): return len(self._list)
 
@@ -209,11 +226,24 @@ class IndexedGroup(MutableSequence, ABC):
                 self._save(file)
                 file.close()
         else:
-            self._save()
+            if self._parent._h != {}:
+                file = self._parent._h.file
+            self._save(file)
 
     def appendGroup(self):
         'Adds a group to the end of the list'
-        self._list.append(self._element(self._name + str(len(self._list) + 1, self._cfg))
+        location = self._parent.location + '/' + self._name + str(len(self._list) + 1)
+        self._list.append(self._element(location, self._cfg))
+    
+    def _populate_list(self):
+        """
+        Add all the appropriate groups in parent to the list
+        """
+        self._list = list()
+        names = self._get_matching_keys()
+        for name in names:
+            if name in self._parent._h:
+                self._list.append(self._element(self._parent[name].id, self._cfg))
     
     def _check_type(self, item):
         if type(item) is not self._element:
@@ -229,9 +259,10 @@ class IndexedGroup(MutableSequence, ABC):
         within the IndexedGroup
         '''
         if h is None:
-            h = self._parent
-        if all([len(e._h.name.split('/' + self._name)[-1]) > 0 for e in self._list]):
-            if not [int(e._h.name.split('/' + self._name)[-1]) for e in self._list] == list(range(1, len(self._list) + 1)):
+            h = self._parent._h
+        print([e.location for e in self._list])
+        if all([len(e.location.split('/' + self._name)[-1]) > 0 for e in self._list]):
+            if not [int(e.location.split('/' + self._name)[-1]) for e in self._list] == list(range(1, len(self._list) + 1)):
                 # if list is not already ordered propertly
                 for i, e in enumerate(self._list):
                     # To avoid assignment to an existing name, move all
@@ -250,7 +281,7 @@ class IndexedGroup(MutableSequence, ABC):
         Return sorted list of a group or file's keys which match this IndexedList's _name format
         '''
         if h is None:
-            h = self._parent
+            h = self._parent._h
         unordered = []
         indices = []
         for key in h:
@@ -269,7 +300,10 @@ class IndexedGroup(MutableSequence, ABC):
         if len(args) > 0 and type(args[0]) is h5py.File:
             h = args[0]
         else:
-            h = self._parent.file
+            if self._parent._h != {}:
+                h = self._parent._h.file
+            else:
+                raise ValueError('Cannot save an anonymous ' + self.__class__.__name__ + ' instance')
         names_in_file = self._get_matching_keys(h=h)  # List of all names in the file on disk
         names_to_save = [e.location.split('/')[-1] for e in self._list]  # List of names in the wrapper
         print('Saving indexed group', self.__class__.__name__)
@@ -280,11 +314,7 @@ class IndexedGroup(MutableSequence, ABC):
             if name not in names_to_save:
                 print('Deleting', self._parent.name + '/' + name, 'while overwriting indexed group', self.__class__.__name__, 'as it has been deleted from the file')
                 del h[self._parent.name + '/' + name]  # Remove the actual data from the hdf5 file.
-        
         for e in self._list:
-            if e.location not in h:
-                print('Creating group', e.location, 'in', h)
-                h.create_group(e.location)
-            e._save(*args)
+            e._save(*args)  # Group save functions handle the write to disk
         self._order_names(h=h)  # Enforce order in the group names
 
