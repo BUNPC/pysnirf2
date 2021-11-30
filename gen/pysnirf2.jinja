@@ -23,6 +23,7 @@
     {% else %}
     if '{{ CHILD.name }}' in self._h:
         if not self._cfg.dynamic_loading:
+            self._cfg.logger.info('Loaded %s/{{ CHILD.name }} from %s', self.location, self.filename)
         {% if (TYPES.ARRAY_1D in CHILD.type) or (TYPES.ARRAY_2D in CHILD.type) %}
             {% if TYPES.VARLEN_STRING in CHILD.type %}
             self._{{- CHILD.name }} = _read_string_array(self._h['{{ CHILD.name }}'])
@@ -91,6 +92,7 @@
     @{{ CHILD.name }}.setter
     def {{ CHILD.name }}(self, value):
         self._{{ CHILD.name }} = value
+        self._cfg.logger.info('Assignment to %s/{{ CHILD.name }} in %s', self.location, self.filename)
 
     @{{ CHILD.name }}.deleter
     def {{ CHILD.name }}(self):
@@ -101,6 +103,7 @@
         {% else %}
         self._{{ CHILD.name }} = AbsentDataset()
         {% endif %}
+        self._cfg.logger.info('Deleted %s/{{ CHILD.name }} from %s', self.location, self.filename)
 
     {% endfor %}
 {% endmacro %}
@@ -110,10 +113,12 @@
             file = args[0]
             if self.location not in file:
                 file.create_group(self.location)
+                self._cfg.logger.info('Created Group at %s in %s', self.location, file)
         else:
             if self.location not in file:
                 # Assign the wrapper to the new HDF5 Group on disk
                 self._h = file.create_group(self.location)
+                self._cfg.logger.info('Created Group at %s in %s', self.location, file)
             if self._h != {}:
                 file = self._h.file
             else:
@@ -125,12 +130,14 @@
         if type(self._{{ CHILD.name }}) is AbsentGroup:
             if '{{ CHILD.name }}' in file:
                 del file['{{ CHILD.name }}']
+                self._cfg.logger.info('Deleted Group %s/{{ CHILD.name }} from %s', self.location, file)
         else:
             self.{{ CHILD.name }}._save(*args)
     {% else %}
         name = self.location + '/{{ CHILD.name }}'
         if name in file:
             del file[name]
+            self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         data = self.{{ CHILD.name }}
         if type(data) is not AbsentDataset and data is not None:
         {% if (TYPES.ARRAY_1D in CHILD.type) or (TYPES.ARRAY_2D in CHILD.type) %}
@@ -154,6 +161,7 @@
             _create_dataset(file, name, data)
             {% endif %}
         {% endif %}
+            self._cfg.logger.info('Creating Dataset %s in %s', name, file)
     {% endif %}
     {% endfor %}
 {% endmacro %}
@@ -215,10 +223,10 @@ class Snirf():
                 else:
                     self._cfg.logger = _logger  # Use global logger
                 if os.path.exists(path):
-                    self._cfg.logger.info('Loading from file ' + path)
+                    self._cfg.logger.info('Loading from file %s', path)
                     self._h = h5py.File(path, 'r+')
                 else:
-                    self._cfg.logger.info('Creating new file at ' + path)
+                    self._cfg.logger.info('Creating new file at %s', path)
                     self._h = h5py.File(path, 'w')
             else:
                 raise TypeError(str(path) + ' is not a valid filename')
@@ -246,6 +254,7 @@ class Snirf():
                 path += '.snirf'
             new_file = h5py.File(path, 'w')
             self._save(new_file)
+            self._cfg.logger.info('Saved Snirf file at %s to copy at %s', self.filename, path)
             new_file.close()
         else:
             self._save(self._h.file)
@@ -259,6 +268,7 @@ class Snirf():
         return self._h.name
 
     def close(self):
+        self._cfg.logger.info('Closing Snirf file %s', self.filename)
         self._cfg.logger.handlers.clear()
         self._h.close()
 

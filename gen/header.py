@@ -4,7 +4,7 @@ import os
 import sys
 import numpy as np
 from warnings import warn
-from collections import MutableSequence
+from collections.abc import MutableSequence
 from tempfile import TemporaryFile
 import logging
 
@@ -179,6 +179,7 @@ class SnirfFormatError(Exception):
 
 
 class SnirfConfig:
+    logger: logging.Logger = _logger
     dynamic_loading: bool = False  # If False, data is loaded in the constructor, if True, data is loaded on access
 
 
@@ -226,6 +227,7 @@ class Group(ABC):
                     file = h5py.File(path, 'w')
                 else:
                     raise FileNotFoundError("No such SNIRF file '" + path + "'. Create a SNIRF file before attempting to save a Group to it.")
+                self._cfg.logger.info('Group-level save of %s in %s tp %s', self.location, self.filename, file)
                 self._save(file)
                 file.close()
         else:
@@ -311,6 +313,8 @@ class IndexedGroup(MutableSequence, ABC):
         self._parent = parent
         self._cfg = cfg
         self._populate_list()
+        self._cfg.logger.info('IndexedGroup %s at %s in %s initalized with %i instances of %s', self.__class__.__name__,
+                              self._parent.location, self.filename, len(self._list), self._element)
     
     @property
     def filename(self):
@@ -344,11 +348,15 @@ class IndexedGroup(MutableSequence, ABC):
     def insert(self, i, item):
         self._check_type(item)
         self._list.insert(i, item)
+        self._cfg.logger.info('%i th element inserted into IndexedGroup %s at %s in %s at %i', len(self._list),
+                              self.__class__.__name__, self._parent.location, self.filename, i)
 
     def append(self, item):
         self._check_type(item)
         self._list.append(item)
-    
+        self._cfg.logger.info('%i th element appended to IndexedGroup %s at %s in %s', len(self._list),
+                              self.__class__.__name__, self._parent.location, self.filename)
+
     def save(self, *args):
         if len(args) > 0:
             if type(args[0]) is h5py.File:
@@ -361,6 +369,8 @@ class IndexedGroup(MutableSequence, ABC):
                     file = h5py.File(path, 'w')
                 else:
                     raise FileNotFoundError("No such SNIRF file '" + path + "'. Create a SNIRF file before attempting to save an IndexedGroup to it.")
+                self._cfg.logger.info('IndexedGroup-level save of %s at %s in %s to %s', self.__class__.__name__,
+                                      self._parent.location, self.filename, file)
                 self._save(file)
                 file.close()
         else:
@@ -400,19 +410,21 @@ class IndexedGroup(MutableSequence, ABC):
             h = self._parent._h
         if all([len(e.location.split('/' + self._name)[-1]) > 0 for e in self._list]):
             if not [int(e.location.split('/' + self._name)[-1]) for e in self._list] == list(range(1, len(self._list) + 1)):
+                self._cfg.logger.info('renaming elements of IndexedGroup ' + self.__class__.__name__ + ' at '
+                                      + self._parent.location + ' in ' + self.filename + ' to agree with naming format')
                 # if list is not already ordered propertly
                 for i, e in enumerate(self._list):
                     # To avoid assignment to an existing name, move all
                     h.move(e.location,
                            '/'.join(e.location.split('/')[:-1]) + '/' + self._name + str(i + 1) + '_tmp')
-    #                print(e.location, '--->',
-    #                      '/'.join(e.location.split('/')[:-1]) + '/' + self._name + str(i + 1) + '_tmp')
+                    self._cfg.logger.info(e.location, '--->',
+                                          '/'.join(e.location.split('/')[:-1]) + '/' + self._name + str(i + 1) + '_tmp')
                 for i, e in enumerate(self._list):
                     h.move('/'.join(e.location.split('/')[:-1]) + '/' + self._name + str(i + 1) + '_tmp',
                            '/'.join(e.location.split('/')[:-1]) + '/' + self._name + str(i + 1))
-    #                print('/'.join(e.location.split('/')[:-1]) + '/' + self._name + str(i + 1) + '_tmp', '--->',
-    #                      '/'.join(e.location.split('/')[:-1]) + '/' + self._name + str(i + 1))
-        
+                    self._cfg.logger.info('/'.join(e.location.split('/')[:-1]) + '/' + self._name + str(i + 1) + '_tmp',
+                                          '--->', '/'.join(e.location.split('/')[:-1]) + '/' + self._name + str(i + 1))
+
     def _get_matching_keys(self, h=None):
         '''
         Return sorted list of a group or file's keys which match this IndexedList's _name format
