@@ -28,18 +28,30 @@
     if '{{ CHILD.name }}' in self._h:
         self._{{- CHILD.name }} = {{ sentencecase(CHILD.name) }}(self._h['{{ CHILD.name }}'].id, self._cfg)  # Group
     else:
-        self._{{ CHILD.name }} = {{ sentencecase(CHILD.name) }}(self.location + '/' + '{{ CHILD.name }}', self._cfg)  # Group wrapper
+        self._{{ CHILD.name }} = {{ sentencecase(CHILD.name) }}(self.location + '/' + '{{ CHILD.name }}', self._cfg)  # Anonymous group (wrapper only)
     {% else %}
     if '{{ CHILD.name }}' in self._h:
+        if not self._cfg.dynamic_loading:
         {% if (TYPES.ARRAY_1D in CHILD.type) or (TYPES.ARRAY_2D in CHILD.type) %}
-        if not self._cfg.dynamic_loading:
-            self._{{- CHILD.name }} = np.array(self._h['{{ CHILD.name }}']).astype({{ python_type }})  # Array
-        {% elif TYPES.VARLEN_STRING in CHILD.type %}
-        if not self._cfg.dynamic_loading:
-            self._{{- CHILD.name }} = _read_string(self._h['{{ CHILD.name }}'])
+            {% if TYPES.VARLEN_STRING in CHILD.type %}
+            self._{{- CHILD.name }} = _read_string_array(self._h['{{ CHILD.name }}'])
+            {% elif TYPES.INT_VALUE in CHILD.type %}
+            self._{{- CHILD.name }} = _read_int_array(self._h['{{ CHILD.name }}'])
+            {% elif TYPES.FLOAT_VALUE in CHILD.type %}
+            self._{{- CHILD.name }} = _read_float_array(self._h['{{ CHILD.name }}'])
+            {% else %}
+            self._{{- CHILD.name }} = _read_dataset(self._h['{{ CHILD.name }}'])
+            {% endif %}
         {% else %}
-        if not self._cfg.dynamic_loading:
-            self._{{- CHILD.name }} = {{ python_type }}(self._h['{{ CHILD.name }}'][()])
+            {% if TYPES.VARLEN_STRING in CHILD.type %}
+            self._{{- CHILD.name }} = _read_string(self._h['{{ CHILD.name }}'])
+            {% elif TYPES.INT_VALUE in CHILD.type %}
+            self._{{- CHILD.name }} = _read_int(self._h['{{ CHILD.name }}'])
+            {% elif TYPES.FLOAT_VALUE in CHILD.type %}
+            self._{{- CHILD.name }} = _read_float(self._h['{{ CHILD.name }}'])
+            {% else %}
+            self._{{- CHILD.name }} = _read_dataset(self._h['{{ CHILD.name }}'])
+            {% endif %}
         {% endif %}
         {% if (TYPES.REQUIRED in CHILD.type) and not ((TYPES.REQUIRED + '1' in CHILD.type) or (TYPES.REQUIRED + '2' in CHILD.type)) %}
     else:

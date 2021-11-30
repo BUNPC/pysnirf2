@@ -22,15 +22,153 @@ _logger = _create_logger('pysnirf2', 'pysnirf2.log')
 if sys.version_info[0] < 3:
     raise ImportError('pysnirf2 requires Python > 3')
 
-# -- methods for writing and reading ------
+# -- methods to cast data prior to writing to and after reading from h5py interfaces------
 
-    
-def _read_string(dataset):
+_varlen_str_type = h5py.string_dtype(encoding='ascii', length=None)  # Length=None creates HDF5 variable length string
+_DTYPE_FLOAT = 'f8'
+_DTYPE_INT = 'i4'
+_DTYPE_STR = 'S'  # Not sure how robust this is, but fixed length strings will always at least contain S
+
+
+def _create_dataset_dataset(file, name, data):
+    """
+    Formats the input to satisfy the SNIRF specification as well as the HDF5 format. Determines appropriate write
+    function from the type of data. The returned value should be passed to h5py.create_dataset() as kwarg "data" to be
+    saved to an HDF5 file.
+
+    Returns None if input is invalid and an h5py.Dataset instance if successful.
+
+    Supported dtype str values: 'O', _DTYPE_FLOAT, _DTYPE_INT
+    """
+    try:
+        if len(data) > 1:
+            data = np.array(data)  # Cast to array
+            dtype = data[0].dtype
+            if any([dtype is t for t in [int, np.int32, np.int64]]):  # int
+                return _create_dataset_int_array(file, name, data)
+            elif any([dtype is t for t in [float, np.float, np.float64]]):  # float
+                return _create_dataset_float_array(file, name, data)
+            elif any([dtype is t for t in [str, np.string_]]):  # string
+                return _create_dataset_string_array(file, name, data)
+    except TypeError:  # data has no len()
+        dtype = type(data)
+    if any([dtype is t for t in [int, np.int32, np.int64]]):  # int
+        return _create_dataset_int(file, name, data)
+    elif any([dtype is t for t in [float, np.float, np.float64]]):  # float
+        return _create_dataset_float(file, name, data)
+    elif any([dtype is t for t in [str, np.string_]]):  # string
+        return _create_dataset_string(file, name, data)
+    raise TypeError('Unrecognized data type' + str(dtype)
+                    + '. Please provide an int, float, or str, or an iterable of these.')
+
+
+def _create_dataset_string(file: h5py.File, name: str, data: str):
+    return file.create_dataset(name, dtype=h5py.string_dtype(encoding='ascii', length=None), data=str(data))
+
+
+def _create_dataset_int(file: h5py.File, name: str, data: int):
+    return file.create_dataset(name, dtype=_DTYPE_INT, data=int(data))
+
+
+def _create_dataset_float(file: h5py.File, name: str, data: float):
+    return file.create_dataset(name, dtype=_DTYPE_FLOAT, data=float(data))
+
+
+def _create_dataset_string_array(file: h5py.File, name: str, data: np.ndarray):
+    array = np.array(data).astype('O')
+    if data.size is 0 or data.any() is None:
+        array = AbsentDataset()  # Do not save empty or "None" NumPy arrays
+    return file.create_dataset(name, dtype=h5py.string_dtype(encoding='ascii', length=None), data=array)
+
+
+def _create_dataset_int_array(file: h5py.File, name: str, data: np.ndarray):
+    array = np.array(data).astype(int)
+    if data.size is 0 or data.any() is None:
+        array = AbsentDataset()
+    return file.create_dataset(name, dtype=_DTYPE_INT, data=array)
+
+
+def _create_dataset_float_array(file: h5py.File, name: str, data: np.ndarray):
+    array = np.array(data).astype(float)
+    if data.size is 0 or data.any() is None:
+        array = AbsentDataset()
+    return file.create_dataset(name, dtype=_DTYPE_FLOAT, data=array)
+
+
+# -----------------------------------------
+
+
+def _read_dataset(h_dataset: h5py.Dataset):
+    """
+    Reads data from a SNIRF file using the HDF5 interface and casts it to a Pythonic type or numpy array. Determines
+    the appropriate read function from the properties of h_dataset
+    """
+    if type(h_dataset) is not h5py.Dataset:
+        raise TypeError("'dataset' must be type h5py.Dataset")
+    if h_dataset.size > 1:
+        if _DTYPE_STR in h_dataset.dtype:
+            return _read_string_array(h_dataset)
+        elif _DTYPE_INT in h_dataset.dtype:
+            return _read_int_array(h_dataset)
+        elif _DTYPE_FLOAT in h_dataset.dtype:
+            return _read_float_array(h_dataset)
+    else:
+        if _DTYPE_STR in h_dataset.dtype:
+            return _read_string(h_dataset)
+        elif _DTYPE_INT in h_dataset.dtype:
+            return _read_int(h_dataset)
+        elif _DTYPE_FLOAT in h_dataset.dtype:
+            return _read_float(h_dataset)
+    raise TypeError("Dataset dtype='" + str(h_dataset.dtype)
+    + "' not recognized. Expecting dtype to contain one of these: " + str([_DTYPE_STR, _DTYPE_INT, _DTYPE_FLOAT]))
+
+
+def _read_string(dataset: h5py.Dataset):
     # Because many SNIRF files are saved with string values in length 1 arrays
+    if type(dataset) is not h5py.Dataset:
+        raise TypeError("'dataset' must be type h5py.Dataset")
     if dataset.ndim > 0:
         return dataset[0].decode('ascii')
     else:
         return dataset[()].decode('ascii')
+
+
+def _read_int(dataset: h5py.Dataset):
+    # Because many SNIRF files are saved with string values in length 1 arrays
+    if type(dataset) is not h5py.Dataset:
+        raise TypeError("'dataset' must be type h5py.Dataset")
+    if dataset.ndim > 0:
+        return int(dataset[0])
+    else:
+        return int(dataset[()])
+
+
+def _read_float(dataset: h5py.Dataset):
+    # Because many SNIRF files are saved with string values in length 1 arrays
+    if type(dataset) is not h5py.Dataset:
+        raise TypeError("'dataset' must be type h5py.Dataset")
+    if dataset.ndim > 0:
+        return float(dataset[0])
+    else:
+        return float(dataset[()])
+
+
+def _read_string_array(dataset: h5py.Dataset):
+    if type(dataset) is not h5py.Dataset:
+        raise TypeError("'dataset' must be type h5py.Dataset")
+    return np.array(dataset).astype(str)
+
+
+def _read_int_array(dataset: h5py.Dataset):
+    if type(dataset) is not h5py.Dataset:
+        raise TypeError("'dataset' must be type h5py.Dataset")
+    return np.array(dataset).astype(int)
+
+
+def _read_float_array(dataset: h5py.Dataset):
+    if type(dataset) is not h5py.Dataset:
+        raise TypeError("'dataset' must be type h5py.Dataset")
+    return np.array(dataset).astype(float)
 
 
 # -----------------------------------------
@@ -571,60 +709,60 @@ class Probe(Group):
         self.__snirfnames = ['wavelengths', 'wavelengthsEmission', 'sourcePos2D', 'sourcePos3D', 'detectorPos2D', 'detectorPos3D', 'frequencies', 'timeDelays', 'timeDelayWidths', 'momentOrders', 'correlationTimeDelays', 'correlationTimeDelayWidths', 'sourceLabels', 'detectorLabels', 'landmarkPos2D', 'landmarkPos3D', 'landmarkLabels', 'useLocalIndex', ]
         if 'wavelengths' in self._h:
             if not self._cfg.dynamic_loading:
-                self._wavelengths = np.array(self._h['wavelengths']).astype(float)  # Array
+                self._wavelengths = _read_float_array(self._h['wavelengths'])
         else:
             warn(str(self.__class__.__name__) + ' missing required key ' + '"wavelengths"')
         if 'wavelengthsEmission' in self._h:
             if not self._cfg.dynamic_loading:
-                self._wavelengthsEmission = np.array(self._h['wavelengthsEmission']).astype(float)  # Array
+                self._wavelengthsEmission = _read_float_array(self._h['wavelengthsEmission'])
         if 'sourcePos2D' in self._h:
             if not self._cfg.dynamic_loading:
-                self._sourcePos2D = np.array(self._h['sourcePos2D']).astype(float)  # Array
+                self._sourcePos2D = _read_float_array(self._h['sourcePos2D'])
         if 'sourcePos3D' in self._h:
             if not self._cfg.dynamic_loading:
-                self._sourcePos3D = np.array(self._h['sourcePos3D']).astype(float)  # Array
+                self._sourcePos3D = _read_float_array(self._h['sourcePos3D'])
         if 'detectorPos2D' in self._h:
             if not self._cfg.dynamic_loading:
-                self._detectorPos2D = np.array(self._h['detectorPos2D']).astype(float)  # Array
+                self._detectorPos2D = _read_float_array(self._h['detectorPos2D'])
         if 'detectorPos3D' in self._h:
             if not self._cfg.dynamic_loading:
-                self._detectorPos3D = np.array(self._h['detectorPos3D']).astype(float)  # Array
+                self._detectorPos3D = _read_float_array(self._h['detectorPos3D'])
         if 'frequencies' in self._h:
             if not self._cfg.dynamic_loading:
-                self._frequencies = np.array(self._h['frequencies']).astype(float)  # Array
+                self._frequencies = _read_float_array(self._h['frequencies'])
         if 'timeDelays' in self._h:
             if not self._cfg.dynamic_loading:
-                self._timeDelays = np.array(self._h['timeDelays']).astype(float)  # Array
+                self._timeDelays = _read_float_array(self._h['timeDelays'])
         if 'timeDelayWidths' in self._h:
             if not self._cfg.dynamic_loading:
-                self._timeDelayWidths = np.array(self._h['timeDelayWidths']).astype(float)  # Array
+                self._timeDelayWidths = _read_float_array(self._h['timeDelayWidths'])
         if 'momentOrders' in self._h:
             if not self._cfg.dynamic_loading:
-                self._momentOrders = np.array(self._h['momentOrders']).astype(float)  # Array
+                self._momentOrders = _read_float_array(self._h['momentOrders'])
         if 'correlationTimeDelays' in self._h:
             if not self._cfg.dynamic_loading:
-                self._correlationTimeDelays = np.array(self._h['correlationTimeDelays']).astype(float)  # Array
+                self._correlationTimeDelays = _read_float_array(self._h['correlationTimeDelays'])
         if 'correlationTimeDelayWidths' in self._h:
             if not self._cfg.dynamic_loading:
-                self._correlationTimeDelayWidths = np.array(self._h['correlationTimeDelayWidths']).astype(float)  # Array
+                self._correlationTimeDelayWidths = _read_float_array(self._h['correlationTimeDelayWidths'])
         if 'sourceLabels' in self._h:
             if not self._cfg.dynamic_loading:
-                self._sourceLabels = np.array(self._h['sourceLabels']).astype(str)  # Array
+                self._sourceLabels = _read_string_array(self._h['sourceLabels'])
         if 'detectorLabels' in self._h:
             if not self._cfg.dynamic_loading:
-                self._detectorLabels = np.array(self._h['detectorLabels']).astype(str)  # Array
+                self._detectorLabels = _read_string_array(self._h['detectorLabels'])
         if 'landmarkPos2D' in self._h:
             if not self._cfg.dynamic_loading:
-                self._landmarkPos2D = np.array(self._h['landmarkPos2D']).astype(float)  # Array
+                self._landmarkPos2D = _read_float_array(self._h['landmarkPos2D'])
         if 'landmarkPos3D' in self._h:
             if not self._cfg.dynamic_loading:
-                self._landmarkPos3D = np.array(self._h['landmarkPos3D']).astype(float)  # Array
+                self._landmarkPos3D = _read_float_array(self._h['landmarkPos3D'])
         if 'landmarkLabels' in self._h:
             if not self._cfg.dynamic_loading:
-                self._landmarkLabels = np.array(self._h['landmarkLabels']).astype(str)  # Array
+                self._landmarkLabels = _read_string_array(self._h['landmarkLabels'])
         if 'useLocalIndex' in self._h:
             if not self._cfg.dynamic_loading:
-                self._useLocalIndex = int(self._h['useLocalIndex'][()])
+                self._useLocalIndex = _read_int(self._h['useLocalIndex'])
 
     @property
     def wavelengths(self):
@@ -1163,13 +1301,13 @@ class NirsElement(Group):
         if 'metaDataTags' in self._h:
             self._metaDataTags = MetaDataTags(self._h['metaDataTags'].id, self._cfg)  # Group
         else:
-            self._metaDataTags = MetaDataTags(self.location + '/' + 'metaDataTags', self._cfg)  # Group wrapper
+            self._metaDataTags = MetaDataTags(self.location + '/' + 'metaDataTags', self._cfg)  # Anonymous group (wrapper only)
         self.data = Data(self, self._cfg)  # Indexed group
         self.stim = Stim(self, self._cfg)  # Indexed group
         if 'probe' in self._h:
             self._probe = Probe(self._h['probe'].id, self._cfg)  # Group
         else:
-            self._probe = Probe(self.location + '/' + 'probe', self._cfg)  # Group wrapper
+            self._probe = Probe(self.location + '/' + 'probe', self._cfg)  # Anonymous group (wrapper only)
         self.aux = Aux(self, self._cfg)  # Indexed group
 
     @property
@@ -1287,12 +1425,12 @@ class DataElement(Group):
         self.__snirfnames = ['dataTimeSeries', 'time', 'measurementList', ]
         if 'dataTimeSeries' in self._h:
             if not self._cfg.dynamic_loading:
-                self._dataTimeSeries = np.array(self._h['dataTimeSeries']).astype(float)  # Array
+                self._dataTimeSeries = _read_float_array(self._h['dataTimeSeries'])
         else:
             warn(str(self.__class__.__name__) + ' missing required key ' + '"dataTimeSeries"')
         if 'time' in self._h:
             if not self._cfg.dynamic_loading:
-                self._time = np.array(self._h['time']).astype(float)  # Array
+                self._time = _read_float_array(self._h['time'])
         else:
             warn(str(self.__class__.__name__) + ' missing required key ' + '"time"')
         self.measurementList = MeasurementList(self, self._cfg)  # Indexed group
@@ -1416,28 +1554,28 @@ class MeasurementListElement(Group):
         self.__snirfnames = ['sourceIndex', 'detectorIndex', 'wavelengthIndex', 'wavelengthActual', 'wavelengthEmissionActual', 'dataType', 'dataTypeLabel', 'dataTypeIndex', 'sourcePower', 'detectorGain', 'moduleIndex', 'sourceModuleIndex', 'detectorModuleIndex', ]
         if 'sourceIndex' in self._h:
             if not self._cfg.dynamic_loading:
-                self._sourceIndex = int(self._h['sourceIndex'][()])
+                self._sourceIndex = _read_int(self._h['sourceIndex'])
         else:
             warn(str(self.__class__.__name__) + ' missing required key ' + '"sourceIndex"')
         if 'detectorIndex' in self._h:
             if not self._cfg.dynamic_loading:
-                self._detectorIndex = int(self._h['detectorIndex'][()])
+                self._detectorIndex = _read_int(self._h['detectorIndex'])
         else:
             warn(str(self.__class__.__name__) + ' missing required key ' + '"detectorIndex"')
         if 'wavelengthIndex' in self._h:
             if not self._cfg.dynamic_loading:
-                self._wavelengthIndex = int(self._h['wavelengthIndex'][()])
+                self._wavelengthIndex = _read_int(self._h['wavelengthIndex'])
         else:
             warn(str(self.__class__.__name__) + ' missing required key ' + '"wavelengthIndex"')
         if 'wavelengthActual' in self._h:
             if not self._cfg.dynamic_loading:
-                self._wavelengthActual = float(self._h['wavelengthActual'][()])
+                self._wavelengthActual = _read_float(self._h['wavelengthActual'])
         if 'wavelengthEmissionActual' in self._h:
             if not self._cfg.dynamic_loading:
-                self._wavelengthEmissionActual = float(self._h['wavelengthEmissionActual'][()])
+                self._wavelengthEmissionActual = _read_float(self._h['wavelengthEmissionActual'])
         if 'dataType' in self._h:
             if not self._cfg.dynamic_loading:
-                self._dataType = int(self._h['dataType'][()])
+                self._dataType = _read_int(self._h['dataType'])
         else:
             warn(str(self.__class__.__name__) + ' missing required key ' + '"dataType"')
         if 'dataTypeLabel' in self._h:
@@ -1445,24 +1583,24 @@ class MeasurementListElement(Group):
                 self._dataTypeLabel = _read_string(self._h['dataTypeLabel'])
         if 'dataTypeIndex' in self._h:
             if not self._cfg.dynamic_loading:
-                self._dataTypeIndex = int(self._h['dataTypeIndex'][()])
+                self._dataTypeIndex = _read_int(self._h['dataTypeIndex'])
         else:
             warn(str(self.__class__.__name__) + ' missing required key ' + '"dataTypeIndex"')
         if 'sourcePower' in self._h:
             if not self._cfg.dynamic_loading:
-                self._sourcePower = float(self._h['sourcePower'][()])
+                self._sourcePower = _read_float(self._h['sourcePower'])
         if 'detectorGain' in self._h:
             if not self._cfg.dynamic_loading:
-                self._detectorGain = float(self._h['detectorGain'][()])
+                self._detectorGain = _read_float(self._h['detectorGain'])
         if 'moduleIndex' in self._h:
             if not self._cfg.dynamic_loading:
-                self._moduleIndex = int(self._h['moduleIndex'][()])
+                self._moduleIndex = _read_int(self._h['moduleIndex'])
         if 'sourceModuleIndex' in self._h:
             if not self._cfg.dynamic_loading:
-                self._sourceModuleIndex = int(self._h['sourceModuleIndex'][()])
+                self._sourceModuleIndex = _read_int(self._h['sourceModuleIndex'])
         if 'detectorModuleIndex' in self._h:
             if not self._cfg.dynamic_loading:
-                self._detectorModuleIndex = int(self._h['detectorModuleIndex'][()])
+                self._detectorModuleIndex = _read_int(self._h['detectorModuleIndex'])
 
     @property
     def sourceIndex(self):
@@ -1845,10 +1983,10 @@ class StimElement(Group):
                 self._name = _read_string(self._h['name'])
         if 'data' in self._h:
             if not self._cfg.dynamic_loading:
-                self._data = np.array(self._h['data']).astype(float)  # Array
+                self._data = _read_float_array(self._h['data'])
         if 'dataLabels' in self._h:
             if not self._cfg.dynamic_loading:
-                self._dataLabels = np.array(self._h['dataLabels']).astype(str)  # Array
+                self._dataLabels = _read_string_array(self._h['dataLabels'])
 
     @property
     def name(self):
@@ -1976,13 +2114,13 @@ class AuxElement(Group):
                 self._name = _read_string(self._h['name'])
         if 'dataTimeSeries' in self._h:
             if not self._cfg.dynamic_loading:
-                self._dataTimeSeries = np.array(self._h['dataTimeSeries']).astype(float)  # Array
+                self._dataTimeSeries = _read_float_array(self._h['dataTimeSeries'])
         if 'time' in self._h:
             if not self._cfg.dynamic_loading:
-                self._time = np.array(self._h['time']).astype(float)  # Array
+                self._time = _read_float_array(self._h['time'])
         if 'timeOffset' in self._h:
             if not self._cfg.dynamic_loading:
-                self._timeOffset = np.array(self._h['timeOffset']).astype(float)  # Array
+                self._timeOffset = _read_float_array(self._h['timeOffset'])
 
     @property
     def name(self):

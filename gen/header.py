@@ -22,15 +22,153 @@ _logger = _create_logger('pysnirf2', 'pysnirf2.log')
 if sys.version_info[0] < 3:
     raise ImportError('pysnirf2 requires Python > 3')
 
-# -- methods for writing and reading ------
+# -- methods to cast data prior to writing to and after reading from h5py interfaces------
 
-    
-def _read_string(dataset):
+_varlen_str_type = h5py.string_dtype(encoding='ascii', length=None)  # Length=None creates HDF5 variable length string
+_DTYPE_FLOAT = 'f8'
+_DTYPE_INT = 'i4'
+_DTYPE_STR = 'S'  # Not sure how robust this is, but fixed length strings will always at least contain S
+
+
+def _create_dataset_dataset(file, name, data):
+    """
+    Formats the input to satisfy the SNIRF specification as well as the HDF5 format. Determines appropriate write
+    function from the type of data. The returned value should be passed to h5py.create_dataset() as kwarg "data" to be
+    saved to an HDF5 file.
+
+    Returns None if input is invalid and an h5py.Dataset instance if successful.
+
+    Supported dtype str values: 'O', _DTYPE_FLOAT, _DTYPE_INT
+    """
+    try:
+        if len(data) > 1:
+            data = np.array(data)  # Cast to array
+            dtype = data[0].dtype
+            if any([dtype is t for t in [int, np.int32, np.int64]]):  # int
+                return _create_dataset_int_array(file, name, data)
+            elif any([dtype is t for t in [float, np.float, np.float64]]):  # float
+                return _create_dataset_float_array(file, name, data)
+            elif any([dtype is t for t in [str, np.string_]]):  # string
+                return _create_dataset_string_array(file, name, data)
+    except TypeError:  # data has no len()
+        dtype = type(data)
+    if any([dtype is t for t in [int, np.int32, np.int64]]):  # int
+        return _create_dataset_int(file, name, data)
+    elif any([dtype is t for t in [float, np.float, np.float64]]):  # float
+        return _create_dataset_float(file, name, data)
+    elif any([dtype is t for t in [str, np.string_]]):  # string
+        return _create_dataset_string(file, name, data)
+    raise TypeError('Unrecognized data type' + str(dtype)
+                    + '. Please provide an int, float, or str, or an iterable of these.')
+
+
+def _create_dataset_string(file: h5py.File, name: str, data: str):
+    return file.create_dataset(name, dtype=h5py.string_dtype(encoding='ascii', length=None), data=str(data))
+
+
+def _create_dataset_int(file: h5py.File, name: str, data: int):
+    return file.create_dataset(name, dtype=_DTYPE_INT, data=int(data))
+
+
+def _create_dataset_float(file: h5py.File, name: str, data: float):
+    return file.create_dataset(name, dtype=_DTYPE_FLOAT, data=float(data))
+
+
+def _create_dataset_string_array(file: h5py.File, name: str, data: np.ndarray):
+    array = np.array(data).astype('O')
+    if data.size is 0 or data.any() is None:
+        array = AbsentDataset()  # Do not save empty or "None" NumPy arrays
+    return file.create_dataset(name, dtype=h5py.string_dtype(encoding='ascii', length=None), data=array)
+
+
+def _create_dataset_int_array(file: h5py.File, name: str, data: np.ndarray):
+    array = np.array(data).astype(int)
+    if data.size is 0 or data.any() is None:
+        array = AbsentDataset()
+    return file.create_dataset(name, dtype=_DTYPE_INT, data=array)
+
+
+def _create_dataset_float_array(file: h5py.File, name: str, data: np.ndarray):
+    array = np.array(data).astype(float)
+    if data.size is 0 or data.any() is None:
+        array = AbsentDataset()
+    return file.create_dataset(name, dtype=_DTYPE_FLOAT, data=array)
+
+
+# -----------------------------------------
+
+
+def _read_dataset(h_dataset: h5py.Dataset):
+    """
+    Reads data from a SNIRF file using the HDF5 interface and casts it to a Pythonic type or numpy array. Determines
+    the appropriate read function from the properties of h_dataset
+    """
+    if type(h_dataset) is not h5py.Dataset:
+        raise TypeError("'dataset' must be type h5py.Dataset")
+    if h_dataset.size > 1:
+        if _DTYPE_STR in h_dataset.dtype:
+            return _read_string_array(h_dataset)
+        elif _DTYPE_INT in h_dataset.dtype:
+            return _read_int_array(h_dataset)
+        elif _DTYPE_FLOAT in h_dataset.dtype:
+            return _read_float_array(h_dataset)
+    else:
+        if _DTYPE_STR in h_dataset.dtype:
+            return _read_string(h_dataset)
+        elif _DTYPE_INT in h_dataset.dtype:
+            return _read_int(h_dataset)
+        elif _DTYPE_FLOAT in h_dataset.dtype:
+            return _read_float(h_dataset)
+    raise TypeError("Dataset dtype='" + str(h_dataset.dtype)
+    + "' not recognized. Expecting dtype to contain one of these: " + str([_DTYPE_STR, _DTYPE_INT, _DTYPE_FLOAT]))
+
+
+def _read_string(dataset: h5py.Dataset):
     # Because many SNIRF files are saved with string values in length 1 arrays
+    if type(dataset) is not h5py.Dataset:
+        raise TypeError("'dataset' must be type h5py.Dataset")
     if dataset.ndim > 0:
         return dataset[0].decode('ascii')
     else:
         return dataset[()].decode('ascii')
+
+
+def _read_int(dataset: h5py.Dataset):
+    # Because many SNIRF files are saved with string values in length 1 arrays
+    if type(dataset) is not h5py.Dataset:
+        raise TypeError("'dataset' must be type h5py.Dataset")
+    if dataset.ndim > 0:
+        return int(dataset[0])
+    else:
+        return int(dataset[()])
+
+
+def _read_float(dataset: h5py.Dataset):
+    # Because many SNIRF files are saved with string values in length 1 arrays
+    if type(dataset) is not h5py.Dataset:
+        raise TypeError("'dataset' must be type h5py.Dataset")
+    if dataset.ndim > 0:
+        return float(dataset[0])
+    else:
+        return float(dataset[()])
+
+
+def _read_string_array(dataset: h5py.Dataset):
+    if type(dataset) is not h5py.Dataset:
+        raise TypeError("'dataset' must be type h5py.Dataset")
+    return np.array(dataset).astype(str)
+
+
+def _read_int_array(dataset: h5py.Dataset):
+    if type(dataset) is not h5py.Dataset:
+        raise TypeError("'dataset' must be type h5py.Dataset")
+    return np.array(dataset).astype(int)
+
+
+def _read_float_array(dataset: h5py.Dataset):
+    if type(dataset) is not h5py.Dataset:
+        raise TypeError("'dataset' must be type h5py.Dataset")
+    return np.array(dataset).astype(float)
 
 
 # -----------------------------------------
