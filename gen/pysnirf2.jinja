@@ -44,7 +44,6 @@
             self._{{- CHILD.name }} = _read_dataset(self._h['{{ CHILD.name }}'])
             {% endif %}
         {% endif %}
-            self._cfg.logger.info('Loaded %s/{{ CHILD.name }} from %s', self.location, self.filename)
         {% if (TYPES.REQUIRED in CHILD.type) and not ((TYPES.REQUIRED + '1' in CHILD.type) or (TYPES.REQUIRED + '2' in CHILD.type)) %}
         {% endif %}
     {% endif %}
@@ -114,12 +113,12 @@
             file = args[0]
             if self.location not in file:
                 file.create_group(self.location)
-                self._cfg.logger.info('Created Group at %s in %s', self.location, file)
+                # self._cfg.logger.info('Created Group at %s in %s', self.location, file)
         else:
             if self.location not in file:
                 # Assign the wrapper to the new HDF5 Group on disk
                 self._h = file.create_group(self.location)
-                self._cfg.logger.info('Created Group at %s in %s', self.location, file)
+                # self._cfg.logger.info('Created Group at %s in %s', self.location, file)
             if self._h != {}:
                 file = self._h.file
             else:
@@ -162,7 +161,7 @@
             _create_dataset(file, name, data)
             {% endif %}
         {% endif %}
-            self._cfg.logger.info('Creating Dataset %s in %s', name, file)
+            # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
     {% endif %}
     {% endfor %}
 {% endmacro %}

@@ -498,27 +498,21 @@ class MetaDataTags(Group):
         if 'SubjectID' in self._h:
             if not self._cfg.dynamic_loading:
                 self._SubjectID = _read_string(self._h['SubjectID'])
-                self._cfg.logger.info('Loaded %s/SubjectID from %s', self.location, self.filename)
         if 'MeasurementDate' in self._h:
             if not self._cfg.dynamic_loading:
                 self._MeasurementDate = _read_string(self._h['MeasurementDate'])
-                self._cfg.logger.info('Loaded %s/MeasurementDate from %s', self.location, self.filename)
         if 'MeasurementTime' in self._h:
             if not self._cfg.dynamic_loading:
                 self._MeasurementTime = _read_string(self._h['MeasurementTime'])
-                self._cfg.logger.info('Loaded %s/MeasurementTime from %s', self.location, self.filename)
         if 'LengthUnit' in self._h:
             if not self._cfg.dynamic_loading:
                 self._LengthUnit = _read_string(self._h['LengthUnit'])
-                self._cfg.logger.info('Loaded %s/LengthUnit from %s', self.location, self.filename)
         if 'TimeUnit' in self._h:
             if not self._cfg.dynamic_loading:
                 self._TimeUnit = _read_string(self._h['TimeUnit'])
-                self._cfg.logger.info('Loaded %s/TimeUnit from %s', self.location, self.filename)
         if 'FrequencyUnit' in self._h:
             if not self._cfg.dynamic_loading:
                 self._FrequencyUnit = _read_string(self._h['FrequencyUnit'])
-                self._cfg.logger.info('Loaded %s/FrequencyUnit from %s', self.location, self.filename)
 
     @property
     def SubjectID(self):
@@ -658,12 +652,12 @@ class MetaDataTags(Group):
             file = args[0]
             if self.location not in file:
                 file.create_group(self.location)
-                self._cfg.logger.info('Created Group at %s in %s', self.location, file)
+                # self._cfg.logger.info('Created Group at %s in %s', self.location, file)
         else:
             if self.location not in file:
                 # Assign the wrapper to the new HDF5 Group on disk
                 self._h = file.create_group(self.location)
-                self._cfg.logger.info('Created Group at %s in %s', self.location, file)
+                # self._cfg.logger.info('Created Group at %s in %s', self.location, file)
             if self._h != {}:
                 file = self._h.file
             else:
@@ -675,7 +669,7 @@ class MetaDataTags(Group):
         data = self.SubjectID
         if type(data) is not AbsentDataset and data is not None:
             _create_dataset_string(file, name, data)
-            self._cfg.logger.info('Creating Dataset %s in %s', name, file)
+            # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/MeasurementDate'
         if name in file:
             del file[name]
@@ -683,7 +677,7 @@ class MetaDataTags(Group):
         data = self.MeasurementDate
         if type(data) is not AbsentDataset and data is not None:
             _create_dataset_string(file, name, data)
-            self._cfg.logger.info('Creating Dataset %s in %s', name, file)
+            # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/MeasurementTime'
         if name in file:
             del file[name]
@@ -691,7 +685,7 @@ class MetaDataTags(Group):
         data = self.MeasurementTime
         if type(data) is not AbsentDataset and data is not None:
             _create_dataset_string(file, name, data)
-            self._cfg.logger.info('Creating Dataset %s in %s', name, file)
+            # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/LengthUnit'
         if name in file:
             del file[name]
@@ -699,7 +693,7 @@ class MetaDataTags(Group):
         data = self.LengthUnit
         if type(data) is not AbsentDataset and data is not None:
             _create_dataset_string(file, name, data)
-            self._cfg.logger.info('Creating Dataset %s in %s', name, file)
+            # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/TimeUnit'
         if name in file:
             del file[name]
@@ -707,7 +701,7 @@ class MetaDataTags(Group):
         data = self.TimeUnit
         if type(data) is not AbsentDataset and data is not None:
             _create_dataset_string(file, name, data)
-            self._cfg.logger.info('Creating Dataset %s in %s', name, file)
+            # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/FrequencyUnit'
         if name in file:
             del file[name]
@@ -715,7 +709,7 @@ class MetaDataTags(Group):
         data = self.FrequencyUnit
         if type(data) is not AbsentDataset and data is not None:
             _create_dataset_string(file, name, data)
-            self._cfg.logger.info('Creating Dataset %s in %s', name, file)
+            # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
 
 
 
@@ -747,75 +741,57 @@ class Probe(Group):
         if 'wavelengths' in self._h:
             if not self._cfg.dynamic_loading:
                 self._wavelengths = _read_float_array(self._h['wavelengths'])
-                self._cfg.logger.info('Loaded %s/wavelengths from %s', self.location, self.filename)
         if 'wavelengthsEmission' in self._h:
             if not self._cfg.dynamic_loading:
                 self._wavelengthsEmission = _read_float_array(self._h['wavelengthsEmission'])
-                self._cfg.logger.info('Loaded %s/wavelengthsEmission from %s', self.location, self.filename)
         if 'sourcePos2D' in self._h:
             if not self._cfg.dynamic_loading:
                 self._sourcePos2D = _read_float_array(self._h['sourcePos2D'])
-                self._cfg.logger.info('Loaded %s/sourcePos2D from %s', self.location, self.filename)
         if 'sourcePos3D' in self._h:
             if not self._cfg.dynamic_loading:
                 self._sourcePos3D = _read_float_array(self._h['sourcePos3D'])
-                self._cfg.logger.info('Loaded %s/sourcePos3D from %s', self.location, self.filename)
         if 'detectorPos2D' in self._h:
             if not self._cfg.dynamic_loading:
                 self._detectorPos2D = _read_float_array(self._h['detectorPos2D'])
-                self._cfg.logger.info('Loaded %s/detectorPos2D from %s', self.location, self.filename)
         if 'detectorPos3D' in self._h:
             if not self._cfg.dynamic_loading:
                 self._detectorPos3D = _read_float_array(self._h['detectorPos3D'])
-                self._cfg.logger.info('Loaded %s/detectorPos3D from %s', self.location, self.filename)
         if 'frequencies' in self._h:
             if not self._cfg.dynamic_loading:
                 self._frequencies = _read_float_array(self._h['frequencies'])
-                self._cfg.logger.info('Loaded %s/frequencies from %s', self.location, self.filename)
         if 'timeDelays' in self._h:
             if not self._cfg.dynamic_loading:
                 self._timeDelays = _read_float_array(self._h['timeDelays'])
-                self._cfg.logger.info('Loaded %s/timeDelays from %s', self.location, self.filename)
         if 'timeDelayWidths' in self._h:
             if not self._cfg.dynamic_loading:
                 self._timeDelayWidths = _read_float_array(self._h['timeDelayWidths'])
-                self._cfg.logger.info('Loaded %s/timeDelayWidths from %s', self.location, self.filename)
         if 'momentOrders' in self._h:
             if not self._cfg.dynamic_loading:
                 self._momentOrders = _read_float_array(self._h['momentOrders'])
-                self._cfg.logger.info('Loaded %s/momentOrders from %s', self.location, self.filename)
         if 'correlationTimeDelays' in self._h:
             if not self._cfg.dynamic_loading:
                 self._correlationTimeDelays = _read_float_array(self._h['correlationTimeDelays'])
-                self._cfg.logger.info('Loaded %s/correlationTimeDelays from %s', self.location, self.filename)
         if 'correlationTimeDelayWidths' in self._h:
             if not self._cfg.dynamic_loading:
                 self._correlationTimeDelayWidths = _read_float_array(self._h['correlationTimeDelayWidths'])
-                self._cfg.logger.info('Loaded %s/correlationTimeDelayWidths from %s', self.location, self.filename)
         if 'sourceLabels' in self._h:
             if not self._cfg.dynamic_loading:
                 self._sourceLabels = _read_string_array(self._h['sourceLabels'])
-                self._cfg.logger.info('Loaded %s/sourceLabels from %s', self.location, self.filename)
         if 'detectorLabels' in self._h:
             if not self._cfg.dynamic_loading:
                 self._detectorLabels = _read_string_array(self._h['detectorLabels'])
-                self._cfg.logger.info('Loaded %s/detectorLabels from %s', self.location, self.filename)
         if 'landmarkPos2D' in self._h:
             if not self._cfg.dynamic_loading:
                 self._landmarkPos2D = _read_float_array(self._h['landmarkPos2D'])
-                self._cfg.logger.info('Loaded %s/landmarkPos2D from %s', self.location, self.filename)
         if 'landmarkPos3D' in self._h:
             if not self._cfg.dynamic_loading:
                 self._landmarkPos3D = _read_float_array(self._h['landmarkPos3D'])
-                self._cfg.logger.info('Loaded %s/landmarkPos3D from %s', self.location, self.filename)
         if 'landmarkLabels' in self._h:
             if not self._cfg.dynamic_loading:
                 self._landmarkLabels = _read_string_array(self._h['landmarkLabels'])
-                self._cfg.logger.info('Loaded %s/landmarkLabels from %s', self.location, self.filename)
         if 'useLocalIndex' in self._h:
             if not self._cfg.dynamic_loading:
                 self._useLocalIndex = _read_int(self._h['useLocalIndex'])
-                self._cfg.logger.info('Loaded %s/useLocalIndex from %s', self.location, self.filename)
 
     @property
     def wavelengths(self):
@@ -1219,12 +1195,12 @@ class Probe(Group):
             file = args[0]
             if self.location not in file:
                 file.create_group(self.location)
-                self._cfg.logger.info('Created Group at %s in %s', self.location, file)
+                # self._cfg.logger.info('Created Group at %s in %s', self.location, file)
         else:
             if self.location not in file:
                 # Assign the wrapper to the new HDF5 Group on disk
                 self._h = file.create_group(self.location)
-                self._cfg.logger.info('Created Group at %s in %s', self.location, file)
+                # self._cfg.logger.info('Created Group at %s in %s', self.location, file)
             if self._h != {}:
                 file = self._h.file
             else:
@@ -1236,7 +1212,7 @@ class Probe(Group):
         data = self.wavelengths
         if type(data) is not AbsentDataset and data is not None:
             _create_dataset_float_array(file, name, data)
-            self._cfg.logger.info('Creating Dataset %s in %s', name, file)
+            # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/wavelengthsEmission'
         if name in file:
             del file[name]
@@ -1244,7 +1220,7 @@ class Probe(Group):
         data = self.wavelengthsEmission
         if type(data) is not AbsentDataset and data is not None:
             _create_dataset_float_array(file, name, data)
-            self._cfg.logger.info('Creating Dataset %s in %s', name, file)
+            # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/sourcePos2D'
         if name in file:
             del file[name]
@@ -1252,7 +1228,7 @@ class Probe(Group):
         data = self.sourcePos2D
         if type(data) is not AbsentDataset and data is not None:
             _create_dataset_float_array(file, name, data)
-            self._cfg.logger.info('Creating Dataset %s in %s', name, file)
+            # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/sourcePos3D'
         if name in file:
             del file[name]
@@ -1260,7 +1236,7 @@ class Probe(Group):
         data = self.sourcePos3D
         if type(data) is not AbsentDataset and data is not None:
             _create_dataset_float_array(file, name, data)
-            self._cfg.logger.info('Creating Dataset %s in %s', name, file)
+            # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/detectorPos2D'
         if name in file:
             del file[name]
@@ -1268,7 +1244,7 @@ class Probe(Group):
         data = self.detectorPos2D
         if type(data) is not AbsentDataset and data is not None:
             _create_dataset_float_array(file, name, data)
-            self._cfg.logger.info('Creating Dataset %s in %s', name, file)
+            # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/detectorPos3D'
         if name in file:
             del file[name]
@@ -1276,7 +1252,7 @@ class Probe(Group):
         data = self.detectorPos3D
         if type(data) is not AbsentDataset and data is not None:
             _create_dataset_float_array(file, name, data)
-            self._cfg.logger.info('Creating Dataset %s in %s', name, file)
+            # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/frequencies'
         if name in file:
             del file[name]
@@ -1284,7 +1260,7 @@ class Probe(Group):
         data = self.frequencies
         if type(data) is not AbsentDataset and data is not None:
             _create_dataset_float_array(file, name, data)
-            self._cfg.logger.info('Creating Dataset %s in %s', name, file)
+            # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/timeDelays'
         if name in file:
             del file[name]
@@ -1292,7 +1268,7 @@ class Probe(Group):
         data = self.timeDelays
         if type(data) is not AbsentDataset and data is not None:
             _create_dataset_float_array(file, name, data)
-            self._cfg.logger.info('Creating Dataset %s in %s', name, file)
+            # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/timeDelayWidths'
         if name in file:
             del file[name]
@@ -1300,7 +1276,7 @@ class Probe(Group):
         data = self.timeDelayWidths
         if type(data) is not AbsentDataset and data is not None:
             _create_dataset_float_array(file, name, data)
-            self._cfg.logger.info('Creating Dataset %s in %s', name, file)
+            # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/momentOrders'
         if name in file:
             del file[name]
@@ -1308,7 +1284,7 @@ class Probe(Group):
         data = self.momentOrders
         if type(data) is not AbsentDataset and data is not None:
             _create_dataset_float_array(file, name, data)
-            self._cfg.logger.info('Creating Dataset %s in %s', name, file)
+            # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/correlationTimeDelays'
         if name in file:
             del file[name]
@@ -1316,7 +1292,7 @@ class Probe(Group):
         data = self.correlationTimeDelays
         if type(data) is not AbsentDataset and data is not None:
             _create_dataset_float_array(file, name, data)
-            self._cfg.logger.info('Creating Dataset %s in %s', name, file)
+            # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/correlationTimeDelayWidths'
         if name in file:
             del file[name]
@@ -1324,7 +1300,7 @@ class Probe(Group):
         data = self.correlationTimeDelayWidths
         if type(data) is not AbsentDataset and data is not None:
             _create_dataset_float_array(file, name, data)
-            self._cfg.logger.info('Creating Dataset %s in %s', name, file)
+            # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/sourceLabels'
         if name in file:
             del file[name]
@@ -1332,7 +1308,7 @@ class Probe(Group):
         data = self.sourceLabels
         if type(data) is not AbsentDataset and data is not None:
             _create_dataset_string_array(file, name, data)
-            self._cfg.logger.info('Creating Dataset %s in %s', name, file)
+            # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/detectorLabels'
         if name in file:
             del file[name]
@@ -1340,7 +1316,7 @@ class Probe(Group):
         data = self.detectorLabels
         if type(data) is not AbsentDataset and data is not None:
             _create_dataset_string_array(file, name, data)
-            self._cfg.logger.info('Creating Dataset %s in %s', name, file)
+            # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/landmarkPos2D'
         if name in file:
             del file[name]
@@ -1348,7 +1324,7 @@ class Probe(Group):
         data = self.landmarkPos2D
         if type(data) is not AbsentDataset and data is not None:
             _create_dataset_float_array(file, name, data)
-            self._cfg.logger.info('Creating Dataset %s in %s', name, file)
+            # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/landmarkPos3D'
         if name in file:
             del file[name]
@@ -1356,7 +1332,7 @@ class Probe(Group):
         data = self.landmarkPos3D
         if type(data) is not AbsentDataset and data is not None:
             _create_dataset_float_array(file, name, data)
-            self._cfg.logger.info('Creating Dataset %s in %s', name, file)
+            # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/landmarkLabels'
         if name in file:
             del file[name]
@@ -1364,7 +1340,7 @@ class Probe(Group):
         data = self.landmarkLabels
         if type(data) is not AbsentDataset and data is not None:
             _create_dataset_string_array(file, name, data)
-            self._cfg.logger.info('Creating Dataset %s in %s', name, file)
+            # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/useLocalIndex'
         if name in file:
             del file[name]
@@ -1372,7 +1348,7 @@ class Probe(Group):
         data = self.useLocalIndex
         if type(data) is not AbsentDataset and data is not None:
             _create_dataset_int(file, name, data)
-            self._cfg.logger.info('Creating Dataset %s in %s', name, file)
+            # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
 
 
 
@@ -1476,12 +1452,12 @@ class NirsElement(Group):
             file = args[0]
             if self.location not in file:
                 file.create_group(self.location)
-                self._cfg.logger.info('Created Group at %s in %s', self.location, file)
+                # self._cfg.logger.info('Created Group at %s in %s', self.location, file)
         else:
             if self.location not in file:
                 # Assign the wrapper to the new HDF5 Group on disk
                 self._h = file.create_group(self.location)
-                self._cfg.logger.info('Created Group at %s in %s', self.location, file)
+                # self._cfg.logger.info('Created Group at %s in %s', self.location, file)
             if self._h != {}:
                 file = self._h.file
             else:
@@ -1525,11 +1501,9 @@ class DataElement(Group):
         if 'dataTimeSeries' in self._h:
             if not self._cfg.dynamic_loading:
                 self._dataTimeSeries = _read_float_array(self._h['dataTimeSeries'])
-                self._cfg.logger.info('Loaded %s/dataTimeSeries from %s', self.location, self.filename)
         if 'time' in self._h:
             if not self._cfg.dynamic_loading:
                 self._time = _read_float_array(self._h['time'])
-                self._cfg.logger.info('Loaded %s/time from %s', self.location, self.filename)
         self.measurementList = MeasurementList(self, self._cfg)  # Indexed group
 
     @property
@@ -1596,12 +1570,12 @@ class DataElement(Group):
             file = args[0]
             if self.location not in file:
                 file.create_group(self.location)
-                self._cfg.logger.info('Created Group at %s in %s', self.location, file)
+                # self._cfg.logger.info('Created Group at %s in %s', self.location, file)
         else:
             if self.location not in file:
                 # Assign the wrapper to the new HDF5 Group on disk
                 self._h = file.create_group(self.location)
-                self._cfg.logger.info('Created Group at %s in %s', self.location, file)
+                # self._cfg.logger.info('Created Group at %s in %s', self.location, file)
             if self._h != {}:
                 file = self._h.file
             else:
@@ -1613,7 +1587,7 @@ class DataElement(Group):
         data = self.dataTimeSeries
         if type(data) is not AbsentDataset and data is not None:
             _create_dataset_float_array(file, name, data)
-            self._cfg.logger.info('Creating Dataset %s in %s', name, file)
+            # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/time'
         if name in file:
             del file[name]
@@ -1621,7 +1595,7 @@ class DataElement(Group):
         data = self.time
         if type(data) is not AbsentDataset and data is not None:
             _create_dataset_float_array(file, name, data)
-            self._cfg.logger.info('Creating Dataset %s in %s', name, file)
+            # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         self.measurementList._save(*args)
 
 
@@ -1657,55 +1631,42 @@ class MeasurementListElement(Group):
         if 'sourceIndex' in self._h:
             if not self._cfg.dynamic_loading:
                 self._sourceIndex = _read_int(self._h['sourceIndex'])
-                self._cfg.logger.info('Loaded %s/sourceIndex from %s', self.location, self.filename)
         if 'detectorIndex' in self._h:
             if not self._cfg.dynamic_loading:
                 self._detectorIndex = _read_int(self._h['detectorIndex'])
-                self._cfg.logger.info('Loaded %s/detectorIndex from %s', self.location, self.filename)
         if 'wavelengthIndex' in self._h:
             if not self._cfg.dynamic_loading:
                 self._wavelengthIndex = _read_int(self._h['wavelengthIndex'])
-                self._cfg.logger.info('Loaded %s/wavelengthIndex from %s', self.location, self.filename)
         if 'wavelengthActual' in self._h:
             if not self._cfg.dynamic_loading:
                 self._wavelengthActual = _read_float(self._h['wavelengthActual'])
-                self._cfg.logger.info('Loaded %s/wavelengthActual from %s', self.location, self.filename)
         if 'wavelengthEmissionActual' in self._h:
             if not self._cfg.dynamic_loading:
                 self._wavelengthEmissionActual = _read_float(self._h['wavelengthEmissionActual'])
-                self._cfg.logger.info('Loaded %s/wavelengthEmissionActual from %s', self.location, self.filename)
         if 'dataType' in self._h:
             if not self._cfg.dynamic_loading:
                 self._dataType = _read_int(self._h['dataType'])
-                self._cfg.logger.info('Loaded %s/dataType from %s', self.location, self.filename)
         if 'dataTypeLabel' in self._h:
             if not self._cfg.dynamic_loading:
                 self._dataTypeLabel = _read_string(self._h['dataTypeLabel'])
-                self._cfg.logger.info('Loaded %s/dataTypeLabel from %s', self.location, self.filename)
         if 'dataTypeIndex' in self._h:
             if not self._cfg.dynamic_loading:
                 self._dataTypeIndex = _read_int(self._h['dataTypeIndex'])
-                self._cfg.logger.info('Loaded %s/dataTypeIndex from %s', self.location, self.filename)
         if 'sourcePower' in self._h:
             if not self._cfg.dynamic_loading:
                 self._sourcePower = _read_float(self._h['sourcePower'])
-                self._cfg.logger.info('Loaded %s/sourcePower from %s', self.location, self.filename)
         if 'detectorGain' in self._h:
             if not self._cfg.dynamic_loading:
                 self._detectorGain = _read_float(self._h['detectorGain'])
-                self._cfg.logger.info('Loaded %s/detectorGain from %s', self.location, self.filename)
         if 'moduleIndex' in self._h:
             if not self._cfg.dynamic_loading:
                 self._moduleIndex = _read_int(self._h['moduleIndex'])
-                self._cfg.logger.info('Loaded %s/moduleIndex from %s', self.location, self.filename)
         if 'sourceModuleIndex' in self._h:
             if not self._cfg.dynamic_loading:
                 self._sourceModuleIndex = _read_int(self._h['sourceModuleIndex'])
-                self._cfg.logger.info('Loaded %s/sourceModuleIndex from %s', self.location, self.filename)
         if 'detectorModuleIndex' in self._h:
             if not self._cfg.dynamic_loading:
                 self._detectorModuleIndex = _read_int(self._h['detectorModuleIndex'])
-                self._cfg.logger.info('Loaded %s/detectorModuleIndex from %s', self.location, self.filename)
 
     @property
     def sourceIndex(self):
@@ -1999,12 +1960,12 @@ class MeasurementListElement(Group):
             file = args[0]
             if self.location not in file:
                 file.create_group(self.location)
-                self._cfg.logger.info('Created Group at %s in %s', self.location, file)
+                # self._cfg.logger.info('Created Group at %s in %s', self.location, file)
         else:
             if self.location not in file:
                 # Assign the wrapper to the new HDF5 Group on disk
                 self._h = file.create_group(self.location)
-                self._cfg.logger.info('Created Group at %s in %s', self.location, file)
+                # self._cfg.logger.info('Created Group at %s in %s', self.location, file)
             if self._h != {}:
                 file = self._h.file
             else:
@@ -2016,7 +1977,7 @@ class MeasurementListElement(Group):
         data = self.sourceIndex
         if type(data) is not AbsentDataset and data is not None:
             _create_dataset_int(file, name, data)
-            self._cfg.logger.info('Creating Dataset %s in %s', name, file)
+            # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/detectorIndex'
         if name in file:
             del file[name]
@@ -2024,7 +1985,7 @@ class MeasurementListElement(Group):
         data = self.detectorIndex
         if type(data) is not AbsentDataset and data is not None:
             _create_dataset_int(file, name, data)
-            self._cfg.logger.info('Creating Dataset %s in %s', name, file)
+            # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/wavelengthIndex'
         if name in file:
             del file[name]
@@ -2032,7 +1993,7 @@ class MeasurementListElement(Group):
         data = self.wavelengthIndex
         if type(data) is not AbsentDataset and data is not None:
             _create_dataset_int(file, name, data)
-            self._cfg.logger.info('Creating Dataset %s in %s', name, file)
+            # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/wavelengthActual'
         if name in file:
             del file[name]
@@ -2040,7 +2001,7 @@ class MeasurementListElement(Group):
         data = self.wavelengthActual
         if type(data) is not AbsentDataset and data is not None:
             _create_dataset_float(file, name, data)
-            self._cfg.logger.info('Creating Dataset %s in %s', name, file)
+            # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/wavelengthEmissionActual'
         if name in file:
             del file[name]
@@ -2048,7 +2009,7 @@ class MeasurementListElement(Group):
         data = self.wavelengthEmissionActual
         if type(data) is not AbsentDataset and data is not None:
             _create_dataset_float(file, name, data)
-            self._cfg.logger.info('Creating Dataset %s in %s', name, file)
+            # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/dataType'
         if name in file:
             del file[name]
@@ -2056,7 +2017,7 @@ class MeasurementListElement(Group):
         data = self.dataType
         if type(data) is not AbsentDataset and data is not None:
             _create_dataset_int(file, name, data)
-            self._cfg.logger.info('Creating Dataset %s in %s', name, file)
+            # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/dataTypeLabel'
         if name in file:
             del file[name]
@@ -2064,7 +2025,7 @@ class MeasurementListElement(Group):
         data = self.dataTypeLabel
         if type(data) is not AbsentDataset and data is not None:
             _create_dataset_string(file, name, data)
-            self._cfg.logger.info('Creating Dataset %s in %s', name, file)
+            # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/dataTypeIndex'
         if name in file:
             del file[name]
@@ -2072,7 +2033,7 @@ class MeasurementListElement(Group):
         data = self.dataTypeIndex
         if type(data) is not AbsentDataset and data is not None:
             _create_dataset_int(file, name, data)
-            self._cfg.logger.info('Creating Dataset %s in %s', name, file)
+            # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/sourcePower'
         if name in file:
             del file[name]
@@ -2080,7 +2041,7 @@ class MeasurementListElement(Group):
         data = self.sourcePower
         if type(data) is not AbsentDataset and data is not None:
             _create_dataset_float(file, name, data)
-            self._cfg.logger.info('Creating Dataset %s in %s', name, file)
+            # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/detectorGain'
         if name in file:
             del file[name]
@@ -2088,7 +2049,7 @@ class MeasurementListElement(Group):
         data = self.detectorGain
         if type(data) is not AbsentDataset and data is not None:
             _create_dataset_float(file, name, data)
-            self._cfg.logger.info('Creating Dataset %s in %s', name, file)
+            # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/moduleIndex'
         if name in file:
             del file[name]
@@ -2096,7 +2057,7 @@ class MeasurementListElement(Group):
         data = self.moduleIndex
         if type(data) is not AbsentDataset and data is not None:
             _create_dataset_int(file, name, data)
-            self._cfg.logger.info('Creating Dataset %s in %s', name, file)
+            # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/sourceModuleIndex'
         if name in file:
             del file[name]
@@ -2104,7 +2065,7 @@ class MeasurementListElement(Group):
         data = self.sourceModuleIndex
         if type(data) is not AbsentDataset and data is not None:
             _create_dataset_int(file, name, data)
-            self._cfg.logger.info('Creating Dataset %s in %s', name, file)
+            # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/detectorModuleIndex'
         if name in file:
             del file[name]
@@ -2112,7 +2073,7 @@ class MeasurementListElement(Group):
         data = self.detectorModuleIndex
         if type(data) is not AbsentDataset and data is not None:
             _create_dataset_int(file, name, data)
-            self._cfg.logger.info('Creating Dataset %s in %s', name, file)
+            # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
 
 
 class MeasurementList(IndexedGroup):
@@ -2137,15 +2098,12 @@ class StimElement(Group):
         if 'name' in self._h:
             if not self._cfg.dynamic_loading:
                 self._name = _read_string(self._h['name'])
-                self._cfg.logger.info('Loaded %s/name from %s', self.location, self.filename)
         if 'data' in self._h:
             if not self._cfg.dynamic_loading:
                 self._data = _read_float_array(self._h['data'])
-                self._cfg.logger.info('Loaded %s/data from %s', self.location, self.filename)
         if 'dataLabels' in self._h:
             if not self._cfg.dynamic_loading:
                 self._dataLabels = _read_string_array(self._h['dataLabels'])
-                self._cfg.logger.info('Loaded %s/dataLabels from %s', self.location, self.filename)
 
     @property
     def name(self):
@@ -2219,12 +2177,12 @@ class StimElement(Group):
             file = args[0]
             if self.location not in file:
                 file.create_group(self.location)
-                self._cfg.logger.info('Created Group at %s in %s', self.location, file)
+                # self._cfg.logger.info('Created Group at %s in %s', self.location, file)
         else:
             if self.location not in file:
                 # Assign the wrapper to the new HDF5 Group on disk
                 self._h = file.create_group(self.location)
-                self._cfg.logger.info('Created Group at %s in %s', self.location, file)
+                # self._cfg.logger.info('Created Group at %s in %s', self.location, file)
             if self._h != {}:
                 file = self._h.file
             else:
@@ -2236,7 +2194,7 @@ class StimElement(Group):
         data = self.name
         if type(data) is not AbsentDataset and data is not None:
             _create_dataset_string(file, name, data)
-            self._cfg.logger.info('Creating Dataset %s in %s', name, file)
+            # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/data'
         if name in file:
             del file[name]
@@ -2244,7 +2202,7 @@ class StimElement(Group):
         data = self.data
         if type(data) is not AbsentDataset and data is not None:
             _create_dataset_float_array(file, name, data)
-            self._cfg.logger.info('Creating Dataset %s in %s', name, file)
+            # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/dataLabels'
         if name in file:
             del file[name]
@@ -2252,7 +2210,7 @@ class StimElement(Group):
         data = self.dataLabels
         if type(data) is not AbsentDataset and data is not None:
             _create_dataset_string_array(file, name, data)
-            self._cfg.logger.info('Creating Dataset %s in %s', name, file)
+            # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
 
 
 class Stim(IndexedGroup):
@@ -2278,19 +2236,15 @@ class AuxElement(Group):
         if 'name' in self._h:
             if not self._cfg.dynamic_loading:
                 self._name = _read_string(self._h['name'])
-                self._cfg.logger.info('Loaded %s/name from %s', self.location, self.filename)
         if 'dataTimeSeries' in self._h:
             if not self._cfg.dynamic_loading:
                 self._dataTimeSeries = _read_float_array(self._h['dataTimeSeries'])
-                self._cfg.logger.info('Loaded %s/dataTimeSeries from %s', self.location, self.filename)
         if 'time' in self._h:
             if not self._cfg.dynamic_loading:
                 self._time = _read_float_array(self._h['time'])
-                self._cfg.logger.info('Loaded %s/time from %s', self.location, self.filename)
         if 'timeOffset' in self._h:
             if not self._cfg.dynamic_loading:
                 self._timeOffset = _read_float_array(self._h['timeOffset'])
-                self._cfg.logger.info('Loaded %s/timeOffset from %s', self.location, self.filename)
 
     @property
     def name(self):
@@ -2386,12 +2340,12 @@ class AuxElement(Group):
             file = args[0]
             if self.location not in file:
                 file.create_group(self.location)
-                self._cfg.logger.info('Created Group at %s in %s', self.location, file)
+                # self._cfg.logger.info('Created Group at %s in %s', self.location, file)
         else:
             if self.location not in file:
                 # Assign the wrapper to the new HDF5 Group on disk
                 self._h = file.create_group(self.location)
-                self._cfg.logger.info('Created Group at %s in %s', self.location, file)
+                # self._cfg.logger.info('Created Group at %s in %s', self.location, file)
             if self._h != {}:
                 file = self._h.file
             else:
@@ -2403,7 +2357,7 @@ class AuxElement(Group):
         data = self.name
         if type(data) is not AbsentDataset and data is not None:
             _create_dataset_string(file, name, data)
-            self._cfg.logger.info('Creating Dataset %s in %s', name, file)
+            # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/dataTimeSeries'
         if name in file:
             del file[name]
@@ -2411,7 +2365,7 @@ class AuxElement(Group):
         data = self.dataTimeSeries
         if type(data) is not AbsentDataset and data is not None:
             _create_dataset_float_array(file, name, data)
-            self._cfg.logger.info('Creating Dataset %s in %s', name, file)
+            # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/time'
         if name in file:
             del file[name]
@@ -2419,7 +2373,7 @@ class AuxElement(Group):
         data = self.time
         if type(data) is not AbsentDataset and data is not None:
             _create_dataset_float_array(file, name, data)
-            self._cfg.logger.info('Creating Dataset %s in %s', name, file)
+            # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/timeOffset'
         if name in file:
             del file[name]
@@ -2427,7 +2381,7 @@ class AuxElement(Group):
         data = self.timeOffset
         if type(data) is not AbsentDataset and data is not None:
             _create_dataset_float_array(file, name, data)
-            self._cfg.logger.info('Creating Dataset %s in %s', name, file)
+            # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
 
 
 class Aux(IndexedGroup):
@@ -2475,7 +2429,6 @@ class Snirf():
         if 'formatVersion' in self._h:
             if not self._cfg.dynamic_loading:
                 self._formatVersion = _read_string(self._h['formatVersion'])
-                self._cfg.logger.info('Loaded %s/formatVersion from %s', self.location, self.filename)
         self.nirs = Nirs(self, self._cfg)  # Indexed group
 
     @property
@@ -2520,12 +2473,12 @@ class Snirf():
             file = args[0]
             if self.location not in file:
                 file.create_group(self.location)
-                self._cfg.logger.info('Created Group at %s in %s', self.location, file)
+                # self._cfg.logger.info('Created Group at %s in %s', self.location, file)
         else:
             if self.location not in file:
                 # Assign the wrapper to the new HDF5 Group on disk
                 self._h = file.create_group(self.location)
-                self._cfg.logger.info('Created Group at %s in %s', self.location, file)
+                # self._cfg.logger.info('Created Group at %s in %s', self.location, file)
             if self._h != {}:
                 file = self._h.file
             else:
@@ -2537,7 +2490,7 @@ class Snirf():
         data = self.formatVersion
         if type(data) is not AbsentDataset and data is not None:
             _create_dataset_string(file, name, data)
-            self._cfg.logger.info('Creating Dataset %s in %s', name, file)
+            # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         self.nirs._save(*args)
 
 
