@@ -13,15 +13,6 @@
 {% macro init_members(NODE) %}
     self.__snirfnames = [{% for CHILD in NODE.children %}'{{ CHILD.name }}', {% endfor %}]
     {% for CHILD in NODE.children %}
-    {% if TYPES.INT_VALUE in CHILD.type %}
-        {% set python_type = 'int' %}
-    {% elif TYPES.FLOAT_VALUE in CHILD.type %}
-        {% set python_type = 'float' %}
-    {% elif TYPES.VARLEN_STRING in CHILD.type %}
-        {% set python_type = 'str' %}
-    {% else %}
-        {% set python_type = 'float' %}
-    {% endif %}
     {% if TYPES.INDEXED_GROUP in CHILD.type %}
     self.{{- CHILD.name }} = {{ sentencecase(CHILD.name) }}(self, self._cfg)  # Indexed group
     {% elif TYPES.GROUP in CHILD.type %}
@@ -54,23 +45,12 @@
             {% endif %}
         {% endif %}
         {% if (TYPES.REQUIRED in CHILD.type) and not ((TYPES.REQUIRED + '1' in CHILD.type) or (TYPES.REQUIRED + '2' in CHILD.type)) %}
-    else:
-        warn(str(self.__class__.__name__) + ' missing required key ' + '"{{ CHILD.name }}"')
         {% endif %}
     {% endif %}
     {% endfor %}
 {% endmacro %}
 {% macro gen_properties(NODE) %}
 {% for CHILD in NODE.children %}
-    {% if TYPES.INT_VALUE in CHILD.type %}
-        {% set python_type = 'int' %}
-    {% elif TYPES.FLOAT_VALUE in CHILD.type %}
-        {% set python_type = 'float' %}
-    {% elif TYPES.VARLEN_STRING in CHILD.type %}
-        {% set python_type = 'str' %}
-    {% else %}
-        {% set python_type = 'float' %}
-    {% endif %}
     @property
     def {{ CHILD.name }}(self):
     {% if TYPES.INDEXED_GROUP in CHILD.type %}
@@ -81,13 +61,27 @@
         if type(self._{{ CHILD.name }}) is AbsentDataset:
             if self._cfg.dynamic_loading:
                 if '{{ CHILD.name }}' in self._h:
-    {% if (TYPES.ARRAY_1D in CHILD.type) or (TYPES.ARRAY_2D in CHILD.type) %}
-                    return np.array(self._h['{{ CHILD.name }}']).astype({{ python_type }})  # Array
-    {% elif TYPES.VARLEN_STRING in CHILD.type %}
+        {% if (TYPES.ARRAY_1D in CHILD.type) or (TYPES.ARRAY_2D in CHILD.type) %}
+            {% if TYPES.VARLEN_STRING in CHILD.type %}
+                    return _read_string_array(self._h['{{ CHILD.name }}'])
+            {% elif TYPES.INT_VALUE in CHILD.type %}
+                    return _read_int_array(self._h['{{ CHILD.name }}'])
+            {% elif TYPES.FLOAT_VALUE in CHILD.type %}
+                    return _read_float_array(self._h['{{ CHILD.name }}'])
+            {% else %}
+                    return _read_dataset(self._h['{{ CHILD.name }}'])
+            {% endif %}
+        {% else %}
+            {% if TYPES.VARLEN_STRING in CHILD.type %}
                     return _read_string(self._h['{{ CHILD.name }}'])
-    {% else %}
-                    return {{ python_type }}(self._h['{{ CHILD.name }}'][()])
-    {% endif %}
+            {% elif TYPES.INT_VALUE in CHILD.type %}
+                    return _read_int(self._h['{{ CHILD.name }}'])
+            {% elif TYPES.FLOAT_VALUE in CHILD.type %}
+                    return _read_float(self._h['{{ CHILD.name }}'])
+            {% else %}
+                    return _read_dataset(self._h['{{ CHILD.name }}'])
+            {% endif %}
+        {% endif %}
             else:
                 return None
         else:
@@ -120,52 +114,46 @@
             if self.location not in file:
                 # Assign the wrapper to the new HDF5 Group on disk
                 self._h = file.create_group(self.location)
-            if self.location not in file:
-                # Assign the wrapper to the new HDF5 Group on disk
-                self._h = file.create_group(self.location)
             if self._h != {}:
                 file = self._h.file
             else:
                 raise ValueError('Cannot save an anonymous ' + self.__class__.__name__ + ' instance without a filename')
 {% for CHILD in NODE.children %}
-    {% if TYPES.INT_VALUE in CHILD.type %}
-        {% set h5_type = "'i4'" %}
-    {% elif TYPES.FLOAT_VALUE in CHILD.type %}
-        {% set h5_type = "'f8'" %}
-    {% elif TYPES.VARLEN_STRING in CHILD.type %}
-        {% set h5_type = "h5py.string_dtype(encoding='ascii', length=None)" %}
-    {% else %}
-        {% set h5_type = "'f8'" %}
-    {% endif %}
     {% if TYPES.INDEXED_GROUP in CHILD.type %}
         self.{{ CHILD.name }}._save(*args)
     {% elif TYPES.GROUP in CHILD.type %}
         if type(self._{{ CHILD.name }}) is AbsentGroup:
             if '{{ CHILD.name }}' in file:
-                # print('Deleting group {{ CHILD.name }} from', file)
                 del file['{{ CHILD.name }}']
         else:
             self.{{ CHILD.name }}._save(*args)
     {% else %}
         name = self.location + '/{{ CHILD.name }}'
-        {% if (TYPES.ARRAY_1D in CHILD.type) or (TYPES.ARRAY_2D in CHILD.type) %}
-            {% if TYPES.VARLEN_STRING in CHILD.type %}
-        data = np.array(self.{{ CHILD.name }}).astype('O')
-            {% else %}
-        data = np.array(self.{{ CHILD.name }})
-            {% endif %}
-        if data.size is 0 or data.any() is None:
-            data = AbsentDataset()  # Do not save empty or "None" NumPy arrays
-        {% elif TYPES.VARLEN_STRING in CHILD.type %}
-        data = self.{{ CHILD.name }}
-        {% else %}
-        data = self.{{ CHILD.name }}
-        {% endif %}
         if name in file:
             del file[name]
+        data = self.{{ CHILD.name }}
         if type(data) is not AbsentDataset and data is not None:
-            # # print('Saving', name, 'data is', type(data), data, 'being cast to', {{ h5_type }})
-            file.create_dataset(name, dtype={{ h5_type }}, data=data)
+        {% if (TYPES.ARRAY_1D in CHILD.type) or (TYPES.ARRAY_2D in CHILD.type) %}
+            {% if TYPES.VARLEN_STRING in CHILD.type %}
+            _create_dataset_string_array(file, name, data)
+            {% elif TYPES.INT_VALUE in CHILD.type %}
+            _create_dataset_int_array(file, name, data)
+            {% elif TYPES.FLOAT_VALUE in CHILD.type %}
+            _create_dataset_float_array(file, name, data)
+            {% else %}
+            _create_dataset(file, name, data)
+            {% endif %}
+        {% else %}
+            {% if TYPES.VARLEN_STRING in CHILD.type %}
+            _create_dataset_string(file, name, data)
+            {% elif TYPES.INT_VALUE in CHILD.type %}
+            _create_dataset_int(file, name, data)
+            {% elif TYPES.FLOAT_VALUE in CHILD.type %}
+            _create_dataset_float(file, name, data)
+            {% else %}
+            _create_dataset(file, name, data)
+            {% endif %}
+        {% endif %}
     {% endif %}
     {% endfor %}
 {% endmacro %}

@@ -30,7 +30,7 @@ _DTYPE_INT = 'i4'
 _DTYPE_STR = 'S'  # Not sure how robust this is, but fixed length strings will always at least contain S
 
 
-def _create_dataset_dataset(file, name, data):
+def _create_dataset(file, name, data):
     """
     Formats the input to satisfy the SNIRF specification as well as the HDF5 format. Determines appropriate write
     function from the type of data. The returned value should be passed to h5py.create_dataset() as kwarg "data" to be
@@ -76,21 +76,21 @@ def _create_dataset_float(file: h5py.File, name: str, data: float):
 
 def _create_dataset_string_array(file: h5py.File, name: str, data: np.ndarray):
     array = np.array(data).astype('O')
-    if data.size is 0 or data.any() is None:
+    if data.size is 0:
         array = AbsentDataset()  # Do not save empty or "None" NumPy arrays
     return file.create_dataset(name, dtype=h5py.string_dtype(encoding='ascii', length=None), data=array)
 
 
 def _create_dataset_int_array(file: h5py.File, name: str, data: np.ndarray):
     array = np.array(data).astype(int)
-    if data.size is 0 or data.any() is None:
+    if data.size is 0:
         array = AbsentDataset()
     return file.create_dataset(name, dtype=_DTYPE_INT, data=array)
 
 
 def _create_dataset_float_array(file: h5py.File, name: str, data: np.ndarray):
     array = np.array(data).astype(float)
-    if data.size is 0 or data.any() is None:
+    if data.size is 0:
         array = AbsentDataset()
     return file.create_dataset(name, dtype=_DTYPE_FLOAT, data=array)
 
@@ -398,7 +398,6 @@ class IndexedGroup(MutableSequence, ABC):
         '''
         if h is None:
             h = self._parent._h
-        print([e.location for e in self._list])
         if all([len(e.location.split('/' + self._name)[-1]) > 0 for e in self._list]):
             if not [int(e.location.split('/' + self._name)[-1]) for e in self._list] == list(range(1, len(self._list) + 1)):
                 # if list is not already ordered propertly
@@ -444,13 +443,9 @@ class IndexedGroup(MutableSequence, ABC):
                 raise ValueError('Cannot save an anonymous ' + self.__class__.__name__ + ' instance')
         names_in_file = self._get_matching_keys(h=h)  # List of all names in the file on disk
         names_to_save = [e.location.split('/')[-1] for e in self._list]  # List of names in the wrapper
-        print('Saving indexed group', self.__class__.__name__)
-        print('names to save: ', names_to_save)
-        print('names in file: ', names_in_file)
         # Remove groups which remain on disk after being removed from the wrapper
         for name in names_in_file:
             if name not in names_to_save:
-                print('Deleting', self._parent.name + '/' + name, 'while overwriting indexed group', self.__class__.__name__, 'as it has been deleted from the file')
                 del h[self._parent.name + '/' + name]  # Remove the actual data from the hdf5 file.
         for e in self._list:
             e._save(*args)  # Group save functions handle the write to disk

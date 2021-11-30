@@ -203,8 +203,8 @@ def test_loading_saving(filenames, spec_locations, verbose=True, fn=None):
 def test_create_a_file(filename_in, filename_out, verbose=True):
     
     print(filename_out)
-    src_data = Snirf(filename_in)
-    dst_data = Snirf(filename_out)
+    src_data = Snirf(filename_in, 'r+')
+    dst_data = Snirf(filename_out, 'w')
     
     h5snirf = h5py.File(filename_out, 'w')
     h5snirf['nirs1/metaDataTags/SubjectID'] = src_data.nirs[0].metaDataTags.SubjectID 
@@ -285,7 +285,7 @@ test_files = [WD + '/' + file for file in os.listdir(WD)[0:2]]
 
 print(test_files)
 
-s = Snirf(test_files[-1])
+# s = Snirf(test_files[-1])
 
 # %%
 
