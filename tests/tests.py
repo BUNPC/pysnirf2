@@ -264,7 +264,7 @@ def test_create_a_file(filename_in, filename_out, verbose=True):
 
 # -----------------------------------------------------------------------------
 
-SNIRF_DIR = 'testdata'  # Sample data source
+SNIRF_DIR = 'data'  # Sample data source
 WD = 'wd'  # Working directory for testing
 
 print('Deleting all files in', WD)

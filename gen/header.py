@@ -8,16 +8,21 @@ from collections.abc import MutableSequence
 from tempfile import TemporaryFile
 import logging
 
+_loggers = {}
 def _create_logger(name, log_file, level=logging.INFO):
+    if name in _loggers.keys():
+        return _loggers[name]
     handler = logging.FileHandler(log_file)
-    handler.setFormatter(logging.Formatter('%(asctime)s | %(message)s'))
+    handler.setFormatter(logging.Formatter('%(asctime)s | %(name)s | %(message)s'))
     logger = logging.getLogger(name)
     logger.setLevel(level)
     logger.addHandler(handler)
+    _loggers[name] = logger
     return logger
 
-# Package wide logger that can superseded in files
+# Package-wide logger
 _logger = _create_logger('pysnirf2', 'pysnirf2.log')
+_logger.info('Opened pysnirf2.log')
 
 if sys.version_info[0] < 3:
     raise ImportError('pysnirf2 requires Python > 3')
@@ -218,6 +223,7 @@ class Group(ABC):
         """
         if len(args) > 0:
             if type(args[0]) is h5py.File:
+                self._cfg.logger.info('Group-level save of %s in %s', self.location, self.filename)
                 self._save(args[0])
             elif type(args[0]) is str:
                 path = args[0]
@@ -227,12 +233,13 @@ class Group(ABC):
                     file = h5py.File(path, 'w')
                 else:
                     raise FileNotFoundError("No such SNIRF file '" + path + "'. Create a SNIRF file before attempting to save a Group to it.")
-                self._cfg.logger.info('Group-level save of %s in %s tp %s', self.location, self.filename, file)
+                self._cfg.logger.info('Group-level save of %s in %s to new file %s', self.location, self.filename, file)
                 self._save(file)
                 file.close()
         else:
             if self._h != {}:
                 file = self._h.file
+            self._cfg.logger.info('Group-level save of %s in %s', self.location, file)
             self._save(file)
             
     @property
@@ -361,6 +368,8 @@ class IndexedGroup(MutableSequence, ABC):
         if len(args) > 0:
             if type(args[0]) is h5py.File:
                 self._save(args[0])
+                self._cfg.logger.info('IndexedGroup-level save of %s at %s in %s', self.__class__.__name__,
+                      self._parent.location, self.filename)
             elif type(args[0]) is str:
                 path = args[0]
                 if not path.endswith('.snirf'):
@@ -377,11 +386,15 @@ class IndexedGroup(MutableSequence, ABC):
             if self._parent._h != {}:
                 file = self._parent._h.file
             self._save(file)
+            self._cfg.logger.info('IndexedGroup-level save of %s at %s in %s', self.__class__.__name__,
+                      self._parent.location, self.filename)
 
     def appendGroup(self):
         'Adds a group to the end of the list'
         location = self._parent.location + '/' + self._name + str(len(self._list) + 1)
         self._list.append(self._element(location, self._cfg))
+        self._cfg.logger.info('%i th %s appended to IndexedGroup %s at %s in %s', len(self._list),
+                          self._element, self.__class__.__name__, self._parent.location, self.filename)
     
     def _populate_list(self):
         """

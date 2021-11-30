@@ -23,7 +23,6 @@
     {% else %}
     if '{{ CHILD.name }}' in self._h:
         if not self._cfg.dynamic_loading:
-            self._cfg.logger.info('Loaded %s/{{ CHILD.name }} from %s', self.location, self.filename)
         {% if (TYPES.ARRAY_1D in CHILD.type) or (TYPES.ARRAY_2D in CHILD.type) %}
             {% if TYPES.VARLEN_STRING in CHILD.type %}
             self._{{- CHILD.name }} = _read_string_array(self._h['{{ CHILD.name }}'])
@@ -45,6 +44,7 @@
             self._{{- CHILD.name }} = _read_dataset(self._h['{{ CHILD.name }}'])
             {% endif %}
         {% endif %}
+            self._cfg.logger.info('Loaded %s/{{ CHILD.name }} from %s', self.location, self.filename)
         {% if (TYPES.REQUIRED in CHILD.type) and not ((TYPES.REQUIRED + '1' in CHILD.type) or (TYPES.REQUIRED + '2' in CHILD.type)) %}
         {% endif %}
     {% endif %}
@@ -83,6 +83,7 @@
                     return _read_dataset(self._h['{{ CHILD.name }}'])
             {% endif %}
         {% endif %}
+                    self._cfg.logger.info('Dynamically loaded %s/{{ CHILD.name }} from %s', self.location, self.filename)
             else:
                 return None
         else:
@@ -92,7 +93,7 @@
     @{{ CHILD.name }}.setter
     def {{ CHILD.name }}(self, value):
         self._{{ CHILD.name }} = value
-        self._cfg.logger.info('Assignment to %s/{{ CHILD.name }} in %s', self.location, self.filename)
+        # self._cfg.logger.info('Assignment to %s/{{ CHILD.name }} in %s', self.location, self.filename)
 
     @{{ CHILD.name }}.deleter
     def {{ CHILD.name }}(self):
@@ -269,17 +270,16 @@ class Snirf():
 
     def close(self):
         self._cfg.logger.info('Closing Snirf file %s', self.filename)
-        self._cfg.logger.handlers.clear()
         self._h.close()
 
     def __enter__(self):
         return self
 
-    def __exit__(self):
-        self.close()
+#    def __exit__(self):
+#        self.close()
 
-    def __del__(self):
-        self.close()
+#    def __del__(self):
+#        self.close()
 
     def __getitem__(self, key):
         if self._h != {}:
