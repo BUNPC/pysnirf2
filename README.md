@@ -1,4 +1,4 @@
-![example workflow](https://github.com/sstucker/pysnirf2/actions/workflows/test.yml/badge.svg)
+![example workflow](https://github.com/BUNPC/pysnirf2/actions/workflows/test.yml/badge.svg)
 
 # pysnirf2
 
