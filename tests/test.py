@@ -11,8 +11,8 @@ from collections.abc import Set, Mapping
 import numpy as np
 
 VERBOSE = True  # Additional print statements in each test
-snirf_directory = os.getcwd() + '/tests/data'  # Sample data source
-working_directory = os.getcwd() + '/tests/wd'  # Working directory for testing
+snirf_directory = '/tests/data'  # Sample data source
+working_directory = '/tests/wd'  # Working directory for testing
 
 if len(os.listdir(snirf_directory)) == 0:
     sys.exit('Failed to find test data in '+ working_directory)
