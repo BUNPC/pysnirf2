@@ -1,4 +1,4 @@
-h5py==3.6.0
+h5py==3.1.0
 numpy==1.19.5
 setuptools==40.8.0
 pip==21.3.1

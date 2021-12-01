@@ -1,12 +1,11 @@
 name: test
-
 on:
   push:
     branches:
-      - master
+      - main
   pull_request:
     branches:
-      - master
+      - main
 
 jobs:
   build-linux:
@@ -21,8 +20,9 @@ jobs:
         with:
           python-version: 3.6
       - name: Install dependencies
+        working-directory: pysnirf2
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-      - name: test
-        run: python -m unittest 
+      - name: Run test.py
+        run: python -m unittest discover -s ./tests
