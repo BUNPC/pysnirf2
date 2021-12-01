@@ -11,8 +11,11 @@ from collections.abc import Set, Mapping
 import numpy as np
 
 VERBOSE = True  # Additional print statements in each test
-SNIRF_DIR = 'data'  # Sample data source
-WD = 'wd'  # Working directory for testing
+snirf_directory = os.getcwd() + '\\tests\\data'  # Sample data source
+working_directory = os.getcwd() + '\\tests\\wd'  # Working directory for testing
+
+if len(os.listdir(snirf_directory)) == 0:
+    sys.exit('Failed to find test data in '+ working_directory)
 
 ZERO_DEPTH_BASES = (str, bytes, Number, range, bytearray)
 def getsize(obj_0):
@@ -135,28 +138,6 @@ def _print_keys(group):
 
 class TestSnirf(unittest.TestCase):
     
-    def test_dynamic(self):
-        """
-        Confirm that dynamically loaded files have smaller memory footprints
-        and faster load-times than non dynamically loaded files
-        """
-        times = [-1, -1]
-        sizes = [-1, -1]
-        for i, mode in enumerate([True, False]):
-            s = []
-            start = time.time()
-            for file in TEST_FILES:
-                s.append(Snirf(file, dynamic_loading=mode))
-            times[i] = time.time() - start
-            sizes[i] = getsize(s)
-            for snirf in s:
-                snirf.close()
-            if VERBOSE:
-                print('Loaded', len(TEST_FILES), 'SNIRF files of total size', sizes[i],
-                      'in', str(times[i])[0:6], 'seconds with dynamic_loading =', mode)
-        self.assertTrue(times[0] < times[1], msg='Dynamically-loaded files not loaded faster')
-        self.assertTrue(sizes[0] < sizes[1], msg='Dynamically-loaded files not smaller in memory')
-    
     
     def test_loading_saving(self):
         """
@@ -182,7 +163,30 @@ class TestSnirf(unittest.TestCase):
             for (fname1, fname2) in zip(s1_paths, s2_paths):
                 dataset_equal_test(self, fname1, fname2)
     
+
+    def test_dynamic(self):
+        """
+        Confirm that dynamically loaded files have smaller memory footprints
+        and faster load-times than non dynamically loaded files
+        """
+        times = [-1, -1]
+        sizes = [-1, -1]
+        for i, mode in enumerate([True, False]):
+            s = []
+            start = time.time()
+            for file in TEST_FILES:
+                s.append(Snirf(file, dynamic_loading=mode))
+            times[i] = time.time() - start
+            sizes[i] = getsize(s)
+            for snirf in s:
+                snirf.close()
+            if VERBOSE:
+                print('Loaded', len(TEST_FILES), 'SNIRF files of total size', sizes[i],
+                      'in', str(times[i])[0:6], 'seconds with dynamic_loading =', mode)
+        self.assertTrue(times[0] < times[1], msg='Dynamically-loaded files not loaded faster')
+        self.assertTrue(sizes[0] < sizes[1], msg='Dynamically-loaded files not smaller in memory')
     
+
     # def test_create_a_file(self):
     #     """
     #     Create a file from scratch using the data in the first test file. Compare
@@ -255,17 +259,24 @@ class TestSnirf(unittest.TestCase):
 
 # -- Set up test working-directory --------------------------------------------
 
-print('Deleting all files in', WD)
-for file in os.listdir(WD):
-    os.remove(WD + '\\' + file)
+print('Deleting all files in', working_directory)
+for file in os.listdir(working_directory):
+    os.remove(working_directory + '\\' + file)
+    print('Deleted', working_directory + '\\' + file)
 
-'Copying all files to WD'
-for file in os.listdir(SNIRF_DIR):
-    os.popen('copy ' + SNIRF_DIR + '\\' + file + ' ' + WD + '\\' + file)
-time.sleep(1)  # Sleep while os exectues copy operation
+print('Copying all test files to', working_directory)
+if os.name == 'nt':
+    cmd = 'copy '
+else:
+    cmd = 'cp '
+for file in os.listdir(snirf_directory):
+    os.popen(cmd + snirf_directory + '\\' + file + ' ' + working_directory + '\\' + file)
+    print(cmd + snirf_directory + '\\' + file + ' ' + working_directory + '\\' + file)
+    time.sleep(0.5)  # Sleep while executing copy operation
 
-TEST_FILES = [WD + '/' + file for file in os.listdir(WD)]
-
+TEST_FILES = [working_directory + '\\' + file for file in os.listdir(working_directory)]
+if len(TEST_FILES) == 0:
+    sys.exit('Failed to set up test data working directory at '+ working_directory)
 
 if __name__ == '__main__':
     result = unittest.main()

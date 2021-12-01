@@ -16,7 +16,7 @@ hosted at SPEC_SRC.
 
 if __name__ == '__main__':
     
-    local_spec = SPEC_SRC.split('/')[-1].split('.')[0] + '_retrieved_'+ datetime.now().strftime('%d_%m_%y') + '.txt'
+    local_spec = SPEC_SRC.split('/')[-1].split('.')[0] + '_retrieved_' + datetime.now().strftime('%d_%m_%y') + '.txt'
     
     if os.path.exists(local_spec):
         print('Loading specification from local document', local_spec, '...')
@@ -168,7 +168,7 @@ if __name__ == '__main__':
     
     # Generate the complete Snirf interface from base.py and the template + data
     dst = os.path.abspath(os.path.join(os.getcwd(), os.pardir))
-    output_path = dst + '/src/' + 'pysnirf2.py'
+    output_path = dst + '/pysnirf2/' + 'pysnirf2.py'
     with open(HEADER, 'r') as f_header:
         with open(FOOTER, 'r') as f_footer:
             print('Loading base class definitions and file header from', HEADER)
