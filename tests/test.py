@@ -1,6 +1,6 @@
 import unittest
-import pysnirf2
-from pysnirf2 import Snirf, NirsElement, StimElement, MetaDataTags
+import src.pysnirf2
+from src.pysnirf2 import Snirf, NirsElement, StimElement, MetaDataTags
 import h5py
 import os
 import sys
