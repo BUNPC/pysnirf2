@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # Based on https://github.com/kennethreitz/setup.py
+# To upload to PyPI
+# >>> setup.py upload
 
 import io
 import os
