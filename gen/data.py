@@ -11,8 +11,8 @@ TYPELUT = {  # usage: if TYPELUT[<type>] in <typecode>:
         'VARLEN_STRING': '"s"'
         }
 TEMPLATE = 'pysnirf2.jinja'
-HEADER = 'base.py'
-FOOTER = None
+HEADER = 'header.py'
+FOOTER = 'footer.py'
 TABLE_DELIM_START = '### SNIRF data format summary'
 TABLE_DELIM_END = 'In the above table, the used notations are explained below'
 DEFINITIONS_DELIM_START = '### SNIRF data container definitions'

@@ -2,7 +2,7 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 import requests
 from unidecode import unidecode
 from pathlib import Path
-from datetime import date
+from datetime import date, datetime
 import getpass
 import os
 import sys
@@ -16,17 +16,33 @@ hosted at SPEC_SRC.
 
 if __name__ == '__main__':
     
-
-    print('Attempting to retrieve spec from', SPEC_SRC, '...')
+    local_spec = SPEC_SRC.split('/')[-1].split('.')[0] + '_retrieved_'+ datetime.now().strftime('%d_%m_%y') + '.txt'
     
-    # Retrieve the SNIRF specification from GitHub and parse it for the summary table
-    spec = requests.get(SPEC_SRC)
+    if os.path.exists(local_spec):
+        print('Loading specification from local document', local_spec, '...')
+        with open(local_spec, 'r') as f:
+            text = f.read()
+    else:
+        print('Attempting to retrieve spec from', SPEC_SRC, '...')
     
-    if spec.text == '404: Not Found':
-        print(spec.text)
-        sys.exit('The Snirf specification could not be found at ' + SPEC_SRC)
-    
-    table = unidecode(spec.text).split(TABLE_DELIM_START)[1].split(TABLE_DELIM_END)[0]
+        # Retrieve the SNIRF specification from GitHub and parse it for the summary table
+        spec = requests.get(SPEC_SRC)
+        
+        if spec.text == '404: Not Found':
+            print(spec.text)
+            sys.exit('The Snirf specification could not be found at ' + SPEC_SRC)
+        
+        text = unidecode(spec.text)
+        
+        for file in os.listdir():
+            if file.startswith(SPEC_SRC.split('/')[-1].split('.')[0] + '_retrieved_') and file.endswith('.txt'):
+                os.remove(file)
+        
+        with open(local_spec, 'w') as f:
+            f.write(text)
+            
+        
+    table = text.split(TABLE_DELIM_START)[1].split(TABLE_DELIM_END)[0]
     
     rows = table.split('\n')
     while '' in rows:
@@ -52,7 +68,7 @@ if __name__ == '__main__':
     print('Found', len(type_codes), 'types in the table...')
     
     # Parse headings in spec for complete HDF style locations with which to build tree
-    definitions = unidecode(spec.text).split(DEFINITIONS_DELIM_START)[1].split(DEFINITIONS_DELIM_END)[0]
+    definitions = unidecode(text).split(DEFINITIONS_DELIM_START)[1].split(DEFINITIONS_DELIM_END)[0]
     lines = definitions.split('\n')
     while '' in lines:
         lines.remove('')
@@ -68,6 +84,15 @@ if __name__ == '__main__':
     flat = []
 
     print('Found', len(locations), 'locations...')
+    
+    # Write locations to file
+    if os.path.exists('locations.txt'):
+        os.remove('locations.txt')
+    with open('locations.txt', 'w') as f:
+        for location in locations:
+            f.write(location.replace('(i)', '').replace('(j)', '').replace('(k)', '') + '\n')
+    print('Wrote to locations.txt')
+    
     
     if len(locations) != len(type_codes):
         sys.exit('Parsed ' + str(len(type_codes)) + ' type codes from the summary table but '
@@ -107,7 +132,8 @@ if __name__ == '__main__':
     SNIRF = {
             'VERSION': VERSION,
             'SPEC_SRC': SPEC_SRC,
-            'BASE': '',
+            'HEADER': '',
+            'FOOTER': '',
             'ROOT': flat[0],  # Snirf root '/'
             'TYPES': TYPELUT, 
             'USER': getpass.getuser(),
@@ -143,10 +169,13 @@ if __name__ == '__main__':
     # Generate the complete Snirf interface from base.py and the template + data
     dst = os.path.abspath(os.path.join(os.getcwd(), os.pardir))
     output_path = dst + '/src/' + 'pysnirf2.py'
-    with open(HEADER, 'r') as f_base:
-        print('Loading base class definitions and file header from', HEADER)
-        with open(output_path, "w") as f_out:
-            SNIRF['BASE'] = f_base.read()
-            f_out.write(template.render(SNIRF))
+    with open(HEADER, 'r') as f_header:
+        with open(FOOTER, 'r') as f_footer:
+            print('Loading base class definitions and file header from', HEADER)
+            print('Loading file footer from', FOOTER)
+            with open(output_path, "w") as f_out:
+                SNIRF['HEADER'] = f_header.read()
+                SNIRF['FOOTER'] = f_footer.read()
+                f_out.write(template.render(SNIRF))
             
     print('\nWrote script to ' + output_path + '.')

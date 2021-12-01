@@ -1,81 +1,109 @@
 {% macro sentencecase(text) %}
     {{- text[0]|upper}}{{text[1:] -}}
 {% endmacro %}
+{% macro declare_members(NODE) %}
+    {%- for CHILD in NODE.children %}
+    {%- if TYPES.GROUP in CHILD.name %}
+    _{{ CHILD.name }} = AbsentGroup()  # {{ CHILD.type }}
+    {% else  %}
+    _{{ CHILD.name }} = AbsentDataset()  # {{ CHILD.type }}
+    {% endif -%}    
+    {% endfor -%}
+{% endmacro %}
 {% macro init_members(NODE) %}
+    self.__snirfnames = [{% for CHILD in NODE.children %}'{{ CHILD.name }}', {% endfor %}]
     {% for CHILD in NODE.children %}
-    {% if TYPES.INT_VALUE in CHILD.type %}
-        {% set python_type = 'int' %}
-    {% elif TYPES.FLOAT_VALUE in CHILD.type %}
-        {% set python_type = 'float' %}
-    {% elif TYPES.VARLEN_STRING in CHILD.type %}
-        {% set python_type = 'str' %}
-    {% else %}
-        {% set python_type = 'float' %}
-    {% endif %}
     {% if TYPES.INDEXED_GROUP in CHILD.type %}
-    self.{{- CHILD.name }} = {{ sentencecase(CHILD.name) }}(self._h, self._cfg)  # Indexed group
+    self.{{- CHILD.name }} = {{ sentencecase(CHILD.name) }}(self, self._cfg)  # Indexed group
     {% elif TYPES.GROUP in CHILD.type %}
-    if '{{ CHILD.name }}' in self._h.keys():
+    if '{{ CHILD.name }}' in self._h:
         self._{{- CHILD.name }} = {{ sentencecase(CHILD.name) }}(self._h['{{ CHILD.name }}'].id, self._cfg)  # Group
-        {% if TYPES.REQUIRED in CHILD.type %}
-    else:  # Create an empty group
-        self._h.create_group('{{ CHILD.name }}')
-        self._{{ CHILD.name }} = {{ sentencecase(CHILD.name) }}(self._h['{{ CHILD.name }}'].id, self._cfg)  # Group
-        {% endif %}
+    else:
+        self._{{ CHILD.name }} = {{ sentencecase(CHILD.name) }}(self.location + '/' + '{{ CHILD.name }}', self._cfg)  # Anonymous group (wrapper only)
     {% else %}
-    if '{{ CHILD.name }}' in self._h.keys():
+    if '{{ CHILD.name }}' in self._h:
+        if not self._cfg.dynamic_loading:
         {% if (TYPES.ARRAY_1D in CHILD.type) or (TYPES.ARRAY_2D in CHILD.type) %}
-        if not self._cfg.dynamic_loading:
-            self._{{- CHILD.name }} = np.array(self._h['{{ CHILD.name }}']).astype({{ python_type }})  # Array
-        {% elif TYPES.VARLEN_STRING in CHILD.type %}
-        if not self._cfg.dynamic_loading:
-            self._{{- CHILD.name }} = _read_string(self._h['{{ CHILD.name }}'])
+            {% if TYPES.VARLEN_STRING in CHILD.type %}
+            self._{{- CHILD.name }} = _read_string_array(self._h['{{ CHILD.name }}'])
+            {% elif TYPES.INT_VALUE in CHILD.type %}
+            self._{{- CHILD.name }} = _read_int_array(self._h['{{ CHILD.name }}'])
+            {% elif TYPES.FLOAT_VALUE in CHILD.type %}
+            self._{{- CHILD.name }} = _read_float_array(self._h['{{ CHILD.name }}'])
+            {% else %}
+            self._{{- CHILD.name }} = _read_dataset(self._h['{{ CHILD.name }}'])
+            {% endif %}
         {% else %}
-        if not self._cfg.dynamic_loading:
-            self._{{- CHILD.name }} = {{ python_type }}(self._h['{{ CHILD.name }}'][()])
+            {% if TYPES.VARLEN_STRING in CHILD.type %}
+            self._{{- CHILD.name }} = _read_string(self._h['{{ CHILD.name }}'])
+            {% elif TYPES.INT_VALUE in CHILD.type %}
+            self._{{- CHILD.name }} = _read_int(self._h['{{ CHILD.name }}'])
+            {% elif TYPES.FLOAT_VALUE in CHILD.type %}
+            self._{{- CHILD.name }} = _read_float(self._h['{{ CHILD.name }}'])
+            {% else %}
+            self._{{- CHILD.name }} = _read_dataset(self._h['{{ CHILD.name }}'])
+            {% endif %}
         {% endif %}
         {% if (TYPES.REQUIRED in CHILD.type) and not ((TYPES.REQUIRED + '1' in CHILD.type) or (TYPES.REQUIRED + '2' in CHILD.type)) %}
-    else:
-        warn(str(self.__class__.__name__) + ' missing required key ' + '"{{ CHILD.name }}"')
         {% endif %}
     {% endif %}
-
     {% endfor %}
 {% endmacro %}
 {% macro gen_properties(NODE) %}
 {% for CHILD in NODE.children %}
-    {% if TYPES.INT_VALUE in CHILD.type %}
-        {% set python_type = 'int' %}
-    {% elif TYPES.FLOAT_VALUE in CHILD.type %}
-        {% set python_type = 'float' %}
-    {% elif TYPES.VARLEN_STRING in CHILD.type %}
-        {% set python_type = 'str' %}
-    {% else %}
-        {% set python_type = 'float' %}
-    {% endif %}
     @property
     def {{ CHILD.name }}(self):
     {% if TYPES.INDEXED_GROUP in CHILD.type %}
         return self._{{ CHILD.name }}
     {% elif TYPES.GROUP in CHILD.type %}
-        if '{{ CHILD.name }}' in self._h.keys():
-            return self._{{ CHILD.name }}
-    {% else %}
-        if self._cfg.dynamic_loading and self._{{ CHILD.name }} is None:
-            if '{{ CHILD.name }}' in self._h.keys():
-    {% if (TYPES.ARRAY_1D in CHILD.type) or (TYPES.ARRAY_2D in CHILD.type) %}
-                return np.array(self._h['{{ CHILD.name }}']).astype({{ python_type }})  # Array
-    {% elif TYPES.VARLEN_STRING in CHILD.type %}
-                return _read_string(self._h['{{ CHILD.name }}'])
-    {% else %}
-                return {{ python_type }}(self._h['{{ CHILD.name }}'][()])
-    {% endif %}
         return self._{{ CHILD.name }}
+    {% else %}
+        if type(self._{{ CHILD.name }}) is AbsentDataset:
+            if self._cfg.dynamic_loading:
+                if '{{ CHILD.name }}' in self._h:
+        {% if (TYPES.ARRAY_1D in CHILD.type) or (TYPES.ARRAY_2D in CHILD.type) %}
+            {% if TYPES.VARLEN_STRING in CHILD.type %}
+                    return _read_string_array(self._h['{{ CHILD.name }}'])
+            {% elif TYPES.INT_VALUE in CHILD.type %}
+                    return _read_int_array(self._h['{{ CHILD.name }}'])
+            {% elif TYPES.FLOAT_VALUE in CHILD.type %}
+                    return _read_float_array(self._h['{{ CHILD.name }}'])
+            {% else %}
+                    return _read_dataset(self._h['{{ CHILD.name }}'])
+            {% endif %}
+        {% else %}
+            {% if TYPES.VARLEN_STRING in CHILD.type %}
+                    return _read_string(self._h['{{ CHILD.name }}'])
+            {% elif TYPES.INT_VALUE in CHILD.type %}
+                    return _read_int(self._h['{{ CHILD.name }}'])
+            {% elif TYPES.FLOAT_VALUE in CHILD.type %}
+                    return _read_float(self._h['{{ CHILD.name }}'])
+            {% else %}
+                    return _read_dataset(self._h['{{ CHILD.name }}'])
+            {% endif %}
+        {% endif %}
+                    self._cfg.logger.info('Dynamically loaded %s/{{ CHILD.name }} from %s', self.location, self.filename)
+            else:
+                return None
+        else:
+            return self._{{ CHILD.name }}
     {% endif %}
 
     @{{ CHILD.name }}.setter
     def {{ CHILD.name }}(self, value):
         self._{{ CHILD.name }} = value
+        # self._cfg.logger.info('Assignment to %s/{{ CHILD.name }} in %s', self.location, self.filename)
+
+    @{{ CHILD.name }}.deleter
+    def {{ CHILD.name }}(self):
+        {% if TYPES.INDEXED_GROUP in CHILD.type %}
+        raise AttributeError('IndexedGroup ' + str(type(self._{{ CHILD.name }})) + ' cannot be deleted')
+        {% elif TYPES.GROUP in CHILD.type %}
+        self._{{ CHILD.name }} = AbsentGroup()
+        {% else %}
+        self._{{ CHILD.name }} = AbsentDataset()
+        {% endif %}
+        self._cfg.logger.info('Deleted %s/{{ CHILD.name }} from %s', self.location, self.filename)
 
     {% endfor %}
 {% endmacro %}
@@ -83,41 +111,61 @@
     def _save(self, *args):
         if len(args) > 0 and type(args[0]) is h5py.File:
             file = args[0]
+            if self.location not in file:
+                file.create_group(self.location)
+                # self._cfg.logger.info('Created Group at %s in %s', self.location, file)
         else:
-            file = self._h.file
+            if self.location not in file:
+                # Assign the wrapper to the new HDF5 Group on disk
+                self._h = file.create_group(self.location)
+                # self._cfg.logger.info('Created Group at %s in %s', self.location, file)
+            if self._h != {}:
+                file = self._h.file
+            else:
+                raise ValueError('Cannot save an anonymous ' + self.__class__.__name__ + ' instance without a filename')
 {% for CHILD in NODE.children %}
-    {% if TYPES.INT_VALUE in CHILD.type %}
-        {% set h5_type = "'i4'" %}
-    {% elif TYPES.FLOAT_VALUE in CHILD.type %}
-        {% set h5_type = "'f8'" %}
-    {% elif TYPES.VARLEN_STRING in CHILD.type %}
-        {% set h5_type = "h5py.string_dtype(encoding='ascii', length=None)" %}
-    {% else %}
-        {% set h5_type = "'f8'" %}
-    {% endif %}
-    {% if (TYPES.GROUP in CHILD.type) or (TYPES.INDEXED_GROUP in CHILD.type) %}
+    {% if TYPES.INDEXED_GROUP in CHILD.type %}
         self.{{ CHILD.name }}._save(*args)
+    {% elif TYPES.GROUP in CHILD.type %}
+        if type(self._{{ CHILD.name }}) is AbsentGroup:
+            if '{{ CHILD.name }}' in file:
+                del file['{{ CHILD.name }}']
+                self._cfg.logger.info('Deleted Group %s/{{ CHILD.name }} from %s', self.location, file)
+        else:
+            self.{{ CHILD.name }}._save(*args)
     {% else %}
-        if '{{ CHILD.name }}' in self._h:
-            name = self._h['{{ CHILD.name }}'].name
+        name = self.location + '/{{ CHILD.name }}'
+        if name in file:
+            del file[name]
+            self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
+        data = self.{{ CHILD.name }}
+        if type(data) is not AbsentDataset and data is not None:
         {% if (TYPES.ARRAY_1D in CHILD.type) or (TYPES.ARRAY_2D in CHILD.type) %}
             {% if TYPES.VARLEN_STRING in CHILD.type %}
-            data = np.array(self.{{ CHILD.name }}).astype('O')
+            _create_dataset_string_array(file, name, data)
+            {% elif TYPES.INT_VALUE in CHILD.type %}
+            _create_dataset_int_array(file, name, data)
+            {% elif TYPES.FLOAT_VALUE in CHILD.type %}
+            _create_dataset_float_array(file, name, data)
             {% else %}
-            data = np.array(self.{{ CHILD.name }})
+            _create_dataset(file, name, data)
             {% endif %}
-        {% elif TYPES.VARLEN_STRING in CHILD.type %}
-            data = self.{{ CHILD.name }}
         {% else %}
-            data = self.{{ CHILD.name }}
+            {% if TYPES.VARLEN_STRING in CHILD.type %}
+            _create_dataset_string(file, name, data)
+            {% elif TYPES.INT_VALUE in CHILD.type %}
+            _create_dataset_int(file, name, data)
+            {% elif TYPES.FLOAT_VALUE in CHILD.type %}
+            _create_dataset_float(file, name, data)
+            {% else %}
+            _create_dataset(file, name, data)
+            {% endif %}
         {% endif %}
-            if name in file:
-                del file[name]
-            file.create_dataset(name, dtype={{ h5_type }}, data=data)
+            # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
     {% endif %}
     {% endfor %}
 {% endmacro %}
-{{ BASE }}
+{{ HEADER }}
 
 # generated by {{ USER }} on {{ DATE }}
 # version {{ VERSION }} SNIRF specification parsed from {{ SPEC_SRC }}
@@ -126,12 +174,10 @@
 {% for GROUP in GROUPS %}
 class {{ sentencecase(GROUP.name) -}}(Group):
 
-    {% for CHILD in GROUP.children %}
-    _{{ CHILD.name }} = None  # {{ CHILD.type }}
-    {% endfor %}
+{{ declare_members(GROUP) }}
 
-    def __init__(self, gid: h5py.h5g.GroupID, cfg: SnirfConfig):
-        super().__init__(gid, cfg)
+    def __init__(self, var, cfg: SnirfConfig):
+        super().__init__(var, cfg)
     {{ init_members(GROUP) | indent }}
 {{ gen_properties(GROUP) }}
 {{ gen_writer(GROUP) }}
@@ -141,9 +187,7 @@ class {{ sentencecase(GROUP.name) -}}(Group):
 {% for INDEXED_GROUP in INDEXED_GROUPS %}
 class {{ sentencecase(INDEXED_GROUP.name) -}}Element(Group):
 
-    {% for CHILD in INDEXED_GROUP.children %}
-    _{{ CHILD.name }} = None  # {{ CHILD.type }}
-    {% endfor %}
+{{ declare_members(INDEXED_GROUP) }}
 
     def __init__(self, gid: h5py.h5g.GroupID, cfg: SnirfConfig):
         super().__init__(gid, cfg)
@@ -164,26 +208,33 @@ class {{ sentencecase(INDEXED_GROUP.name) -}}(IndexedGroup):
 class Snirf():
     
     _name = '/'
-    {% for CHILD in ROOT.children %}
-    _{{ CHILD.name }} = None  # {{ CHILD.type }}
-    {% endfor %}
+{{ declare_members(ROOT) }}
 
-    def __init__(self, *args, dynamic_loading: bool = False):
+    def __init__(self, *args, dynamic_loading: bool = False, logfile: bool = False):
+        self._cfg = SnirfConfig()
+        self._cfg.dynamic_loading = dynamic_loading
         if len(args) > 0:
             path = args[0]
             if type(path) is str:
                 if not path.endswith('.snirf'):
-                    path = path.join('.snirf')
+                    path = path + '.snirf'
+                if logfile:
+                    self._cfg.logger = _create_logger(path, path.split('.')[0] + '.log')
+                else:
+                    self._cfg.logger = _logger  # Use global logger
                 if os.path.exists(path):
+                    self._cfg.logger.info('Loading from file %s', path)
                     self._h = h5py.File(path, 'r+')
                 else:
+                    self._cfg.logger.info('Creating new file at %s', path)
                     self._h = h5py.File(path, 'w')
             else:
                 raise TypeError(str(path) + ' is not a valid filename')
         else:
+            self._cfg.logger = _logger
+            self._cfg.logger.info('Created Snirf object based on tempfile')
+            path = None
             self._h = h5py.File(TemporaryFile(), 'w')
-        self._cfg = SnirfConfig()
-        self._cfg.dynamic_loading = dynamic_loading
     {{ init_members(ROOT) | indent }}
 {{ gen_properties(ROOT) }}
 {{ gen_writer(ROOT) }}
@@ -203,19 +254,41 @@ class Snirf():
                 path += '.snirf'
             new_file = h5py.File(path, 'w')
             self._save(new_file)
+            self._cfg.logger.info('Saved Snirf file at %s to copy at %s', self.filename, path)
             new_file.close()
         else:
-            self._save()
+            self._save(self._h.file)
 
     @property
     def filename(self):
         return self._h.filename
 
+    @property
+    def location(self):
+        return self._h.name
+
     def close(self):
+        self._cfg.logger.info('Closing Snirf file %s', self.filename)
         self._h.close()
 
-    def __del__(self):
-        self._h.close()
+    def __enter__(self):
+        return self
+
+#    def __exit__(self):
+#        self.close()
+
+#    def __del__(self):
+#        self.close()
+
+    def __getitem__(self, key):
+        if self._h != {}:
+            if key in self._h:
+                return self._h[key]
+        else:
+            return None
+
+    def __contains__(self, key):
+        return key in self._h;
 
     def __repr__(self):
         props = [p for p in dir(self) if ('_' not in p and not callable(getattr(self, p)))]
@@ -236,3 +309,5 @@ class Snirf():
                     out += '\n' + prepr
             out += '\n'
         return out[:-1]
+
+{{ FOOTER }}
