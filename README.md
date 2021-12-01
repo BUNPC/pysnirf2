@@ -1,3 +1,5 @@
+![example workflow](https://github.com/sstucker/.github/test.yml/badge.svg)
+
 # pysnirf2
 
 Dynamically generated Python library for loading, saving, and validating Snirf files.
