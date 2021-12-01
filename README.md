@@ -1,4 +1,5 @@
-![example workflow](https://github.com/BUNPC/pysnirf2/actions/workflows/test.yml/badge.svg)
+![testing](https://github.com/BUNPC/pysnirf2/actions/workflows/test.yml/badge.svg)
+[![pypi](https://img.shields.io/pypi/dm/mne.svg?label=PyPI%20downloads)](https://pypi.org/project/pysnirf2/)
 
 # pysnirf2
 
