@@ -77,8 +77,14 @@ setup(
     long_description_content_type='text/markdown',
     author_email='sstucker@bu.edu',
     python_requires='>=3.6.0',
+    install_requires=[
+        'h5py>=3.1.0',
+        'numpy',
+        'setuptools',
+        'pip',
+    ],
     url='https://github.com/BUNPC/pysnirf2',
-    py_modules=['pysnirf2'],
+    packages=find_packages(exclude=('tests', 'gen')),
     include_package_data=True,
     license='GPLv3',
     classifiers=[
