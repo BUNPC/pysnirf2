@@ -68,7 +68,7 @@ def _create_dataset(file, name, data):
 
 
 def _create_dataset_string(file: h5py.File, name: str, data: str):
-    return file.create_dataset(name, dtype=h5py.string_dtype(encoding='ascii', length=None), data=str(data))
+    return file.create_dataset(name, dtype=_varlen_str_type, data=np.string_(data))
 
 
 def _create_dataset_int(file: h5py.File, name: str, data: int):
@@ -83,7 +83,7 @@ def _create_dataset_string_array(file: h5py.File, name: str, data: np.ndarray):
     array = np.array(data).astype('O')
     if data.size is 0:
         array = AbsentDataset()  # Do not save empty or "None" NumPy arrays
-    return file.create_dataset(name, dtype=h5py.string_dtype(encoding='ascii', length=None), data=array)
+    return file.create_dataset(name, dtype=_varlen_str_type, data=array)
 
 
 def _create_dataset_int_array(file: h5py.File, name: str, data: np.ndarray):
@@ -133,9 +133,9 @@ def _read_string(dataset: h5py.Dataset):
     if type(dataset) is not h5py.Dataset:
         raise TypeError("'dataset' must be type h5py.Dataset")
     if dataset.ndim > 0:
-        return dataset[0].decode('ascii')
+        return str(dataset[0].decode('ascii'))
     else:
-        return dataset[()].decode('ascii')
+        return str(dataset[()].decode('ascii'))
 
 
 def _read_int(dataset: h5py.Dataset):
