@@ -1,5 +1,4 @@
 name: test
-
 on:
   push:
     branches:
@@ -24,5 +23,5 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-      - name: test
-        run: python -m unittest 
+      - name: Run test.py
+        run: python -m unittest discover -s ./tests
