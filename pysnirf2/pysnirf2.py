@@ -82,21 +82,21 @@ def _create_dataset_float(file: h5py.File, name: str, data: float):
 def _create_dataset_string_array(file: h5py.File, name: str, data: np.ndarray):
     array = np.array(data).astype('O')
     if data.size is 0:
-        array = AbsentDataset()  # Do not save empty or "None" NumPy arrays
+        array = AbsentDataset  # Do not save empty or "None" NumPy arrays
     return file.create_dataset(name, dtype=_varlen_str_type, data=array)
 
 
 def _create_dataset_int_array(file: h5py.File, name: str, data: np.ndarray):
     array = np.array(data).astype(int)
     if data.size is 0:
-        array = AbsentDataset()
+        array = AbsentDataset
     return file.create_dataset(name, dtype=_DTYPE_INT, data=array)
 
 
 def _create_dataset_float_array(file: h5py.File, name: str, data: np.ndarray):
     array = np.array(data).astype(float)
     if data.size is 0:
-        array = AbsentDataset()
+        array = AbsentDataset
     return file.create_dataset(name, dtype=_DTYPE_FLOAT, data=array)
 
 
@@ -176,6 +176,62 @@ def _read_float_array(dataset: h5py.Dataset):
     return np.array(dataset).astype(float)
 
 
+# -- Validation types ---------------------------------------
+
+class ValidationResultCodes:
+    _codes = {
+            # OK (Severity 0)
+            'OK': (0 << 1, 0, 'OK'),
+            # Errors (Severity 1)
+            'REQUIRED_DATASET_MISSING': (0 << 1, 1, 'a specified required dataset is missing from the group or file'),
+            'REQUIRED_GROUP_MISSING': (0 << 1, 1, 'a specified required group is missing from the group or file'),
+            'INVALID_DATASET_TYPE': (0 << 1, 1, 'the HDF5 Dataset is not stored in a sensible format'),
+            'INVALID_ARRAY_DIMENSIONS': (0 << 1, 1, 'the HDF5 Dataset is not stored in a sensible shape'),
+            'INVALID_MEASUREMENTLIST': (0 << 1, 1, 'the measurementList does not match the second dimension of dataTimeSeries'),
+            'INVALID_TIME': (0 << 1, 1, 'time does not match the first dimension of of dataTimeSeries'),
+            'INVALID_INDEX': (0 << 1, 1, 'an index is negative'),
+            'INVALID_SOURCE_INDEX': (0 << 1, 1, 'sourceIndex exceeds probe/sourceLabels'),
+            'INVALID_DETECTOR_INDEX': (0 << 1, 1, 'detectorIndex exceeds probe/detectorLabels'),
+            'INVALID_PROBE_LABEL': (0 << 1, 1, 'a duplicate sourceLabel or detectorLabel appears'),
+            'INVALID_WAVELENGTH_INDEX': (0 << 1, 1, 'waveLengthIndex exceeds probe/wavelengths, probe/wavelengthsEmission, or probe/sourceLabels'),
+            'INVALID_DATATYPE_INDEX': (0 << 1, 1, 'dataTypeIndex exceeds probe/frequencies, probe/timeDelays, probe/timeDelayWidths, probe/momentOrders, probe/correlationTimeDelayWidths or probe/correlationTimeDelays'),
+            'INVALID_PROBE_MODULE_INDEX': (0 << 1, 1, 'sourceModuleIndex and detectorModuleIndex are used along with moduleIndex'),
+            'INVALID_LANDMARKPOS': (0 << 1, 1, 'a value in the last column of landmarkPos2D or landmarkPos3D'),
+            'INVALID_STIM_DATALABELS': (0 << 1, 1, 'the length of stim/dataLabels exceeds the columns of stim/data'),
+            # Warnings (Severity 2)
+            'UNRECOGNIZED_GROUP_NAME': (0 << 1, 2, 'unspecified group is a part of the file'),
+            'UNRECOGNIZED_DATASET_NAME': (0 << 1, 2, 'unspecified dataset is a part of the file'),
+            'UNRECOGNIZED_DATATYPELABEL': (0 << 1, 2, 'dataTypeLabel is not one of the recognized values listed in the Appendix'),
+            'UNRECOGNIZED_DATATYPE': (0 << 1, 2, 'dataType is not one of the recognized values listed in the Appendix'),
+            'INDEX_OF_ZERO': (0 << 1, 2, 'index of zero is usually undefined'),
+            # Info (Severity 3)
+            'OPTIONAL_GROUP_MISSING': (0 << 1, 3, 'OK (missing optional group)'),
+            }
+
+    def __getitem__(self, item):
+        return self._codes[item]
+
+    def keys(self):
+        return self._codes.keys()
+
+
+
+class ValidationResult:
+
+    _locations = {}  # HDF locations associated with errors or an additional validation result
+
+    def is_valid(self):
+        """
+        :return: True if the file is valid
+        """
+        return False
+
+    def add(self, location, key):
+        if ValidationResultCodes not in ValidationResultCodes.keys():
+            raise KeyError("'" + key + "' is not a valid result code.")
+        self._locations[location] = ValidationResultCodes[key]
+
+
 # -----------------------------------------
 
 
@@ -188,14 +244,43 @@ class SnirfConfig:
     dynamic_loading: bool = False  # If False, data is loaded in the constructor, if True, data is loaded on access
 
 
-class AbsentDataset():    
+# Placeholder for a Dataset that is not on disk or in memory
+class AbsentDatasetType:
+    _instance = None
+    def __new__(self):
+        if self._instance is None:
+            self._instance = self
+        return self._instance
     def __repr__(self):
-        return str(None)
+        return 'AbsentDataset'
 
 
-class AbsentGroup():
+# Placeholder for a Group that is not on disk or in memory
+class AbsentGroupType:
+    _instance = None
+    def __new__(self):
+        if self._instance is None:
+            self._instance = self
+        return self._instance
     def __repr__(self):
-        return str(None)
+        return 'AbsentGroup'
+
+
+# Placeholder for a Dataset that is available only on disk in a dynamic_loading=True wrapper
+class PresentDatasetType:
+    _instance = None
+    def __new__(self):
+        if self._instance is None:
+            self._instance = self
+        return self._instance
+    def __repr__(self):
+        return 'PresentDataset'
+
+
+# Instantiate singletons
+AbsentDataset = AbsentDatasetType()
+AbsentGroup = AbsentGroupType()
+PresentDataset = PresentDatasetType()
 
 
 class Group(ABC):
@@ -258,14 +343,29 @@ class Group(ABC):
             return self._h.name
         else:
             return self._location
-    
+
+    def is_empty(self):
+        for name in self._snirfnames:
+            attr = getattr(self, '_' + name)
+            if isinstance(attr, Group) or isinstance(attr, IndexedGroup):
+                if not attr.is_empty():
+                    return False
+            else:
+                if not any([attr is a for a in [None, AbsentGroup, AbsentDataset]]):
+                    return False
+        return True
+
     @abstractmethod
     def _save(self, *args):
         """
         args is path or empty
         """
         raise NotImplementedError('_save is an abstract method')
-        
+
+    # @abstractmethod
+    # def _validate(self, result: ValidationResult):
+    #     raise NotImplementedError('_validate is an abstract method')
+
     def __repr__(self):
         props = [p for p in dir(self) if ('_' not in p and not callable(getattr(self, p)))]
         out = str(self.__class__.__name__) + ' at ' + str(self.location) + '\n'
@@ -286,15 +386,15 @@ class Group(ABC):
             out += '\n'
         return out[:-1]
 
-    def __getitem__(self, key):
-        if self._h != {}:
-            if key in self._h:
-                return self._h[key]
-        else:
-            return None
+    # def __getitem__(self, key):
+    #     if self._h != {}:
+    #         if key in self._h:
+    #             return self._h[key]
+    #     else:
+    #         return None
 
     def __contains__(self, key):
-        return key in self._h;
+        return key in self._h
 
 
 class IndexedGroup(MutableSequence, ABC):
@@ -352,6 +452,13 @@ class IndexedGroup(MutableSequence, ABC):
     def __repr__(self):
         return str('<' + 'iterable of ' + str(len(self._list)) + ' ' + str(self._element) + '>')
 
+    def is_empty(self):
+        if len(self._list) > 0:
+            for e in self._list:
+                if not e.is_empty():
+                    return False
+        return True
+
     def insert(self, i, item):
         self._check_type(item)
         self._list.insert(i, item)
@@ -404,7 +511,7 @@ class IndexedGroup(MutableSequence, ABC):
         names = self._get_matching_keys()
         for name in names:
             if name in self._parent._h:
-                self._list.append(self._element(self._parent[name].id, self._cfg))
+                self._list.append(self._element(self._parent._h[name].id, self._cfg))
     
     def _check_type(self, item):
         if type(item) is not self._element:
@@ -457,7 +564,10 @@ class IndexedGroup(MutableSequence, ABC):
                 indices.append(0)
         order = np.argsort(indices)
         return [unordered[i] for i in order]
-        
+
+    def _validate(self, result: ValidationResult):
+        [e._validate(result) for e in self._list]
+
     def _save(self, *args):
         if len(args) > 0 and type(args[0]) is h5py.File:
             h = args[0]
@@ -477,54 +587,77 @@ class IndexedGroup(MutableSequence, ABC):
         self._order_names(h=h)  # Enforce order in the group names
 
 
-
 # generated by sstucker on 2021-12-01
 # version 1.0 SNIRF specification parsed from https://raw.githubusercontent.com/fNIRS/snirf/v1.0/snirf_specification.md
 
 
 class MetaDataTags(Group):
 
-    _SubjectID = AbsentDataset()  # "s"*
-    _MeasurementDate = AbsentDataset()  # "s"*
-    _MeasurementTime = AbsentDataset()  # "s"*
-    _LengthUnit = AbsentDataset()  # "s"*
-    _TimeUnit = AbsentDataset()  # "s"*
-    _FrequencyUnit = AbsentDataset()  # "s"*
+    _SubjectID = AbsentDataset  # "s"*
+    _MeasurementDate = AbsentDataset  # "s"*
+    _MeasurementTime = AbsentDataset  # "s"*
+    _LengthUnit = AbsentDataset  # "s"*
+    _TimeUnit = AbsentDataset  # "s"*
+    _FrequencyUnit = AbsentDataset  # "s"*
+    _snirfnames = ['SubjectID', 'MeasurementDate', 'MeasurementTime', 'LengthUnit', 'TimeUnit', 'FrequencyUnit', ]
 
 
     def __init__(self, var, cfg: SnirfConfig):
         super().__init__(var, cfg)
-        self.__snirfnames = ['SubjectID', 'MeasurementDate', 'MeasurementTime', 'LengthUnit', 'TimeUnit', 'FrequencyUnit', ]
         if 'SubjectID' in self._h:
             if not self._cfg.dynamic_loading:
                 self._SubjectID = _read_string(self._h['SubjectID'])
+            else:  # if the dataset is found on disk but dynamic_loading=True
+                self._SubjectID = PresentDataset
+        else:  # if the dataset is not found on disk
+            self._SubjectID = AbsentDataset
         if 'MeasurementDate' in self._h:
             if not self._cfg.dynamic_loading:
                 self._MeasurementDate = _read_string(self._h['MeasurementDate'])
+            else:  # if the dataset is found on disk but dynamic_loading=True
+                self._MeasurementDate = PresentDataset
+        else:  # if the dataset is not found on disk
+            self._MeasurementDate = AbsentDataset
         if 'MeasurementTime' in self._h:
             if not self._cfg.dynamic_loading:
                 self._MeasurementTime = _read_string(self._h['MeasurementTime'])
+            else:  # if the dataset is found on disk but dynamic_loading=True
+                self._MeasurementTime = PresentDataset
+        else:  # if the dataset is not found on disk
+            self._MeasurementTime = AbsentDataset
         if 'LengthUnit' in self._h:
             if not self._cfg.dynamic_loading:
                 self._LengthUnit = _read_string(self._h['LengthUnit'])
+            else:  # if the dataset is found on disk but dynamic_loading=True
+                self._LengthUnit = PresentDataset
+        else:  # if the dataset is not found on disk
+            self._LengthUnit = AbsentDataset
         if 'TimeUnit' in self._h:
             if not self._cfg.dynamic_loading:
                 self._TimeUnit = _read_string(self._h['TimeUnit'])
+            else:  # if the dataset is found on disk but dynamic_loading=True
+                self._TimeUnit = PresentDataset
+        else:  # if the dataset is not found on disk
+            self._TimeUnit = AbsentDataset
         if 'FrequencyUnit' in self._h:
             if not self._cfg.dynamic_loading:
                 self._FrequencyUnit = _read_string(self._h['FrequencyUnit'])
+            else:  # if the dataset is found on disk but dynamic_loading=True
+                self._FrequencyUnit = PresentDataset
+        else:  # if the dataset is not found on disk
+            self._FrequencyUnit = AbsentDataset
 
     @property
     def SubjectID(self):
-        if type(self._SubjectID) is AbsentDataset:
-            if self._cfg.dynamic_loading:
-                if 'SubjectID' in self._h:
-                    return _read_string(self._h['SubjectID'])
-                    self._cfg.logger.info('Dynamically loaded %s/SubjectID from %s', self.location, self.filename)
-            else:
-                return None
-        else:
+        if self._SubjectID is AbsentDataset:
+            return None
+        if self._cfg.dynamic_loading and self._SubjectID is PresentDataset and 'SubjectID' in self._h:
+                return _read_string(self._h['SubjectID'])
+                self._cfg.logger.info('Dynamically loaded %s/SubjectID from %s', self.location, self.filename)
+        elif self._SubjectID is not AbsentDataset:
             return self._SubjectID
+        else:
+            return None
 
     @SubjectID.setter
     def SubjectID(self, value):
@@ -533,20 +666,20 @@ class MetaDataTags(Group):
 
     @SubjectID.deleter
     def SubjectID(self):
-        self._SubjectID = AbsentDataset()
+        self._SubjectID = AbsentDataset
         self._cfg.logger.info('Deleted %s/SubjectID from %s', self.location, self.filename)
 
     @property
     def MeasurementDate(self):
-        if type(self._MeasurementDate) is AbsentDataset:
-            if self._cfg.dynamic_loading:
-                if 'MeasurementDate' in self._h:
-                    return _read_string(self._h['MeasurementDate'])
-                    self._cfg.logger.info('Dynamically loaded %s/MeasurementDate from %s', self.location, self.filename)
-            else:
-                return None
-        else:
+        if self._MeasurementDate is AbsentDataset:
+            return None
+        if self._cfg.dynamic_loading and self._MeasurementDate is PresentDataset and 'MeasurementDate' in self._h:
+                return _read_string(self._h['MeasurementDate'])
+                self._cfg.logger.info('Dynamically loaded %s/MeasurementDate from %s', self.location, self.filename)
+        elif self._MeasurementDate is not AbsentDataset:
             return self._MeasurementDate
+        else:
+            return None
 
     @MeasurementDate.setter
     def MeasurementDate(self, value):
@@ -555,20 +688,20 @@ class MetaDataTags(Group):
 
     @MeasurementDate.deleter
     def MeasurementDate(self):
-        self._MeasurementDate = AbsentDataset()
+        self._MeasurementDate = AbsentDataset
         self._cfg.logger.info('Deleted %s/MeasurementDate from %s', self.location, self.filename)
 
     @property
     def MeasurementTime(self):
-        if type(self._MeasurementTime) is AbsentDataset:
-            if self._cfg.dynamic_loading:
-                if 'MeasurementTime' in self._h:
-                    return _read_string(self._h['MeasurementTime'])
-                    self._cfg.logger.info('Dynamically loaded %s/MeasurementTime from %s', self.location, self.filename)
-            else:
-                return None
-        else:
+        if self._MeasurementTime is AbsentDataset:
+            return None
+        if self._cfg.dynamic_loading and self._MeasurementTime is PresentDataset and 'MeasurementTime' in self._h:
+                return _read_string(self._h['MeasurementTime'])
+                self._cfg.logger.info('Dynamically loaded %s/MeasurementTime from %s', self.location, self.filename)
+        elif self._MeasurementTime is not AbsentDataset:
             return self._MeasurementTime
+        else:
+            return None
 
     @MeasurementTime.setter
     def MeasurementTime(self, value):
@@ -577,20 +710,20 @@ class MetaDataTags(Group):
 
     @MeasurementTime.deleter
     def MeasurementTime(self):
-        self._MeasurementTime = AbsentDataset()
+        self._MeasurementTime = AbsentDataset
         self._cfg.logger.info('Deleted %s/MeasurementTime from %s', self.location, self.filename)
 
     @property
     def LengthUnit(self):
-        if type(self._LengthUnit) is AbsentDataset:
-            if self._cfg.dynamic_loading:
-                if 'LengthUnit' in self._h:
-                    return _read_string(self._h['LengthUnit'])
-                    self._cfg.logger.info('Dynamically loaded %s/LengthUnit from %s', self.location, self.filename)
-            else:
-                return None
-        else:
+        if self._LengthUnit is AbsentDataset:
+            return None
+        if self._cfg.dynamic_loading and self._LengthUnit is PresentDataset and 'LengthUnit' in self._h:
+                return _read_string(self._h['LengthUnit'])
+                self._cfg.logger.info('Dynamically loaded %s/LengthUnit from %s', self.location, self.filename)
+        elif self._LengthUnit is not AbsentDataset:
             return self._LengthUnit
+        else:
+            return None
 
     @LengthUnit.setter
     def LengthUnit(self, value):
@@ -599,20 +732,20 @@ class MetaDataTags(Group):
 
     @LengthUnit.deleter
     def LengthUnit(self):
-        self._LengthUnit = AbsentDataset()
+        self._LengthUnit = AbsentDataset
         self._cfg.logger.info('Deleted %s/LengthUnit from %s', self.location, self.filename)
 
     @property
     def TimeUnit(self):
-        if type(self._TimeUnit) is AbsentDataset:
-            if self._cfg.dynamic_loading:
-                if 'TimeUnit' in self._h:
-                    return _read_string(self._h['TimeUnit'])
-                    self._cfg.logger.info('Dynamically loaded %s/TimeUnit from %s', self.location, self.filename)
-            else:
-                return None
-        else:
+        if self._TimeUnit is AbsentDataset:
+            return None
+        if self._cfg.dynamic_loading and self._TimeUnit is PresentDataset and 'TimeUnit' in self._h:
+                return _read_string(self._h['TimeUnit'])
+                self._cfg.logger.info('Dynamically loaded %s/TimeUnit from %s', self.location, self.filename)
+        elif self._TimeUnit is not AbsentDataset:
             return self._TimeUnit
+        else:
+            return None
 
     @TimeUnit.setter
     def TimeUnit(self, value):
@@ -621,20 +754,20 @@ class MetaDataTags(Group):
 
     @TimeUnit.deleter
     def TimeUnit(self):
-        self._TimeUnit = AbsentDataset()
+        self._TimeUnit = AbsentDataset
         self._cfg.logger.info('Deleted %s/TimeUnit from %s', self.location, self.filename)
 
     @property
     def FrequencyUnit(self):
-        if type(self._FrequencyUnit) is AbsentDataset:
-            if self._cfg.dynamic_loading:
-                if 'FrequencyUnit' in self._h:
-                    return _read_string(self._h['FrequencyUnit'])
-                    self._cfg.logger.info('Dynamically loaded %s/FrequencyUnit from %s', self.location, self.filename)
-            else:
-                return None
-        else:
+        if self._FrequencyUnit is AbsentDataset:
+            return None
+        if self._cfg.dynamic_loading and self._FrequencyUnit is PresentDataset and 'FrequencyUnit' in self._h:
+                return _read_string(self._h['FrequencyUnit'])
+                self._cfg.logger.info('Dynamically loaded %s/FrequencyUnit from %s', self.location, self.filename)
+        elif self._FrequencyUnit is not AbsentDataset:
             return self._FrequencyUnit
+        else:
+            return None
 
     @FrequencyUnit.setter
     def FrequencyUnit(self, value):
@@ -643,7 +776,7 @@ class MetaDataTags(Group):
 
     @FrequencyUnit.deleter
     def FrequencyUnit(self):
-        self._FrequencyUnit = AbsentDataset()
+        self._FrequencyUnit = AbsentDataset
         self._cfg.logger.info('Deleted %s/FrequencyUnit from %s', self.location, self.filename)
 
 
@@ -667,7 +800,7 @@ class MetaDataTags(Group):
             del file[name]
             self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         data = self.SubjectID
-        if type(data) is not AbsentDataset and data is not None:
+        if data not in [AbsentDataset, None]:
             _create_dataset_string(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/MeasurementDate'
@@ -675,7 +808,7 @@ class MetaDataTags(Group):
             del file[name]
             self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         data = self.MeasurementDate
-        if type(data) is not AbsentDataset and data is not None:
+        if data not in [AbsentDataset, None]:
             _create_dataset_string(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/MeasurementTime'
@@ -683,7 +816,7 @@ class MetaDataTags(Group):
             del file[name]
             self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         data = self.MeasurementTime
-        if type(data) is not AbsentDataset and data is not None:
+        if data not in [AbsentDataset, None]:
             _create_dataset_string(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/LengthUnit'
@@ -691,7 +824,7 @@ class MetaDataTags(Group):
             del file[name]
             self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         data = self.LengthUnit
-        if type(data) is not AbsentDataset and data is not None:
+        if data not in [AbsentDataset, None]:
             _create_dataset_string(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/TimeUnit'
@@ -699,7 +832,7 @@ class MetaDataTags(Group):
             del file[name]
             self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         data = self.TimeUnit
-        if type(data) is not AbsentDataset and data is not None:
+        if data not in [AbsentDataset, None]:
             _create_dataset_string(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/FrequencyUnit'
@@ -707,7 +840,7 @@ class MetaDataTags(Group):
             del file[name]
             self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         data = self.FrequencyUnit
-        if type(data) is not AbsentDataset and data is not None:
+        if data not in [AbsentDataset, None]:
             _create_dataset_string(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
 
@@ -715,29 +848,29 @@ class MetaDataTags(Group):
 
 class Probe(Group):
 
-    _wavelengths = AbsentDataset()  # [<f>,...]*
-    _wavelengthsEmission = AbsentDataset()  # [<f>,...]
-    _sourcePos2D = AbsentDataset()  # [[<f>,...]]*1
-    _sourcePos3D = AbsentDataset()  # [[<f>,...]]*1
-    _detectorPos2D = AbsentDataset()  # [[<f>,...]]*2
-    _detectorPos3D = AbsentDataset()  # [[<f>,...]]*2
-    _frequencies = AbsentDataset()  # [<f>,...]
-    _timeDelays = AbsentDataset()  # [<f>,...]
-    _timeDelayWidths = AbsentDataset()  # [<f>,...]
-    _momentOrders = AbsentDataset()  # [<f>,...]
-    _correlationTimeDelays = AbsentDataset()  # [<f>,...]
-    _correlationTimeDelayWidths = AbsentDataset()  # [<f>,...]
-    _sourceLabels = AbsentDataset()  # ["s",...]
-    _detectorLabels = AbsentDataset()  # ["s",...]
-    _landmarkPos2D = AbsentDataset()  # [[<f>,...]]
-    _landmarkPos3D = AbsentDataset()  # [[<f>,...]]
-    _landmarkLabels = AbsentDataset()  # ["s",...]
-    _useLocalIndex = AbsentDataset()  # <i>
+    _wavelengths = AbsentDataset  # [<f>,...]*
+    _wavelengthsEmission = AbsentDataset  # [<f>,...]
+    _sourcePos2D = AbsentDataset  # [[<f>,...]]*1
+    _sourcePos3D = AbsentDataset  # [[<f>,...]]*1
+    _detectorPos2D = AbsentDataset  # [[<f>,...]]*2
+    _detectorPos3D = AbsentDataset  # [[<f>,...]]*2
+    _frequencies = AbsentDataset  # [<f>,...]
+    _timeDelays = AbsentDataset  # [<f>,...]
+    _timeDelayWidths = AbsentDataset  # [<f>,...]
+    _momentOrders = AbsentDataset  # [<f>,...]
+    _correlationTimeDelays = AbsentDataset  # [<f>,...]
+    _correlationTimeDelayWidths = AbsentDataset  # [<f>,...]
+    _sourceLabels = AbsentDataset  # ["s",...]
+    _detectorLabels = AbsentDataset  # ["s",...]
+    _landmarkPos2D = AbsentDataset  # [[<f>,...]]
+    _landmarkPos3D = AbsentDataset  # [[<f>,...]]
+    _landmarkLabels = AbsentDataset  # ["s",...]
+    _useLocalIndex = AbsentDataset  # <i>
+    _snirfnames = ['wavelengths', 'wavelengthsEmission', 'sourcePos2D', 'sourcePos3D', 'detectorPos2D', 'detectorPos3D', 'frequencies', 'timeDelays', 'timeDelayWidths', 'momentOrders', 'correlationTimeDelays', 'correlationTimeDelayWidths', 'sourceLabels', 'detectorLabels', 'landmarkPos2D', 'landmarkPos3D', 'landmarkLabels', 'useLocalIndex', ]
 
 
     def __init__(self, var, cfg: SnirfConfig):
         super().__init__(var, cfg)
-        self.__snirfnames = ['wavelengths', 'wavelengthsEmission', 'sourcePos2D', 'sourcePos3D', 'detectorPos2D', 'detectorPos3D', 'frequencies', 'timeDelays', 'timeDelayWidths', 'momentOrders', 'correlationTimeDelays', 'correlationTimeDelayWidths', 'sourceLabels', 'detectorLabels', 'landmarkPos2D', 'landmarkPos3D', 'landmarkLabels', 'useLocalIndex', ]
         if 'wavelengths' in self._h:
             if not self._cfg.dynamic_loading:
                 self._wavelengths = _read_float_array(self._h['wavelengths'])
@@ -792,18 +925,22 @@ class Probe(Group):
         if 'useLocalIndex' in self._h:
             if not self._cfg.dynamic_loading:
                 self._useLocalIndex = _read_int(self._h['useLocalIndex'])
+            else:  # if the dataset is found on disk but dynamic_loading=True
+                self._useLocalIndex = PresentDataset
+        else:  # if the dataset is not found on disk
+            self._useLocalIndex = AbsentDataset
 
     @property
     def wavelengths(self):
-        if type(self._wavelengths) is AbsentDataset:
-            if self._cfg.dynamic_loading:
-                if 'wavelengths' in self._h:
-                    return _read_float_array(self._h['wavelengths'])
-                    self._cfg.logger.info('Dynamically loaded %s/wavelengths from %s', self.location, self.filename)
-            else:
-                return None
-        else:
+        if self._wavelengths is AbsentDataset:
+            return None
+        if self._cfg.dynamic_loading and self._wavelengths is PresentDataset and 'wavelengths' in self._h:
+                return _read_float_array(self._h['wavelengths'])
+                self._cfg.logger.info('Dynamically loaded %s/wavelengths from %s', self.location, self.filename)
+        elif self._wavelengths is not AbsentDataset:
             return self._wavelengths
+        else:
+            return None
 
     @wavelengths.setter
     def wavelengths(self, value):
@@ -812,20 +949,20 @@ class Probe(Group):
 
     @wavelengths.deleter
     def wavelengths(self):
-        self._wavelengths = AbsentDataset()
+        self._wavelengths = AbsentDataset
         self._cfg.logger.info('Deleted %s/wavelengths from %s', self.location, self.filename)
 
     @property
     def wavelengthsEmission(self):
-        if type(self._wavelengthsEmission) is AbsentDataset:
-            if self._cfg.dynamic_loading:
-                if 'wavelengthsEmission' in self._h:
-                    return _read_float_array(self._h['wavelengthsEmission'])
-                    self._cfg.logger.info('Dynamically loaded %s/wavelengthsEmission from %s', self.location, self.filename)
-            else:
-                return None
-        else:
+        if self._wavelengthsEmission is AbsentDataset:
+            return None
+        if self._cfg.dynamic_loading and self._wavelengthsEmission is PresentDataset and 'wavelengthsEmission' in self._h:
+                return _read_float_array(self._h['wavelengthsEmission'])
+                self._cfg.logger.info('Dynamically loaded %s/wavelengthsEmission from %s', self.location, self.filename)
+        elif self._wavelengthsEmission is not AbsentDataset:
             return self._wavelengthsEmission
+        else:
+            return None
 
     @wavelengthsEmission.setter
     def wavelengthsEmission(self, value):
@@ -834,20 +971,20 @@ class Probe(Group):
 
     @wavelengthsEmission.deleter
     def wavelengthsEmission(self):
-        self._wavelengthsEmission = AbsentDataset()
+        self._wavelengthsEmission = AbsentDataset
         self._cfg.logger.info('Deleted %s/wavelengthsEmission from %s', self.location, self.filename)
 
     @property
     def sourcePos2D(self):
-        if type(self._sourcePos2D) is AbsentDataset:
-            if self._cfg.dynamic_loading:
-                if 'sourcePos2D' in self._h:
-                    return _read_float_array(self._h['sourcePos2D'])
-                    self._cfg.logger.info('Dynamically loaded %s/sourcePos2D from %s', self.location, self.filename)
-            else:
-                return None
-        else:
+        if self._sourcePos2D is AbsentDataset:
+            return None
+        if self._cfg.dynamic_loading and self._sourcePos2D is PresentDataset and 'sourcePos2D' in self._h:
+                return _read_float_array(self._h['sourcePos2D'])
+                self._cfg.logger.info('Dynamically loaded %s/sourcePos2D from %s', self.location, self.filename)
+        elif self._sourcePos2D is not AbsentDataset:
             return self._sourcePos2D
+        else:
+            return None
 
     @sourcePos2D.setter
     def sourcePos2D(self, value):
@@ -856,20 +993,20 @@ class Probe(Group):
 
     @sourcePos2D.deleter
     def sourcePos2D(self):
-        self._sourcePos2D = AbsentDataset()
+        self._sourcePos2D = AbsentDataset
         self._cfg.logger.info('Deleted %s/sourcePos2D from %s', self.location, self.filename)
 
     @property
     def sourcePos3D(self):
-        if type(self._sourcePos3D) is AbsentDataset:
-            if self._cfg.dynamic_loading:
-                if 'sourcePos3D' in self._h:
-                    return _read_float_array(self._h['sourcePos3D'])
-                    self._cfg.logger.info('Dynamically loaded %s/sourcePos3D from %s', self.location, self.filename)
-            else:
-                return None
-        else:
+        if self._sourcePos3D is AbsentDataset:
+            return None
+        if self._cfg.dynamic_loading and self._sourcePos3D is PresentDataset and 'sourcePos3D' in self._h:
+                return _read_float_array(self._h['sourcePos3D'])
+                self._cfg.logger.info('Dynamically loaded %s/sourcePos3D from %s', self.location, self.filename)
+        elif self._sourcePos3D is not AbsentDataset:
             return self._sourcePos3D
+        else:
+            return None
 
     @sourcePos3D.setter
     def sourcePos3D(self, value):
@@ -878,20 +1015,20 @@ class Probe(Group):
 
     @sourcePos3D.deleter
     def sourcePos3D(self):
-        self._sourcePos3D = AbsentDataset()
+        self._sourcePos3D = AbsentDataset
         self._cfg.logger.info('Deleted %s/sourcePos3D from %s', self.location, self.filename)
 
     @property
     def detectorPos2D(self):
-        if type(self._detectorPos2D) is AbsentDataset:
-            if self._cfg.dynamic_loading:
-                if 'detectorPos2D' in self._h:
-                    return _read_float_array(self._h['detectorPos2D'])
-                    self._cfg.logger.info('Dynamically loaded %s/detectorPos2D from %s', self.location, self.filename)
-            else:
-                return None
-        else:
+        if self._detectorPos2D is AbsentDataset:
+            return None
+        if self._cfg.dynamic_loading and self._detectorPos2D is PresentDataset and 'detectorPos2D' in self._h:
+                return _read_float_array(self._h['detectorPos2D'])
+                self._cfg.logger.info('Dynamically loaded %s/detectorPos2D from %s', self.location, self.filename)
+        elif self._detectorPos2D is not AbsentDataset:
             return self._detectorPos2D
+        else:
+            return None
 
     @detectorPos2D.setter
     def detectorPos2D(self, value):
@@ -900,20 +1037,20 @@ class Probe(Group):
 
     @detectorPos2D.deleter
     def detectorPos2D(self):
-        self._detectorPos2D = AbsentDataset()
+        self._detectorPos2D = AbsentDataset
         self._cfg.logger.info('Deleted %s/detectorPos2D from %s', self.location, self.filename)
 
     @property
     def detectorPos3D(self):
-        if type(self._detectorPos3D) is AbsentDataset:
-            if self._cfg.dynamic_loading:
-                if 'detectorPos3D' in self._h:
-                    return _read_float_array(self._h['detectorPos3D'])
-                    self._cfg.logger.info('Dynamically loaded %s/detectorPos3D from %s', self.location, self.filename)
-            else:
-                return None
-        else:
+        if self._detectorPos3D is AbsentDataset:
+            return None
+        if self._cfg.dynamic_loading and self._detectorPos3D is PresentDataset and 'detectorPos3D' in self._h:
+                return _read_float_array(self._h['detectorPos3D'])
+                self._cfg.logger.info('Dynamically loaded %s/detectorPos3D from %s', self.location, self.filename)
+        elif self._detectorPos3D is not AbsentDataset:
             return self._detectorPos3D
+        else:
+            return None
 
     @detectorPos3D.setter
     def detectorPos3D(self, value):
@@ -922,20 +1059,20 @@ class Probe(Group):
 
     @detectorPos3D.deleter
     def detectorPos3D(self):
-        self._detectorPos3D = AbsentDataset()
+        self._detectorPos3D = AbsentDataset
         self._cfg.logger.info('Deleted %s/detectorPos3D from %s', self.location, self.filename)
 
     @property
     def frequencies(self):
-        if type(self._frequencies) is AbsentDataset:
-            if self._cfg.dynamic_loading:
-                if 'frequencies' in self._h:
-                    return _read_float_array(self._h['frequencies'])
-                    self._cfg.logger.info('Dynamically loaded %s/frequencies from %s', self.location, self.filename)
-            else:
-                return None
-        else:
+        if self._frequencies is AbsentDataset:
+            return None
+        if self._cfg.dynamic_loading and self._frequencies is PresentDataset and 'frequencies' in self._h:
+                return _read_float_array(self._h['frequencies'])
+                self._cfg.logger.info('Dynamically loaded %s/frequencies from %s', self.location, self.filename)
+        elif self._frequencies is not AbsentDataset:
             return self._frequencies
+        else:
+            return None
 
     @frequencies.setter
     def frequencies(self, value):
@@ -944,20 +1081,20 @@ class Probe(Group):
 
     @frequencies.deleter
     def frequencies(self):
-        self._frequencies = AbsentDataset()
+        self._frequencies = AbsentDataset
         self._cfg.logger.info('Deleted %s/frequencies from %s', self.location, self.filename)
 
     @property
     def timeDelays(self):
-        if type(self._timeDelays) is AbsentDataset:
-            if self._cfg.dynamic_loading:
-                if 'timeDelays' in self._h:
-                    return _read_float_array(self._h['timeDelays'])
-                    self._cfg.logger.info('Dynamically loaded %s/timeDelays from %s', self.location, self.filename)
-            else:
-                return None
-        else:
+        if self._timeDelays is AbsentDataset:
+            return None
+        if self._cfg.dynamic_loading and self._timeDelays is PresentDataset and 'timeDelays' in self._h:
+                return _read_float_array(self._h['timeDelays'])
+                self._cfg.logger.info('Dynamically loaded %s/timeDelays from %s', self.location, self.filename)
+        elif self._timeDelays is not AbsentDataset:
             return self._timeDelays
+        else:
+            return None
 
     @timeDelays.setter
     def timeDelays(self, value):
@@ -966,20 +1103,20 @@ class Probe(Group):
 
     @timeDelays.deleter
     def timeDelays(self):
-        self._timeDelays = AbsentDataset()
+        self._timeDelays = AbsentDataset
         self._cfg.logger.info('Deleted %s/timeDelays from %s', self.location, self.filename)
 
     @property
     def timeDelayWidths(self):
-        if type(self._timeDelayWidths) is AbsentDataset:
-            if self._cfg.dynamic_loading:
-                if 'timeDelayWidths' in self._h:
-                    return _read_float_array(self._h['timeDelayWidths'])
-                    self._cfg.logger.info('Dynamically loaded %s/timeDelayWidths from %s', self.location, self.filename)
-            else:
-                return None
-        else:
+        if self._timeDelayWidths is AbsentDataset:
+            return None
+        if self._cfg.dynamic_loading and self._timeDelayWidths is PresentDataset and 'timeDelayWidths' in self._h:
+                return _read_float_array(self._h['timeDelayWidths'])
+                self._cfg.logger.info('Dynamically loaded %s/timeDelayWidths from %s', self.location, self.filename)
+        elif self._timeDelayWidths is not AbsentDataset:
             return self._timeDelayWidths
+        else:
+            return None
 
     @timeDelayWidths.setter
     def timeDelayWidths(self, value):
@@ -988,20 +1125,20 @@ class Probe(Group):
 
     @timeDelayWidths.deleter
     def timeDelayWidths(self):
-        self._timeDelayWidths = AbsentDataset()
+        self._timeDelayWidths = AbsentDataset
         self._cfg.logger.info('Deleted %s/timeDelayWidths from %s', self.location, self.filename)
 
     @property
     def momentOrders(self):
-        if type(self._momentOrders) is AbsentDataset:
-            if self._cfg.dynamic_loading:
-                if 'momentOrders' in self._h:
-                    return _read_float_array(self._h['momentOrders'])
-                    self._cfg.logger.info('Dynamically loaded %s/momentOrders from %s', self.location, self.filename)
-            else:
-                return None
-        else:
+        if self._momentOrders is AbsentDataset:
+            return None
+        if self._cfg.dynamic_loading and self._momentOrders is PresentDataset and 'momentOrders' in self._h:
+                return _read_float_array(self._h['momentOrders'])
+                self._cfg.logger.info('Dynamically loaded %s/momentOrders from %s', self.location, self.filename)
+        elif self._momentOrders is not AbsentDataset:
             return self._momentOrders
+        else:
+            return None
 
     @momentOrders.setter
     def momentOrders(self, value):
@@ -1010,20 +1147,20 @@ class Probe(Group):
 
     @momentOrders.deleter
     def momentOrders(self):
-        self._momentOrders = AbsentDataset()
+        self._momentOrders = AbsentDataset
         self._cfg.logger.info('Deleted %s/momentOrders from %s', self.location, self.filename)
 
     @property
     def correlationTimeDelays(self):
-        if type(self._correlationTimeDelays) is AbsentDataset:
-            if self._cfg.dynamic_loading:
-                if 'correlationTimeDelays' in self._h:
-                    return _read_float_array(self._h['correlationTimeDelays'])
-                    self._cfg.logger.info('Dynamically loaded %s/correlationTimeDelays from %s', self.location, self.filename)
-            else:
-                return None
-        else:
+        if self._correlationTimeDelays is AbsentDataset:
+            return None
+        if self._cfg.dynamic_loading and self._correlationTimeDelays is PresentDataset and 'correlationTimeDelays' in self._h:
+                return _read_float_array(self._h['correlationTimeDelays'])
+                self._cfg.logger.info('Dynamically loaded %s/correlationTimeDelays from %s', self.location, self.filename)
+        elif self._correlationTimeDelays is not AbsentDataset:
             return self._correlationTimeDelays
+        else:
+            return None
 
     @correlationTimeDelays.setter
     def correlationTimeDelays(self, value):
@@ -1032,20 +1169,20 @@ class Probe(Group):
 
     @correlationTimeDelays.deleter
     def correlationTimeDelays(self):
-        self._correlationTimeDelays = AbsentDataset()
+        self._correlationTimeDelays = AbsentDataset
         self._cfg.logger.info('Deleted %s/correlationTimeDelays from %s', self.location, self.filename)
 
     @property
     def correlationTimeDelayWidths(self):
-        if type(self._correlationTimeDelayWidths) is AbsentDataset:
-            if self._cfg.dynamic_loading:
-                if 'correlationTimeDelayWidths' in self._h:
-                    return _read_float_array(self._h['correlationTimeDelayWidths'])
-                    self._cfg.logger.info('Dynamically loaded %s/correlationTimeDelayWidths from %s', self.location, self.filename)
-            else:
-                return None
-        else:
+        if self._correlationTimeDelayWidths is AbsentDataset:
+            return None
+        if self._cfg.dynamic_loading and self._correlationTimeDelayWidths is PresentDataset and 'correlationTimeDelayWidths' in self._h:
+                return _read_float_array(self._h['correlationTimeDelayWidths'])
+                self._cfg.logger.info('Dynamically loaded %s/correlationTimeDelayWidths from %s', self.location, self.filename)
+        elif self._correlationTimeDelayWidths is not AbsentDataset:
             return self._correlationTimeDelayWidths
+        else:
+            return None
 
     @correlationTimeDelayWidths.setter
     def correlationTimeDelayWidths(self, value):
@@ -1054,20 +1191,20 @@ class Probe(Group):
 
     @correlationTimeDelayWidths.deleter
     def correlationTimeDelayWidths(self):
-        self._correlationTimeDelayWidths = AbsentDataset()
+        self._correlationTimeDelayWidths = AbsentDataset
         self._cfg.logger.info('Deleted %s/correlationTimeDelayWidths from %s', self.location, self.filename)
 
     @property
     def sourceLabels(self):
-        if type(self._sourceLabels) is AbsentDataset:
-            if self._cfg.dynamic_loading:
-                if 'sourceLabels' in self._h:
-                    return _read_string_array(self._h['sourceLabels'])
-                    self._cfg.logger.info('Dynamically loaded %s/sourceLabels from %s', self.location, self.filename)
-            else:
-                return None
-        else:
+        if self._sourceLabels is AbsentDataset:
+            return None
+        if self._cfg.dynamic_loading and self._sourceLabels is PresentDataset and 'sourceLabels' in self._h:
+                return _read_string_array(self._h['sourceLabels'])
+                self._cfg.logger.info('Dynamically loaded %s/sourceLabels from %s', self.location, self.filename)
+        elif self._sourceLabels is not AbsentDataset:
             return self._sourceLabels
+        else:
+            return None
 
     @sourceLabels.setter
     def sourceLabels(self, value):
@@ -1076,20 +1213,20 @@ class Probe(Group):
 
     @sourceLabels.deleter
     def sourceLabels(self):
-        self._sourceLabels = AbsentDataset()
+        self._sourceLabels = AbsentDataset
         self._cfg.logger.info('Deleted %s/sourceLabels from %s', self.location, self.filename)
 
     @property
     def detectorLabels(self):
-        if type(self._detectorLabels) is AbsentDataset:
-            if self._cfg.dynamic_loading:
-                if 'detectorLabels' in self._h:
-                    return _read_string_array(self._h['detectorLabels'])
-                    self._cfg.logger.info('Dynamically loaded %s/detectorLabels from %s', self.location, self.filename)
-            else:
-                return None
-        else:
+        if self._detectorLabels is AbsentDataset:
+            return None
+        if self._cfg.dynamic_loading and self._detectorLabels is PresentDataset and 'detectorLabels' in self._h:
+                return _read_string_array(self._h['detectorLabels'])
+                self._cfg.logger.info('Dynamically loaded %s/detectorLabels from %s', self.location, self.filename)
+        elif self._detectorLabels is not AbsentDataset:
             return self._detectorLabels
+        else:
+            return None
 
     @detectorLabels.setter
     def detectorLabels(self, value):
@@ -1098,20 +1235,20 @@ class Probe(Group):
 
     @detectorLabels.deleter
     def detectorLabels(self):
-        self._detectorLabels = AbsentDataset()
+        self._detectorLabels = AbsentDataset
         self._cfg.logger.info('Deleted %s/detectorLabels from %s', self.location, self.filename)
 
     @property
     def landmarkPos2D(self):
-        if type(self._landmarkPos2D) is AbsentDataset:
-            if self._cfg.dynamic_loading:
-                if 'landmarkPos2D' in self._h:
-                    return _read_float_array(self._h['landmarkPos2D'])
-                    self._cfg.logger.info('Dynamically loaded %s/landmarkPos2D from %s', self.location, self.filename)
-            else:
-                return None
-        else:
+        if self._landmarkPos2D is AbsentDataset:
+            return None
+        if self._cfg.dynamic_loading and self._landmarkPos2D is PresentDataset and 'landmarkPos2D' in self._h:
+                return _read_float_array(self._h['landmarkPos2D'])
+                self._cfg.logger.info('Dynamically loaded %s/landmarkPos2D from %s', self.location, self.filename)
+        elif self._landmarkPos2D is not AbsentDataset:
             return self._landmarkPos2D
+        else:
+            return None
 
     @landmarkPos2D.setter
     def landmarkPos2D(self, value):
@@ -1120,20 +1257,20 @@ class Probe(Group):
 
     @landmarkPos2D.deleter
     def landmarkPos2D(self):
-        self._landmarkPos2D = AbsentDataset()
+        self._landmarkPos2D = AbsentDataset
         self._cfg.logger.info('Deleted %s/landmarkPos2D from %s', self.location, self.filename)
 
     @property
     def landmarkPos3D(self):
-        if type(self._landmarkPos3D) is AbsentDataset:
-            if self._cfg.dynamic_loading:
-                if 'landmarkPos3D' in self._h:
-                    return _read_float_array(self._h['landmarkPos3D'])
-                    self._cfg.logger.info('Dynamically loaded %s/landmarkPos3D from %s', self.location, self.filename)
-            else:
-                return None
-        else:
+        if self._landmarkPos3D is AbsentDataset:
+            return None
+        if self._cfg.dynamic_loading and self._landmarkPos3D is PresentDataset and 'landmarkPos3D' in self._h:
+                return _read_float_array(self._h['landmarkPos3D'])
+                self._cfg.logger.info('Dynamically loaded %s/landmarkPos3D from %s', self.location, self.filename)
+        elif self._landmarkPos3D is not AbsentDataset:
             return self._landmarkPos3D
+        else:
+            return None
 
     @landmarkPos3D.setter
     def landmarkPos3D(self, value):
@@ -1142,20 +1279,20 @@ class Probe(Group):
 
     @landmarkPos3D.deleter
     def landmarkPos3D(self):
-        self._landmarkPos3D = AbsentDataset()
+        self._landmarkPos3D = AbsentDataset
         self._cfg.logger.info('Deleted %s/landmarkPos3D from %s', self.location, self.filename)
 
     @property
     def landmarkLabels(self):
-        if type(self._landmarkLabels) is AbsentDataset:
-            if self._cfg.dynamic_loading:
-                if 'landmarkLabels' in self._h:
-                    return _read_string_array(self._h['landmarkLabels'])
-                    self._cfg.logger.info('Dynamically loaded %s/landmarkLabels from %s', self.location, self.filename)
-            else:
-                return None
-        else:
+        if self._landmarkLabels is AbsentDataset:
+            return None
+        if self._cfg.dynamic_loading and self._landmarkLabels is PresentDataset and 'landmarkLabels' in self._h:
+                return _read_string_array(self._h['landmarkLabels'])
+                self._cfg.logger.info('Dynamically loaded %s/landmarkLabels from %s', self.location, self.filename)
+        elif self._landmarkLabels is not AbsentDataset:
             return self._landmarkLabels
+        else:
+            return None
 
     @landmarkLabels.setter
     def landmarkLabels(self, value):
@@ -1164,20 +1301,20 @@ class Probe(Group):
 
     @landmarkLabels.deleter
     def landmarkLabels(self):
-        self._landmarkLabels = AbsentDataset()
+        self._landmarkLabels = AbsentDataset
         self._cfg.logger.info('Deleted %s/landmarkLabels from %s', self.location, self.filename)
 
     @property
     def useLocalIndex(self):
-        if type(self._useLocalIndex) is AbsentDataset:
-            if self._cfg.dynamic_loading:
-                if 'useLocalIndex' in self._h:
-                    return _read_int(self._h['useLocalIndex'])
-                    self._cfg.logger.info('Dynamically loaded %s/useLocalIndex from %s', self.location, self.filename)
-            else:
-                return None
-        else:
+        if self._useLocalIndex is AbsentDataset:
+            return None
+        if self._cfg.dynamic_loading and self._useLocalIndex is PresentDataset and 'useLocalIndex' in self._h:
+                return _read_int(self._h['useLocalIndex'])
+                self._cfg.logger.info('Dynamically loaded %s/useLocalIndex from %s', self.location, self.filename)
+        elif self._useLocalIndex is not AbsentDataset:
             return self._useLocalIndex
+        else:
+            return None
 
     @useLocalIndex.setter
     def useLocalIndex(self, value):
@@ -1186,7 +1323,7 @@ class Probe(Group):
 
     @useLocalIndex.deleter
     def useLocalIndex(self):
-        self._useLocalIndex = AbsentDataset()
+        self._useLocalIndex = AbsentDataset
         self._cfg.logger.info('Deleted %s/useLocalIndex from %s', self.location, self.filename)
 
 
@@ -1210,7 +1347,7 @@ class Probe(Group):
             del file[name]
             self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         data = self.wavelengths
-        if type(data) is not AbsentDataset and data is not None:
+        if data not in [AbsentDataset, None]:
             _create_dataset_float_array(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/wavelengthsEmission'
@@ -1218,7 +1355,7 @@ class Probe(Group):
             del file[name]
             self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         data = self.wavelengthsEmission
-        if type(data) is not AbsentDataset and data is not None:
+        if data not in [AbsentDataset, None]:
             _create_dataset_float_array(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/sourcePos2D'
@@ -1226,7 +1363,7 @@ class Probe(Group):
             del file[name]
             self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         data = self.sourcePos2D
-        if type(data) is not AbsentDataset and data is not None:
+        if data not in [AbsentDataset, None]:
             _create_dataset_float_array(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/sourcePos3D'
@@ -1234,7 +1371,7 @@ class Probe(Group):
             del file[name]
             self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         data = self.sourcePos3D
-        if type(data) is not AbsentDataset and data is not None:
+        if data not in [AbsentDataset, None]:
             _create_dataset_float_array(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/detectorPos2D'
@@ -1242,7 +1379,7 @@ class Probe(Group):
             del file[name]
             self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         data = self.detectorPos2D
-        if type(data) is not AbsentDataset and data is not None:
+        if data not in [AbsentDataset, None]:
             _create_dataset_float_array(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/detectorPos3D'
@@ -1250,7 +1387,7 @@ class Probe(Group):
             del file[name]
             self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         data = self.detectorPos3D
-        if type(data) is not AbsentDataset and data is not None:
+        if data not in [AbsentDataset, None]:
             _create_dataset_float_array(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/frequencies'
@@ -1258,7 +1395,7 @@ class Probe(Group):
             del file[name]
             self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         data = self.frequencies
-        if type(data) is not AbsentDataset and data is not None:
+        if data not in [AbsentDataset, None]:
             _create_dataset_float_array(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/timeDelays'
@@ -1266,7 +1403,7 @@ class Probe(Group):
             del file[name]
             self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         data = self.timeDelays
-        if type(data) is not AbsentDataset and data is not None:
+        if data not in [AbsentDataset, None]:
             _create_dataset_float_array(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/timeDelayWidths'
@@ -1274,7 +1411,7 @@ class Probe(Group):
             del file[name]
             self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         data = self.timeDelayWidths
-        if type(data) is not AbsentDataset and data is not None:
+        if data not in [AbsentDataset, None]:
             _create_dataset_float_array(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/momentOrders'
@@ -1282,7 +1419,7 @@ class Probe(Group):
             del file[name]
             self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         data = self.momentOrders
-        if type(data) is not AbsentDataset and data is not None:
+        if data not in [AbsentDataset, None]:
             _create_dataset_float_array(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/correlationTimeDelays'
@@ -1290,7 +1427,7 @@ class Probe(Group):
             del file[name]
             self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         data = self.correlationTimeDelays
-        if type(data) is not AbsentDataset and data is not None:
+        if data not in [AbsentDataset, None]:
             _create_dataset_float_array(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/correlationTimeDelayWidths'
@@ -1298,7 +1435,7 @@ class Probe(Group):
             del file[name]
             self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         data = self.correlationTimeDelayWidths
-        if type(data) is not AbsentDataset and data is not None:
+        if data not in [AbsentDataset, None]:
             _create_dataset_float_array(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/sourceLabels'
@@ -1306,7 +1443,7 @@ class Probe(Group):
             del file[name]
             self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         data = self.sourceLabels
-        if type(data) is not AbsentDataset and data is not None:
+        if data not in [AbsentDataset, None]:
             _create_dataset_string_array(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/detectorLabels'
@@ -1314,7 +1451,7 @@ class Probe(Group):
             del file[name]
             self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         data = self.detectorLabels
-        if type(data) is not AbsentDataset and data is not None:
+        if data not in [AbsentDataset, None]:
             _create_dataset_string_array(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/landmarkPos2D'
@@ -1322,7 +1459,7 @@ class Probe(Group):
             del file[name]
             self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         data = self.landmarkPos2D
-        if type(data) is not AbsentDataset and data is not None:
+        if data not in [AbsentDataset, None]:
             _create_dataset_float_array(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/landmarkPos3D'
@@ -1330,7 +1467,7 @@ class Probe(Group):
             del file[name]
             self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         data = self.landmarkPos3D
-        if type(data) is not AbsentDataset and data is not None:
+        if data not in [AbsentDataset, None]:
             _create_dataset_float_array(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/landmarkLabels'
@@ -1338,7 +1475,7 @@ class Probe(Group):
             del file[name]
             self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         data = self.landmarkLabels
-        if type(data) is not AbsentDataset and data is not None:
+        if data not in [AbsentDataset, None]:
             _create_dataset_string_array(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/useLocalIndex'
@@ -1346,7 +1483,7 @@ class Probe(Group):
             del file[name]
             self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         data = self.useLocalIndex
-        if type(data) is not AbsentDataset and data is not None:
+        if data not in [AbsentDataset, None]:
             _create_dataset_int(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
 
@@ -1354,16 +1491,16 @@ class Probe(Group):
 
 class NirsElement(Group):
 
-    _metaDataTags = AbsentDataset()  # {.}*
-    _data = AbsentDataset()  # {i}*
-    _stim = AbsentDataset()  # {i}
-    _probe = AbsentDataset()  # {.}*
-    _aux = AbsentDataset()  # {i}
+    _metaDataTags = AbsentGroup  # {.}*
+    _data = AbsentDataset  # {i}*
+    _stim = AbsentDataset  # {i}
+    _probe = AbsentGroup  # {.}*
+    _aux = AbsentDataset  # {i}
+    _snirfnames = ['metaDataTags', 'data', 'stim', 'probe', 'aux', ]
 
 
     def __init__(self, gid: h5py.h5g.GroupID, cfg: SnirfConfig):
         super().__init__(gid, cfg)
-        self.__snirfnames = ['metaDataTags', 'data', 'stim', 'probe', 'aux', ]
         if 'metaDataTags' in self._h:
             self._metaDataTags = MetaDataTags(self._h['metaDataTags'].id, self._cfg)  # Group
         else:
@@ -1378,6 +1515,8 @@ class NirsElement(Group):
 
     @property
     def metaDataTags(self):
+        if self._metaDataTags is AbsentGroup:
+            return None
         return self._metaDataTags
 
     @metaDataTags.setter
@@ -1387,7 +1526,7 @@ class NirsElement(Group):
 
     @metaDataTags.deleter
     def metaDataTags(self):
-        self._metaDataTags = AbsentGroup()
+        self._metaDataTags = AbsentGroup
         self._cfg.logger.info('Deleted %s/metaDataTags from %s', self.location, self.filename)
 
     @property
@@ -1420,6 +1559,8 @@ class NirsElement(Group):
 
     @property
     def probe(self):
+        if self._probe is AbsentGroup:
+            return None
         return self._probe
 
     @probe.setter
@@ -1429,7 +1570,7 @@ class NirsElement(Group):
 
     @probe.deleter
     def probe(self):
-        self._probe = AbsentGroup()
+        self._probe = AbsentGroup
         self._cfg.logger.info('Deleted %s/probe from %s', self.location, self.filename)
 
     @property
@@ -1462,7 +1603,7 @@ class NirsElement(Group):
                 file = self._h.file
             else:
                 raise ValueError('Cannot save an anonymous ' + self.__class__.__name__ + ' instance without a filename')
-        if type(self._metaDataTags) is AbsentGroup:
+        if self._metaDataTags.is_empty():
             if 'metaDataTags' in file:
                 del file['metaDataTags']
                 self._cfg.logger.info('Deleted Group %s/metaDataTags from %s', self.location, file)
@@ -1470,7 +1611,7 @@ class NirsElement(Group):
             self.metaDataTags._save(*args)
         self.data._save(*args)
         self.stim._save(*args)
-        if type(self._probe) is AbsentGroup:
+        if self._probe.is_empty():
             if 'probe' in file:
                 del file['probe']
                 self._cfg.logger.info('Deleted Group %s/probe from %s', self.location, file)
@@ -1490,14 +1631,14 @@ class Nirs(IndexedGroup):
 
 class DataElement(Group):
 
-    _dataTimeSeries = AbsentDataset()  # [[<f>,...]]*
-    _time = AbsentDataset()  # [<f>,...]*
-    _measurementList = AbsentDataset()  # {i}*
+    _dataTimeSeries = AbsentDataset  # [[<f>,...]]*
+    _time = AbsentDataset  # [<f>,...]*
+    _measurementList = AbsentDataset  # {i}*
+    _snirfnames = ['dataTimeSeries', 'time', 'measurementList', ]
 
 
     def __init__(self, gid: h5py.h5g.GroupID, cfg: SnirfConfig):
         super().__init__(gid, cfg)
-        self.__snirfnames = ['dataTimeSeries', 'time', 'measurementList', ]
         if 'dataTimeSeries' in self._h:
             if not self._cfg.dynamic_loading:
                 self._dataTimeSeries = _read_float_array(self._h['dataTimeSeries'])
@@ -1508,15 +1649,15 @@ class DataElement(Group):
 
     @property
     def dataTimeSeries(self):
-        if type(self._dataTimeSeries) is AbsentDataset:
-            if self._cfg.dynamic_loading:
-                if 'dataTimeSeries' in self._h:
-                    return _read_float_array(self._h['dataTimeSeries'])
-                    self._cfg.logger.info('Dynamically loaded %s/dataTimeSeries from %s', self.location, self.filename)
-            else:
-                return None
-        else:
+        if self._dataTimeSeries is AbsentDataset:
+            return None
+        if self._cfg.dynamic_loading and self._dataTimeSeries is PresentDataset and 'dataTimeSeries' in self._h:
+                return _read_float_array(self._h['dataTimeSeries'])
+                self._cfg.logger.info('Dynamically loaded %s/dataTimeSeries from %s', self.location, self.filename)
+        elif self._dataTimeSeries is not AbsentDataset:
             return self._dataTimeSeries
+        else:
+            return None
 
     @dataTimeSeries.setter
     def dataTimeSeries(self, value):
@@ -1525,20 +1666,20 @@ class DataElement(Group):
 
     @dataTimeSeries.deleter
     def dataTimeSeries(self):
-        self._dataTimeSeries = AbsentDataset()
+        self._dataTimeSeries = AbsentDataset
         self._cfg.logger.info('Deleted %s/dataTimeSeries from %s', self.location, self.filename)
 
     @property
     def time(self):
-        if type(self._time) is AbsentDataset:
-            if self._cfg.dynamic_loading:
-                if 'time' in self._h:
-                    return _read_float_array(self._h['time'])
-                    self._cfg.logger.info('Dynamically loaded %s/time from %s', self.location, self.filename)
-            else:
-                return None
-        else:
+        if self._time is AbsentDataset:
+            return None
+        if self._cfg.dynamic_loading and self._time is PresentDataset and 'time' in self._h:
+                return _read_float_array(self._h['time'])
+                self._cfg.logger.info('Dynamically loaded %s/time from %s', self.location, self.filename)
+        elif self._time is not AbsentDataset:
             return self._time
+        else:
+            return None
 
     @time.setter
     def time(self, value):
@@ -1547,7 +1688,7 @@ class DataElement(Group):
 
     @time.deleter
     def time(self):
-        self._time = AbsentDataset()
+        self._time = AbsentDataset
         self._cfg.logger.info('Deleted %s/time from %s', self.location, self.filename)
 
     @property
@@ -1585,7 +1726,7 @@ class DataElement(Group):
             del file[name]
             self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         data = self.dataTimeSeries
-        if type(data) is not AbsentDataset and data is not None:
+        if data not in [AbsentDataset, None]:
             _create_dataset_float_array(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/time'
@@ -1593,7 +1734,7 @@ class DataElement(Group):
             del file[name]
             self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         data = self.time
-        if type(data) is not AbsentDataset and data is not None:
+        if data not in [AbsentDataset, None]:
             _create_dataset_float_array(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         self.measurementList._save(*args)
@@ -1610,75 +1751,127 @@ class Data(IndexedGroup):
 
 class MeasurementListElement(Group):
 
-    _sourceIndex = AbsentDataset()  # <i>*
-    _detectorIndex = AbsentDataset()  # <i>*
-    _wavelengthIndex = AbsentDataset()  # <i>*
-    _wavelengthActual = AbsentDataset()  # <f>
-    _wavelengthEmissionActual = AbsentDataset()  # <f>
-    _dataType = AbsentDataset()  # <i>*
-    _dataTypeLabel = AbsentDataset()  # "s"
-    _dataTypeIndex = AbsentDataset()  # <i>*
-    _sourcePower = AbsentDataset()  # <f>
-    _detectorGain = AbsentDataset()  # <f>
-    _moduleIndex = AbsentDataset()  # <i>
-    _sourceModuleIndex = AbsentDataset()  # <i>
-    _detectorModuleIndex = AbsentDataset()  # <i>
+    _sourceIndex = AbsentDataset  # <i>*
+    _detectorIndex = AbsentDataset  # <i>*
+    _wavelengthIndex = AbsentDataset  # <i>*
+    _wavelengthActual = AbsentDataset  # <f>
+    _wavelengthEmissionActual = AbsentDataset  # <f>
+    _dataType = AbsentDataset  # <i>*
+    _dataTypeLabel = AbsentDataset  # "s"
+    _dataTypeIndex = AbsentDataset  # <i>*
+    _sourcePower = AbsentDataset  # <f>
+    _detectorGain = AbsentDataset  # <f>
+    _moduleIndex = AbsentDataset  # <i>
+    _sourceModuleIndex = AbsentDataset  # <i>
+    _detectorModuleIndex = AbsentDataset  # <i>
+    _snirfnames = ['sourceIndex', 'detectorIndex', 'wavelengthIndex', 'wavelengthActual', 'wavelengthEmissionActual', 'dataType', 'dataTypeLabel', 'dataTypeIndex', 'sourcePower', 'detectorGain', 'moduleIndex', 'sourceModuleIndex', 'detectorModuleIndex', ]
 
 
     def __init__(self, gid: h5py.h5g.GroupID, cfg: SnirfConfig):
         super().__init__(gid, cfg)
-        self.__snirfnames = ['sourceIndex', 'detectorIndex', 'wavelengthIndex', 'wavelengthActual', 'wavelengthEmissionActual', 'dataType', 'dataTypeLabel', 'dataTypeIndex', 'sourcePower', 'detectorGain', 'moduleIndex', 'sourceModuleIndex', 'detectorModuleIndex', ]
         if 'sourceIndex' in self._h:
             if not self._cfg.dynamic_loading:
                 self._sourceIndex = _read_int(self._h['sourceIndex'])
+            else:  # if the dataset is found on disk but dynamic_loading=True
+                self._sourceIndex = PresentDataset
+        else:  # if the dataset is not found on disk
+            self._sourceIndex = AbsentDataset
         if 'detectorIndex' in self._h:
             if not self._cfg.dynamic_loading:
                 self._detectorIndex = _read_int(self._h['detectorIndex'])
+            else:  # if the dataset is found on disk but dynamic_loading=True
+                self._detectorIndex = PresentDataset
+        else:  # if the dataset is not found on disk
+            self._detectorIndex = AbsentDataset
         if 'wavelengthIndex' in self._h:
             if not self._cfg.dynamic_loading:
                 self._wavelengthIndex = _read_int(self._h['wavelengthIndex'])
+            else:  # if the dataset is found on disk but dynamic_loading=True
+                self._wavelengthIndex = PresentDataset
+        else:  # if the dataset is not found on disk
+            self._wavelengthIndex = AbsentDataset
         if 'wavelengthActual' in self._h:
             if not self._cfg.dynamic_loading:
                 self._wavelengthActual = _read_float(self._h['wavelengthActual'])
+            else:  # if the dataset is found on disk but dynamic_loading=True
+                self._wavelengthActual = PresentDataset
+        else:  # if the dataset is not found on disk
+            self._wavelengthActual = AbsentDataset
         if 'wavelengthEmissionActual' in self._h:
             if not self._cfg.dynamic_loading:
                 self._wavelengthEmissionActual = _read_float(self._h['wavelengthEmissionActual'])
+            else:  # if the dataset is found on disk but dynamic_loading=True
+                self._wavelengthEmissionActual = PresentDataset
+        else:  # if the dataset is not found on disk
+            self._wavelengthEmissionActual = AbsentDataset
         if 'dataType' in self._h:
             if not self._cfg.dynamic_loading:
                 self._dataType = _read_int(self._h['dataType'])
+            else:  # if the dataset is found on disk but dynamic_loading=True
+                self._dataType = PresentDataset
+        else:  # if the dataset is not found on disk
+            self._dataType = AbsentDataset
         if 'dataTypeLabel' in self._h:
             if not self._cfg.dynamic_loading:
                 self._dataTypeLabel = _read_string(self._h['dataTypeLabel'])
+            else:  # if the dataset is found on disk but dynamic_loading=True
+                self._dataTypeLabel = PresentDataset
+        else:  # if the dataset is not found on disk
+            self._dataTypeLabel = AbsentDataset
         if 'dataTypeIndex' in self._h:
             if not self._cfg.dynamic_loading:
                 self._dataTypeIndex = _read_int(self._h['dataTypeIndex'])
+            else:  # if the dataset is found on disk but dynamic_loading=True
+                self._dataTypeIndex = PresentDataset
+        else:  # if the dataset is not found on disk
+            self._dataTypeIndex = AbsentDataset
         if 'sourcePower' in self._h:
             if not self._cfg.dynamic_loading:
                 self._sourcePower = _read_float(self._h['sourcePower'])
+            else:  # if the dataset is found on disk but dynamic_loading=True
+                self._sourcePower = PresentDataset
+        else:  # if the dataset is not found on disk
+            self._sourcePower = AbsentDataset
         if 'detectorGain' in self._h:
             if not self._cfg.dynamic_loading:
                 self._detectorGain = _read_float(self._h['detectorGain'])
+            else:  # if the dataset is found on disk but dynamic_loading=True
+                self._detectorGain = PresentDataset
+        else:  # if the dataset is not found on disk
+            self._detectorGain = AbsentDataset
         if 'moduleIndex' in self._h:
             if not self._cfg.dynamic_loading:
                 self._moduleIndex = _read_int(self._h['moduleIndex'])
+            else:  # if the dataset is found on disk but dynamic_loading=True
+                self._moduleIndex = PresentDataset
+        else:  # if the dataset is not found on disk
+            self._moduleIndex = AbsentDataset
         if 'sourceModuleIndex' in self._h:
             if not self._cfg.dynamic_loading:
                 self._sourceModuleIndex = _read_int(self._h['sourceModuleIndex'])
+            else:  # if the dataset is found on disk but dynamic_loading=True
+                self._sourceModuleIndex = PresentDataset
+        else:  # if the dataset is not found on disk
+            self._sourceModuleIndex = AbsentDataset
         if 'detectorModuleIndex' in self._h:
             if not self._cfg.dynamic_loading:
                 self._detectorModuleIndex = _read_int(self._h['detectorModuleIndex'])
+            else:  # if the dataset is found on disk but dynamic_loading=True
+                self._detectorModuleIndex = PresentDataset
+        else:  # if the dataset is not found on disk
+            self._detectorModuleIndex = AbsentDataset
 
     @property
     def sourceIndex(self):
-        if type(self._sourceIndex) is AbsentDataset:
-            if self._cfg.dynamic_loading:
-                if 'sourceIndex' in self._h:
-                    return _read_int(self._h['sourceIndex'])
-                    self._cfg.logger.info('Dynamically loaded %s/sourceIndex from %s', self.location, self.filename)
-            else:
-                return None
-        else:
+        if self._sourceIndex is AbsentDataset:
+            return None
+        if self._cfg.dynamic_loading and self._sourceIndex is PresentDataset and 'sourceIndex' in self._h:
+                return _read_int(self._h['sourceIndex'])
+                self._cfg.logger.info('Dynamically loaded %s/sourceIndex from %s', self.location, self.filename)
+        elif self._sourceIndex is not AbsentDataset:
             return self._sourceIndex
+        else:
+            return None
 
     @sourceIndex.setter
     def sourceIndex(self, value):
@@ -1687,20 +1880,20 @@ class MeasurementListElement(Group):
 
     @sourceIndex.deleter
     def sourceIndex(self):
-        self._sourceIndex = AbsentDataset()
+        self._sourceIndex = AbsentDataset
         self._cfg.logger.info('Deleted %s/sourceIndex from %s', self.location, self.filename)
 
     @property
     def detectorIndex(self):
-        if type(self._detectorIndex) is AbsentDataset:
-            if self._cfg.dynamic_loading:
-                if 'detectorIndex' in self._h:
-                    return _read_int(self._h['detectorIndex'])
-                    self._cfg.logger.info('Dynamically loaded %s/detectorIndex from %s', self.location, self.filename)
-            else:
-                return None
-        else:
+        if self._detectorIndex is AbsentDataset:
+            return None
+        if self._cfg.dynamic_loading and self._detectorIndex is PresentDataset and 'detectorIndex' in self._h:
+                return _read_int(self._h['detectorIndex'])
+                self._cfg.logger.info('Dynamically loaded %s/detectorIndex from %s', self.location, self.filename)
+        elif self._detectorIndex is not AbsentDataset:
             return self._detectorIndex
+        else:
+            return None
 
     @detectorIndex.setter
     def detectorIndex(self, value):
@@ -1709,20 +1902,20 @@ class MeasurementListElement(Group):
 
     @detectorIndex.deleter
     def detectorIndex(self):
-        self._detectorIndex = AbsentDataset()
+        self._detectorIndex = AbsentDataset
         self._cfg.logger.info('Deleted %s/detectorIndex from %s', self.location, self.filename)
 
     @property
     def wavelengthIndex(self):
-        if type(self._wavelengthIndex) is AbsentDataset:
-            if self._cfg.dynamic_loading:
-                if 'wavelengthIndex' in self._h:
-                    return _read_int(self._h['wavelengthIndex'])
-                    self._cfg.logger.info('Dynamically loaded %s/wavelengthIndex from %s', self.location, self.filename)
-            else:
-                return None
-        else:
+        if self._wavelengthIndex is AbsentDataset:
+            return None
+        if self._cfg.dynamic_loading and self._wavelengthIndex is PresentDataset and 'wavelengthIndex' in self._h:
+                return _read_int(self._h['wavelengthIndex'])
+                self._cfg.logger.info('Dynamically loaded %s/wavelengthIndex from %s', self.location, self.filename)
+        elif self._wavelengthIndex is not AbsentDataset:
             return self._wavelengthIndex
+        else:
+            return None
 
     @wavelengthIndex.setter
     def wavelengthIndex(self, value):
@@ -1731,20 +1924,20 @@ class MeasurementListElement(Group):
 
     @wavelengthIndex.deleter
     def wavelengthIndex(self):
-        self._wavelengthIndex = AbsentDataset()
+        self._wavelengthIndex = AbsentDataset
         self._cfg.logger.info('Deleted %s/wavelengthIndex from %s', self.location, self.filename)
 
     @property
     def wavelengthActual(self):
-        if type(self._wavelengthActual) is AbsentDataset:
-            if self._cfg.dynamic_loading:
-                if 'wavelengthActual' in self._h:
-                    return _read_float(self._h['wavelengthActual'])
-                    self._cfg.logger.info('Dynamically loaded %s/wavelengthActual from %s', self.location, self.filename)
-            else:
-                return None
-        else:
+        if self._wavelengthActual is AbsentDataset:
+            return None
+        if self._cfg.dynamic_loading and self._wavelengthActual is PresentDataset and 'wavelengthActual' in self._h:
+                return _read_float(self._h['wavelengthActual'])
+                self._cfg.logger.info('Dynamically loaded %s/wavelengthActual from %s', self.location, self.filename)
+        elif self._wavelengthActual is not AbsentDataset:
             return self._wavelengthActual
+        else:
+            return None
 
     @wavelengthActual.setter
     def wavelengthActual(self, value):
@@ -1753,20 +1946,20 @@ class MeasurementListElement(Group):
 
     @wavelengthActual.deleter
     def wavelengthActual(self):
-        self._wavelengthActual = AbsentDataset()
+        self._wavelengthActual = AbsentDataset
         self._cfg.logger.info('Deleted %s/wavelengthActual from %s', self.location, self.filename)
 
     @property
     def wavelengthEmissionActual(self):
-        if type(self._wavelengthEmissionActual) is AbsentDataset:
-            if self._cfg.dynamic_loading:
-                if 'wavelengthEmissionActual' in self._h:
-                    return _read_float(self._h['wavelengthEmissionActual'])
-                    self._cfg.logger.info('Dynamically loaded %s/wavelengthEmissionActual from %s', self.location, self.filename)
-            else:
-                return None
-        else:
+        if self._wavelengthEmissionActual is AbsentDataset:
+            return None
+        if self._cfg.dynamic_loading and self._wavelengthEmissionActual is PresentDataset and 'wavelengthEmissionActual' in self._h:
+                return _read_float(self._h['wavelengthEmissionActual'])
+                self._cfg.logger.info('Dynamically loaded %s/wavelengthEmissionActual from %s', self.location, self.filename)
+        elif self._wavelengthEmissionActual is not AbsentDataset:
             return self._wavelengthEmissionActual
+        else:
+            return None
 
     @wavelengthEmissionActual.setter
     def wavelengthEmissionActual(self, value):
@@ -1775,20 +1968,20 @@ class MeasurementListElement(Group):
 
     @wavelengthEmissionActual.deleter
     def wavelengthEmissionActual(self):
-        self._wavelengthEmissionActual = AbsentDataset()
+        self._wavelengthEmissionActual = AbsentDataset
         self._cfg.logger.info('Deleted %s/wavelengthEmissionActual from %s', self.location, self.filename)
 
     @property
     def dataType(self):
-        if type(self._dataType) is AbsentDataset:
-            if self._cfg.dynamic_loading:
-                if 'dataType' in self._h:
-                    return _read_int(self._h['dataType'])
-                    self._cfg.logger.info('Dynamically loaded %s/dataType from %s', self.location, self.filename)
-            else:
-                return None
-        else:
+        if self._dataType is AbsentDataset:
+            return None
+        if self._cfg.dynamic_loading and self._dataType is PresentDataset and 'dataType' in self._h:
+                return _read_int(self._h['dataType'])
+                self._cfg.logger.info('Dynamically loaded %s/dataType from %s', self.location, self.filename)
+        elif self._dataType is not AbsentDataset:
             return self._dataType
+        else:
+            return None
 
     @dataType.setter
     def dataType(self, value):
@@ -1797,20 +1990,20 @@ class MeasurementListElement(Group):
 
     @dataType.deleter
     def dataType(self):
-        self._dataType = AbsentDataset()
+        self._dataType = AbsentDataset
         self._cfg.logger.info('Deleted %s/dataType from %s', self.location, self.filename)
 
     @property
     def dataTypeLabel(self):
-        if type(self._dataTypeLabel) is AbsentDataset:
-            if self._cfg.dynamic_loading:
-                if 'dataTypeLabel' in self._h:
-                    return _read_string(self._h['dataTypeLabel'])
-                    self._cfg.logger.info('Dynamically loaded %s/dataTypeLabel from %s', self.location, self.filename)
-            else:
-                return None
-        else:
+        if self._dataTypeLabel is AbsentDataset:
+            return None
+        if self._cfg.dynamic_loading and self._dataTypeLabel is PresentDataset and 'dataTypeLabel' in self._h:
+                return _read_string(self._h['dataTypeLabel'])
+                self._cfg.logger.info('Dynamically loaded %s/dataTypeLabel from %s', self.location, self.filename)
+        elif self._dataTypeLabel is not AbsentDataset:
             return self._dataTypeLabel
+        else:
+            return None
 
     @dataTypeLabel.setter
     def dataTypeLabel(self, value):
@@ -1819,20 +2012,20 @@ class MeasurementListElement(Group):
 
     @dataTypeLabel.deleter
     def dataTypeLabel(self):
-        self._dataTypeLabel = AbsentDataset()
+        self._dataTypeLabel = AbsentDataset
         self._cfg.logger.info('Deleted %s/dataTypeLabel from %s', self.location, self.filename)
 
     @property
     def dataTypeIndex(self):
-        if type(self._dataTypeIndex) is AbsentDataset:
-            if self._cfg.dynamic_loading:
-                if 'dataTypeIndex' in self._h:
-                    return _read_int(self._h['dataTypeIndex'])
-                    self._cfg.logger.info('Dynamically loaded %s/dataTypeIndex from %s', self.location, self.filename)
-            else:
-                return None
-        else:
+        if self._dataTypeIndex is AbsentDataset:
+            return None
+        if self._cfg.dynamic_loading and self._dataTypeIndex is PresentDataset and 'dataTypeIndex' in self._h:
+                return _read_int(self._h['dataTypeIndex'])
+                self._cfg.logger.info('Dynamically loaded %s/dataTypeIndex from %s', self.location, self.filename)
+        elif self._dataTypeIndex is not AbsentDataset:
             return self._dataTypeIndex
+        else:
+            return None
 
     @dataTypeIndex.setter
     def dataTypeIndex(self, value):
@@ -1841,20 +2034,20 @@ class MeasurementListElement(Group):
 
     @dataTypeIndex.deleter
     def dataTypeIndex(self):
-        self._dataTypeIndex = AbsentDataset()
+        self._dataTypeIndex = AbsentDataset
         self._cfg.logger.info('Deleted %s/dataTypeIndex from %s', self.location, self.filename)
 
     @property
     def sourcePower(self):
-        if type(self._sourcePower) is AbsentDataset:
-            if self._cfg.dynamic_loading:
-                if 'sourcePower' in self._h:
-                    return _read_float(self._h['sourcePower'])
-                    self._cfg.logger.info('Dynamically loaded %s/sourcePower from %s', self.location, self.filename)
-            else:
-                return None
-        else:
+        if self._sourcePower is AbsentDataset:
+            return None
+        if self._cfg.dynamic_loading and self._sourcePower is PresentDataset and 'sourcePower' in self._h:
+                return _read_float(self._h['sourcePower'])
+                self._cfg.logger.info('Dynamically loaded %s/sourcePower from %s', self.location, self.filename)
+        elif self._sourcePower is not AbsentDataset:
             return self._sourcePower
+        else:
+            return None
 
     @sourcePower.setter
     def sourcePower(self, value):
@@ -1863,20 +2056,20 @@ class MeasurementListElement(Group):
 
     @sourcePower.deleter
     def sourcePower(self):
-        self._sourcePower = AbsentDataset()
+        self._sourcePower = AbsentDataset
         self._cfg.logger.info('Deleted %s/sourcePower from %s', self.location, self.filename)
 
     @property
     def detectorGain(self):
-        if type(self._detectorGain) is AbsentDataset:
-            if self._cfg.dynamic_loading:
-                if 'detectorGain' in self._h:
-                    return _read_float(self._h['detectorGain'])
-                    self._cfg.logger.info('Dynamically loaded %s/detectorGain from %s', self.location, self.filename)
-            else:
-                return None
-        else:
+        if self._detectorGain is AbsentDataset:
+            return None
+        if self._cfg.dynamic_loading and self._detectorGain is PresentDataset and 'detectorGain' in self._h:
+                return _read_float(self._h['detectorGain'])
+                self._cfg.logger.info('Dynamically loaded %s/detectorGain from %s', self.location, self.filename)
+        elif self._detectorGain is not AbsentDataset:
             return self._detectorGain
+        else:
+            return None
 
     @detectorGain.setter
     def detectorGain(self, value):
@@ -1885,20 +2078,20 @@ class MeasurementListElement(Group):
 
     @detectorGain.deleter
     def detectorGain(self):
-        self._detectorGain = AbsentDataset()
+        self._detectorGain = AbsentDataset
         self._cfg.logger.info('Deleted %s/detectorGain from %s', self.location, self.filename)
 
     @property
     def moduleIndex(self):
-        if type(self._moduleIndex) is AbsentDataset:
-            if self._cfg.dynamic_loading:
-                if 'moduleIndex' in self._h:
-                    return _read_int(self._h['moduleIndex'])
-                    self._cfg.logger.info('Dynamically loaded %s/moduleIndex from %s', self.location, self.filename)
-            else:
-                return None
-        else:
+        if self._moduleIndex is AbsentDataset:
+            return None
+        if self._cfg.dynamic_loading and self._moduleIndex is PresentDataset and 'moduleIndex' in self._h:
+                return _read_int(self._h['moduleIndex'])
+                self._cfg.logger.info('Dynamically loaded %s/moduleIndex from %s', self.location, self.filename)
+        elif self._moduleIndex is not AbsentDataset:
             return self._moduleIndex
+        else:
+            return None
 
     @moduleIndex.setter
     def moduleIndex(self, value):
@@ -1907,20 +2100,20 @@ class MeasurementListElement(Group):
 
     @moduleIndex.deleter
     def moduleIndex(self):
-        self._moduleIndex = AbsentDataset()
+        self._moduleIndex = AbsentDataset
         self._cfg.logger.info('Deleted %s/moduleIndex from %s', self.location, self.filename)
 
     @property
     def sourceModuleIndex(self):
-        if type(self._sourceModuleIndex) is AbsentDataset:
-            if self._cfg.dynamic_loading:
-                if 'sourceModuleIndex' in self._h:
-                    return _read_int(self._h['sourceModuleIndex'])
-                    self._cfg.logger.info('Dynamically loaded %s/sourceModuleIndex from %s', self.location, self.filename)
-            else:
-                return None
-        else:
+        if self._sourceModuleIndex is AbsentDataset:
+            return None
+        if self._cfg.dynamic_loading and self._sourceModuleIndex is PresentDataset and 'sourceModuleIndex' in self._h:
+                return _read_int(self._h['sourceModuleIndex'])
+                self._cfg.logger.info('Dynamically loaded %s/sourceModuleIndex from %s', self.location, self.filename)
+        elif self._sourceModuleIndex is not AbsentDataset:
             return self._sourceModuleIndex
+        else:
+            return None
 
     @sourceModuleIndex.setter
     def sourceModuleIndex(self, value):
@@ -1929,20 +2122,20 @@ class MeasurementListElement(Group):
 
     @sourceModuleIndex.deleter
     def sourceModuleIndex(self):
-        self._sourceModuleIndex = AbsentDataset()
+        self._sourceModuleIndex = AbsentDataset
         self._cfg.logger.info('Deleted %s/sourceModuleIndex from %s', self.location, self.filename)
 
     @property
     def detectorModuleIndex(self):
-        if type(self._detectorModuleIndex) is AbsentDataset:
-            if self._cfg.dynamic_loading:
-                if 'detectorModuleIndex' in self._h:
-                    return _read_int(self._h['detectorModuleIndex'])
-                    self._cfg.logger.info('Dynamically loaded %s/detectorModuleIndex from %s', self.location, self.filename)
-            else:
-                return None
-        else:
+        if self._detectorModuleIndex is AbsentDataset:
+            return None
+        if self._cfg.dynamic_loading and self._detectorModuleIndex is PresentDataset and 'detectorModuleIndex' in self._h:
+                return _read_int(self._h['detectorModuleIndex'])
+                self._cfg.logger.info('Dynamically loaded %s/detectorModuleIndex from %s', self.location, self.filename)
+        elif self._detectorModuleIndex is not AbsentDataset:
             return self._detectorModuleIndex
+        else:
+            return None
 
     @detectorModuleIndex.setter
     def detectorModuleIndex(self, value):
@@ -1951,7 +2144,7 @@ class MeasurementListElement(Group):
 
     @detectorModuleIndex.deleter
     def detectorModuleIndex(self):
-        self._detectorModuleIndex = AbsentDataset()
+        self._detectorModuleIndex = AbsentDataset
         self._cfg.logger.info('Deleted %s/detectorModuleIndex from %s', self.location, self.filename)
 
 
@@ -1975,7 +2168,7 @@ class MeasurementListElement(Group):
             del file[name]
             self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         data = self.sourceIndex
-        if type(data) is not AbsentDataset and data is not None:
+        if data not in [AbsentDataset, None]:
             _create_dataset_int(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/detectorIndex'
@@ -1983,7 +2176,7 @@ class MeasurementListElement(Group):
             del file[name]
             self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         data = self.detectorIndex
-        if type(data) is not AbsentDataset and data is not None:
+        if data not in [AbsentDataset, None]:
             _create_dataset_int(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/wavelengthIndex'
@@ -1991,7 +2184,7 @@ class MeasurementListElement(Group):
             del file[name]
             self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         data = self.wavelengthIndex
-        if type(data) is not AbsentDataset and data is not None:
+        if data not in [AbsentDataset, None]:
             _create_dataset_int(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/wavelengthActual'
@@ -1999,7 +2192,7 @@ class MeasurementListElement(Group):
             del file[name]
             self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         data = self.wavelengthActual
-        if type(data) is not AbsentDataset and data is not None:
+        if data not in [AbsentDataset, None]:
             _create_dataset_float(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/wavelengthEmissionActual'
@@ -2007,7 +2200,7 @@ class MeasurementListElement(Group):
             del file[name]
             self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         data = self.wavelengthEmissionActual
-        if type(data) is not AbsentDataset and data is not None:
+        if data not in [AbsentDataset, None]:
             _create_dataset_float(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/dataType'
@@ -2015,7 +2208,7 @@ class MeasurementListElement(Group):
             del file[name]
             self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         data = self.dataType
-        if type(data) is not AbsentDataset and data is not None:
+        if data not in [AbsentDataset, None]:
             _create_dataset_int(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/dataTypeLabel'
@@ -2023,7 +2216,7 @@ class MeasurementListElement(Group):
             del file[name]
             self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         data = self.dataTypeLabel
-        if type(data) is not AbsentDataset and data is not None:
+        if data not in [AbsentDataset, None]:
             _create_dataset_string(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/dataTypeIndex'
@@ -2031,7 +2224,7 @@ class MeasurementListElement(Group):
             del file[name]
             self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         data = self.dataTypeIndex
-        if type(data) is not AbsentDataset and data is not None:
+        if data not in [AbsentDataset, None]:
             _create_dataset_int(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/sourcePower'
@@ -2039,7 +2232,7 @@ class MeasurementListElement(Group):
             del file[name]
             self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         data = self.sourcePower
-        if type(data) is not AbsentDataset and data is not None:
+        if data not in [AbsentDataset, None]:
             _create_dataset_float(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/detectorGain'
@@ -2047,7 +2240,7 @@ class MeasurementListElement(Group):
             del file[name]
             self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         data = self.detectorGain
-        if type(data) is not AbsentDataset and data is not None:
+        if data not in [AbsentDataset, None]:
             _create_dataset_float(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/moduleIndex'
@@ -2055,7 +2248,7 @@ class MeasurementListElement(Group):
             del file[name]
             self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         data = self.moduleIndex
-        if type(data) is not AbsentDataset and data is not None:
+        if data not in [AbsentDataset, None]:
             _create_dataset_int(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/sourceModuleIndex'
@@ -2063,7 +2256,7 @@ class MeasurementListElement(Group):
             del file[name]
             self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         data = self.sourceModuleIndex
-        if type(data) is not AbsentDataset and data is not None:
+        if data not in [AbsentDataset, None]:
             _create_dataset_int(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/detectorModuleIndex'
@@ -2071,7 +2264,7 @@ class MeasurementListElement(Group):
             del file[name]
             self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         data = self.detectorModuleIndex
-        if type(data) is not AbsentDataset and data is not None:
+        if data not in [AbsentDataset, None]:
             _create_dataset_int(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
 
@@ -2087,17 +2280,21 @@ class MeasurementList(IndexedGroup):
 
 class StimElement(Group):
 
-    _name = AbsentDataset()  # "s"+
-    _data = AbsentDataset()  # [<f>,...]+
-    _dataLabels = AbsentDataset()  # ["s",...]
+    _name = AbsentDataset  # "s"+
+    _data = AbsentDataset  # [<f>,...]+
+    _dataLabels = AbsentDataset  # ["s",...]
+    _snirfnames = ['name', 'data', 'dataLabels', ]
 
 
     def __init__(self, gid: h5py.h5g.GroupID, cfg: SnirfConfig):
         super().__init__(gid, cfg)
-        self.__snirfnames = ['name', 'data', 'dataLabels', ]
         if 'name' in self._h:
             if not self._cfg.dynamic_loading:
                 self._name = _read_string(self._h['name'])
+            else:  # if the dataset is found on disk but dynamic_loading=True
+                self._name = PresentDataset
+        else:  # if the dataset is not found on disk
+            self._name = AbsentDataset
         if 'data' in self._h:
             if not self._cfg.dynamic_loading:
                 self._data = _read_float_array(self._h['data'])
@@ -2107,15 +2304,15 @@ class StimElement(Group):
 
     @property
     def name(self):
-        if type(self._name) is AbsentDataset:
-            if self._cfg.dynamic_loading:
-                if 'name' in self._h:
-                    return _read_string(self._h['name'])
-                    self._cfg.logger.info('Dynamically loaded %s/name from %s', self.location, self.filename)
-            else:
-                return None
-        else:
+        if self._name is AbsentDataset:
+            return None
+        if self._cfg.dynamic_loading and self._name is PresentDataset and 'name' in self._h:
+                return _read_string(self._h['name'])
+                self._cfg.logger.info('Dynamically loaded %s/name from %s', self.location, self.filename)
+        elif self._name is not AbsentDataset:
             return self._name
+        else:
+            return None
 
     @name.setter
     def name(self, value):
@@ -2124,20 +2321,20 @@ class StimElement(Group):
 
     @name.deleter
     def name(self):
-        self._name = AbsentDataset()
+        self._name = AbsentDataset
         self._cfg.logger.info('Deleted %s/name from %s', self.location, self.filename)
 
     @property
     def data(self):
-        if type(self._data) is AbsentDataset:
-            if self._cfg.dynamic_loading:
-                if 'data' in self._h:
-                    return _read_float_array(self._h['data'])
-                    self._cfg.logger.info('Dynamically loaded %s/data from %s', self.location, self.filename)
-            else:
-                return None
-        else:
+        if self._data is AbsentDataset:
+            return None
+        if self._cfg.dynamic_loading and self._data is PresentDataset and 'data' in self._h:
+                return _read_float_array(self._h['data'])
+                self._cfg.logger.info('Dynamically loaded %s/data from %s', self.location, self.filename)
+        elif self._data is not AbsentDataset:
             return self._data
+        else:
+            return None
 
     @data.setter
     def data(self, value):
@@ -2146,20 +2343,20 @@ class StimElement(Group):
 
     @data.deleter
     def data(self):
-        self._data = AbsentDataset()
+        self._data = AbsentDataset
         self._cfg.logger.info('Deleted %s/data from %s', self.location, self.filename)
 
     @property
     def dataLabels(self):
-        if type(self._dataLabels) is AbsentDataset:
-            if self._cfg.dynamic_loading:
-                if 'dataLabels' in self._h:
-                    return _read_string_array(self._h['dataLabels'])
-                    self._cfg.logger.info('Dynamically loaded %s/dataLabels from %s', self.location, self.filename)
-            else:
-                return None
-        else:
+        if self._dataLabels is AbsentDataset:
+            return None
+        if self._cfg.dynamic_loading and self._dataLabels is PresentDataset and 'dataLabels' in self._h:
+                return _read_string_array(self._h['dataLabels'])
+                self._cfg.logger.info('Dynamically loaded %s/dataLabels from %s', self.location, self.filename)
+        elif self._dataLabels is not AbsentDataset:
             return self._dataLabels
+        else:
+            return None
 
     @dataLabels.setter
     def dataLabels(self, value):
@@ -2168,7 +2365,7 @@ class StimElement(Group):
 
     @dataLabels.deleter
     def dataLabels(self):
-        self._dataLabels = AbsentDataset()
+        self._dataLabels = AbsentDataset
         self._cfg.logger.info('Deleted %s/dataLabels from %s', self.location, self.filename)
 
 
@@ -2192,7 +2389,7 @@ class StimElement(Group):
             del file[name]
             self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         data = self.name
-        if type(data) is not AbsentDataset and data is not None:
+        if data not in [AbsentDataset, None]:
             _create_dataset_string(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/data'
@@ -2200,7 +2397,7 @@ class StimElement(Group):
             del file[name]
             self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         data = self.data
-        if type(data) is not AbsentDataset and data is not None:
+        if data not in [AbsentDataset, None]:
             _create_dataset_float_array(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/dataLabels'
@@ -2208,7 +2405,7 @@ class StimElement(Group):
             del file[name]
             self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         data = self.dataLabels
-        if type(data) is not AbsentDataset and data is not None:
+        if data not in [AbsentDataset, None]:
             _create_dataset_string_array(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
 
@@ -2224,18 +2421,22 @@ class Stim(IndexedGroup):
 
 class AuxElement(Group):
 
-    _name = AbsentDataset()  # "s"+
-    _dataTimeSeries = AbsentDataset()  # [[<f>,...]]+
-    _time = AbsentDataset()  # [<f>,...]+
-    _timeOffset = AbsentDataset()  # [<f>,...]
+    _name = AbsentDataset  # "s"+
+    _dataTimeSeries = AbsentDataset  # [[<f>,...]]+
+    _time = AbsentDataset  # [<f>,...]+
+    _timeOffset = AbsentDataset  # [<f>,...]
+    _snirfnames = ['name', 'dataTimeSeries', 'time', 'timeOffset', ]
 
 
     def __init__(self, gid: h5py.h5g.GroupID, cfg: SnirfConfig):
         super().__init__(gid, cfg)
-        self.__snirfnames = ['name', 'dataTimeSeries', 'time', 'timeOffset', ]
         if 'name' in self._h:
             if not self._cfg.dynamic_loading:
                 self._name = _read_string(self._h['name'])
+            else:  # if the dataset is found on disk but dynamic_loading=True
+                self._name = PresentDataset
+        else:  # if the dataset is not found on disk
+            self._name = AbsentDataset
         if 'dataTimeSeries' in self._h:
             if not self._cfg.dynamic_loading:
                 self._dataTimeSeries = _read_float_array(self._h['dataTimeSeries'])
@@ -2248,15 +2449,15 @@ class AuxElement(Group):
 
     @property
     def name(self):
-        if type(self._name) is AbsentDataset:
-            if self._cfg.dynamic_loading:
-                if 'name' in self._h:
-                    return _read_string(self._h['name'])
-                    self._cfg.logger.info('Dynamically loaded %s/name from %s', self.location, self.filename)
-            else:
-                return None
-        else:
+        if self._name is AbsentDataset:
+            return None
+        if self._cfg.dynamic_loading and self._name is PresentDataset and 'name' in self._h:
+                return _read_string(self._h['name'])
+                self._cfg.logger.info('Dynamically loaded %s/name from %s', self.location, self.filename)
+        elif self._name is not AbsentDataset:
             return self._name
+        else:
+            return None
 
     @name.setter
     def name(self, value):
@@ -2265,20 +2466,20 @@ class AuxElement(Group):
 
     @name.deleter
     def name(self):
-        self._name = AbsentDataset()
+        self._name = AbsentDataset
         self._cfg.logger.info('Deleted %s/name from %s', self.location, self.filename)
 
     @property
     def dataTimeSeries(self):
-        if type(self._dataTimeSeries) is AbsentDataset:
-            if self._cfg.dynamic_loading:
-                if 'dataTimeSeries' in self._h:
-                    return _read_float_array(self._h['dataTimeSeries'])
-                    self._cfg.logger.info('Dynamically loaded %s/dataTimeSeries from %s', self.location, self.filename)
-            else:
-                return None
-        else:
+        if self._dataTimeSeries is AbsentDataset:
+            return None
+        if self._cfg.dynamic_loading and self._dataTimeSeries is PresentDataset and 'dataTimeSeries' in self._h:
+                return _read_float_array(self._h['dataTimeSeries'])
+                self._cfg.logger.info('Dynamically loaded %s/dataTimeSeries from %s', self.location, self.filename)
+        elif self._dataTimeSeries is not AbsentDataset:
             return self._dataTimeSeries
+        else:
+            return None
 
     @dataTimeSeries.setter
     def dataTimeSeries(self, value):
@@ -2287,20 +2488,20 @@ class AuxElement(Group):
 
     @dataTimeSeries.deleter
     def dataTimeSeries(self):
-        self._dataTimeSeries = AbsentDataset()
+        self._dataTimeSeries = AbsentDataset
         self._cfg.logger.info('Deleted %s/dataTimeSeries from %s', self.location, self.filename)
 
     @property
     def time(self):
-        if type(self._time) is AbsentDataset:
-            if self._cfg.dynamic_loading:
-                if 'time' in self._h:
-                    return _read_float_array(self._h['time'])
-                    self._cfg.logger.info('Dynamically loaded %s/time from %s', self.location, self.filename)
-            else:
-                return None
-        else:
+        if self._time is AbsentDataset:
+            return None
+        if self._cfg.dynamic_loading and self._time is PresentDataset and 'time' in self._h:
+                return _read_float_array(self._h['time'])
+                self._cfg.logger.info('Dynamically loaded %s/time from %s', self.location, self.filename)
+        elif self._time is not AbsentDataset:
             return self._time
+        else:
+            return None
 
     @time.setter
     def time(self, value):
@@ -2309,20 +2510,20 @@ class AuxElement(Group):
 
     @time.deleter
     def time(self):
-        self._time = AbsentDataset()
+        self._time = AbsentDataset
         self._cfg.logger.info('Deleted %s/time from %s', self.location, self.filename)
 
     @property
     def timeOffset(self):
-        if type(self._timeOffset) is AbsentDataset:
-            if self._cfg.dynamic_loading:
-                if 'timeOffset' in self._h:
-                    return _read_float_array(self._h['timeOffset'])
-                    self._cfg.logger.info('Dynamically loaded %s/timeOffset from %s', self.location, self.filename)
-            else:
-                return None
-        else:
+        if self._timeOffset is AbsentDataset:
+            return None
+        if self._cfg.dynamic_loading and self._timeOffset is PresentDataset and 'timeOffset' in self._h:
+                return _read_float_array(self._h['timeOffset'])
+                self._cfg.logger.info('Dynamically loaded %s/timeOffset from %s', self.location, self.filename)
+        elif self._timeOffset is not AbsentDataset:
             return self._timeOffset
+        else:
+            return None
 
     @timeOffset.setter
     def timeOffset(self, value):
@@ -2331,7 +2532,7 @@ class AuxElement(Group):
 
     @timeOffset.deleter
     def timeOffset(self):
-        self._timeOffset = AbsentDataset()
+        self._timeOffset = AbsentDataset
         self._cfg.logger.info('Deleted %s/timeOffset from %s', self.location, self.filename)
 
 
@@ -2355,7 +2556,7 @@ class AuxElement(Group):
             del file[name]
             self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         data = self.name
-        if type(data) is not AbsentDataset and data is not None:
+        if data not in [AbsentDataset, None]:
             _create_dataset_string(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/dataTimeSeries'
@@ -2363,7 +2564,7 @@ class AuxElement(Group):
             del file[name]
             self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         data = self.dataTimeSeries
-        if type(data) is not AbsentDataset and data is not None:
+        if data not in [AbsentDataset, None]:
             _create_dataset_float_array(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/time'
@@ -2371,7 +2572,7 @@ class AuxElement(Group):
             del file[name]
             self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         data = self.time
-        if type(data) is not AbsentDataset and data is not None:
+        if data not in [AbsentDataset, None]:
             _create_dataset_float_array(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/timeOffset'
@@ -2379,7 +2580,7 @@ class AuxElement(Group):
             del file[name]
             self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         data = self.timeOffset
-        if type(data) is not AbsentDataset and data is not None:
+        if data not in [AbsentDataset, None]:
             _create_dataset_float_array(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
 
@@ -2396,8 +2597,9 @@ class Aux(IndexedGroup):
 class Snirf():
     
     _name = '/'
-    _formatVersion = AbsentDataset()  # "s"*
-    _nirs = AbsentDataset()  # {i}*
+    _formatVersion = AbsentDataset  # "s"*
+    _nirs = AbsentDataset  # {i}*
+    _snirfnames = ['formatVersion', 'nirs', ]
 
 
     def __init__(self, *args, dynamic_loading: bool = False, logfile: bool = False):
@@ -2425,23 +2627,26 @@ class Snirf():
             self._cfg.logger.info('Created Snirf object based on tempfile')
             path = None
             self._h = h5py.File(TemporaryFile(), 'w')
-        self.__snirfnames = ['formatVersion', 'nirs', ]
         if 'formatVersion' in self._h:
             if not self._cfg.dynamic_loading:
                 self._formatVersion = _read_string(self._h['formatVersion'])
+            else:  # if the dataset is found on disk but dynamic_loading=True
+                self._formatVersion = PresentDataset
+        else:  # if the dataset is not found on disk
+            self._formatVersion = AbsentDataset
         self.nirs = Nirs(self, self._cfg)  # Indexed group
 
     @property
     def formatVersion(self):
-        if type(self._formatVersion) is AbsentDataset:
-            if self._cfg.dynamic_loading:
-                if 'formatVersion' in self._h:
-                    return _read_string(self._h['formatVersion'])
-                    self._cfg.logger.info('Dynamically loaded %s/formatVersion from %s', self.location, self.filename)
-            else:
-                return None
-        else:
+        if self._formatVersion is AbsentDataset:
+            return None
+        if self._cfg.dynamic_loading and self._formatVersion is PresentDataset and 'formatVersion' in self._h:
+                return _read_string(self._h['formatVersion'])
+                self._cfg.logger.info('Dynamically loaded %s/formatVersion from %s', self.location, self.filename)
+        elif self._formatVersion is not AbsentDataset:
             return self._formatVersion
+        else:
+            return None
 
     @formatVersion.setter
     def formatVersion(self, value):
@@ -2450,7 +2655,7 @@ class Snirf():
 
     @formatVersion.deleter
     def formatVersion(self):
-        self._formatVersion = AbsentDataset()
+        self._formatVersion = AbsentDataset
         self._cfg.logger.info('Deleted %s/formatVersion from %s', self.location, self.filename)
 
     @property
@@ -2488,7 +2693,7 @@ class Snirf():
             del file[name]
             self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         data = self.formatVersion
-        if type(data) is not AbsentDataset and data is not None:
+        if data not in [AbsentDataset, None]:
             _create_dataset_string(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         self.nirs._save(*args)
@@ -2573,7 +2778,7 @@ class MetaDataTags(MetaDataTags):
         super().__init__(varg, cfg)
         self.__other = []
         for key in self._h:
-            if key not in self.__snirfnames:
+            if key not in self._snirfnames:
                 data = np.array(self._h[key])
                 self.__other.append(key)
                 setattr(self, key, data)

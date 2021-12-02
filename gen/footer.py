@@ -6,7 +6,7 @@ class MetaDataTags(MetaDataTags):
         super().__init__(varg, cfg)
         self.__other = []
         for key in self._h:
-            if key not in self.__snirfnames:
+            if key not in self._snirfnames:
                 data = np.array(self._h[key])
                 self.__other.append(key)
                 setattr(self, key, data)

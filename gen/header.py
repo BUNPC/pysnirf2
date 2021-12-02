@@ -82,21 +82,21 @@ def _create_dataset_float(file: h5py.File, name: str, data: float):
 def _create_dataset_string_array(file: h5py.File, name: str, data: np.ndarray):
     array = np.array(data).astype('O')
     if data.size is 0:
-        array = AbsentDataset()  # Do not save empty or "None" NumPy arrays
+        array = AbsentDataset  # Do not save empty or "None" NumPy arrays
     return file.create_dataset(name, dtype=_varlen_str_type, data=array)
 
 
 def _create_dataset_int_array(file: h5py.File, name: str, data: np.ndarray):
     array = np.array(data).astype(int)
     if data.size is 0:
-        array = AbsentDataset()
+        array = AbsentDataset
     return file.create_dataset(name, dtype=_DTYPE_INT, data=array)
 
 
 def _create_dataset_float_array(file: h5py.File, name: str, data: np.ndarray):
     array = np.array(data).astype(float)
     if data.size is 0:
-        array = AbsentDataset()
+        array = AbsentDataset
     return file.create_dataset(name, dtype=_DTYPE_FLOAT, data=array)
 
 
@@ -176,6 +176,62 @@ def _read_float_array(dataset: h5py.Dataset):
     return np.array(dataset).astype(float)
 
 
+# -- Validation types ---------------------------------------
+
+class ValidationResultCodes:
+    _codes = {
+            # OK (Severity 0)
+            'OK': (0 << 1, 0, 'OK'),
+            # Errors (Severity 1)
+            'REQUIRED_DATASET_MISSING': (0 << 1, 1, 'a specified required dataset is missing from the group or file'),
+            'REQUIRED_GROUP_MISSING': (0 << 1, 1, 'a specified required group is missing from the group or file'),
+            'INVALID_DATASET_TYPE': (0 << 1, 1, 'the HDF5 Dataset is not stored in a sensible format'),
+            'INVALID_ARRAY_DIMENSIONS': (0 << 1, 1, 'the HDF5 Dataset is not stored in a sensible shape'),
+            'INVALID_MEASUREMENTLIST': (0 << 1, 1, 'the measurementList does not match the second dimension of dataTimeSeries'),
+            'INVALID_TIME': (0 << 1, 1, 'time does not match the first dimension of of dataTimeSeries'),
+            'INVALID_INDEX': (0 << 1, 1, 'an index is negative'),
+            'INVALID_SOURCE_INDEX': (0 << 1, 1, 'sourceIndex exceeds probe/sourceLabels'),
+            'INVALID_DETECTOR_INDEX': (0 << 1, 1, 'detectorIndex exceeds probe/detectorLabels'),
+            'INVALID_PROBE_LABEL': (0 << 1, 1, 'a duplicate sourceLabel or detectorLabel appears'),
+            'INVALID_WAVELENGTH_INDEX': (0 << 1, 1, 'waveLengthIndex exceeds probe/wavelengths, probe/wavelengthsEmission, or probe/sourceLabels'),
+            'INVALID_DATATYPE_INDEX': (0 << 1, 1, 'dataTypeIndex exceeds probe/frequencies, probe/timeDelays, probe/timeDelayWidths, probe/momentOrders, probe/correlationTimeDelayWidths or probe/correlationTimeDelays'),
+            'INVALID_PROBE_MODULE_INDEX': (0 << 1, 1, 'sourceModuleIndex and detectorModuleIndex are used along with moduleIndex'),
+            'INVALID_LANDMARKPOS': (0 << 1, 1, 'a value in the last column of landmarkPos2D or landmarkPos3D'),
+            'INVALID_STIM_DATALABELS': (0 << 1, 1, 'the length of stim/dataLabels exceeds the columns of stim/data'),
+            # Warnings (Severity 2)
+            'UNRECOGNIZED_GROUP_NAME': (0 << 1, 2, 'unspecified group is a part of the file'),
+            'UNRECOGNIZED_DATASET_NAME': (0 << 1, 2, 'unspecified dataset is a part of the file'),
+            'UNRECOGNIZED_DATATYPELABEL': (0 << 1, 2, 'dataTypeLabel is not one of the recognized values listed in the Appendix'),
+            'UNRECOGNIZED_DATATYPE': (0 << 1, 2, 'dataType is not one of the recognized values listed in the Appendix'),
+            'INDEX_OF_ZERO': (0 << 1, 2, 'index of zero is usually undefined'),
+            # Info (Severity 3)
+            'OPTIONAL_GROUP_MISSING': (0 << 1, 3, 'OK (missing optional group)'),
+            }
+
+    def __getitem__(self, item):
+        return self._codes[item]
+
+    def keys(self):
+        return self._codes.keys()
+
+
+
+class ValidationResult:
+
+    _locations = {}  # HDF locations associated with errors or an additional validation result
+
+    def is_valid(self):
+        """
+        :return: True if the file is valid
+        """
+        return False
+
+    def add(self, location, key):
+        if ValidationResultCodes not in ValidationResultCodes.keys():
+            raise KeyError("'" + key + "' is not a valid result code.")
+        self._locations[location] = ValidationResultCodes[key]
+
+
 # -----------------------------------------
 
 
@@ -188,14 +244,43 @@ class SnirfConfig:
     dynamic_loading: bool = False  # If False, data is loaded in the constructor, if True, data is loaded on access
 
 
-class AbsentDataset():    
+# Placeholder for a Dataset that is not on disk or in memory
+class AbsentDatasetType:
+    _instance = None
+    def __new__(self):
+        if self._instance is None:
+            self._instance = self
+        return self._instance
     def __repr__(self):
-        return str(None)
+        return 'AbsentDataset'
 
 
-class AbsentGroup():
+# Placeholder for a Group that is not on disk or in memory
+class AbsentGroupType:
+    _instance = None
+    def __new__(self):
+        if self._instance is None:
+            self._instance = self
+        return self._instance
     def __repr__(self):
-        return str(None)
+        return 'AbsentGroup'
+
+
+# Placeholder for a Dataset that is available only on disk in a dynamic_loading=True wrapper
+class PresentDatasetType:
+    _instance = None
+    def __new__(self):
+        if self._instance is None:
+            self._instance = self
+        return self._instance
+    def __repr__(self):
+        return 'PresentDataset'
+
+
+# Instantiate singletons
+AbsentDataset = AbsentDatasetType()
+AbsentGroup = AbsentGroupType()
+PresentDataset = PresentDatasetType()
 
 
 class Group(ABC):
@@ -258,14 +343,29 @@ class Group(ABC):
             return self._h.name
         else:
             return self._location
-    
+
+    def is_empty(self):
+        for name in self._snirfnames:
+            attr = getattr(self, '_' + name)
+            if isinstance(attr, Group) or isinstance(attr, IndexedGroup):
+                if not attr.is_empty():
+                    return False
+            else:
+                if not any([attr is a for a in [None, AbsentGroup, AbsentDataset]]):
+                    return False
+        return True
+
     @abstractmethod
     def _save(self, *args):
         """
         args is path or empty
         """
         raise NotImplementedError('_save is an abstract method')
-        
+
+    # @abstractmethod
+    # def _validate(self, result: ValidationResult):
+    #     raise NotImplementedError('_validate is an abstract method')
+
     def __repr__(self):
         props = [p for p in dir(self) if ('_' not in p and not callable(getattr(self, p)))]
         out = str(self.__class__.__name__) + ' at ' + str(self.location) + '\n'
@@ -286,15 +386,15 @@ class Group(ABC):
             out += '\n'
         return out[:-1]
 
-    def __getitem__(self, key):
-        if self._h != {}:
-            if key in self._h:
-                return self._h[key]
-        else:
-            return None
+    # def __getitem__(self, key):
+    #     if self._h != {}:
+    #         if key in self._h:
+    #             return self._h[key]
+    #     else:
+    #         return None
 
     def __contains__(self, key):
-        return key in self._h;
+        return key in self._h
 
 
 class IndexedGroup(MutableSequence, ABC):
@@ -352,6 +452,13 @@ class IndexedGroup(MutableSequence, ABC):
     def __repr__(self):
         return str('<' + 'iterable of ' + str(len(self._list)) + ' ' + str(self._element) + '>')
 
+    def is_empty(self):
+        if len(self._list) > 0:
+            for e in self._list:
+                if not e.is_empty():
+                    return False
+        return True
+
     def insert(self, i, item):
         self._check_type(item)
         self._list.insert(i, item)
@@ -404,7 +511,7 @@ class IndexedGroup(MutableSequence, ABC):
         names = self._get_matching_keys()
         for name in names:
             if name in self._parent._h:
-                self._list.append(self._element(self._parent[name].id, self._cfg))
+                self._list.append(self._element(self._parent._h[name].id, self._cfg))
     
     def _check_type(self, item):
         if type(item) is not self._element:
@@ -457,7 +564,10 @@ class IndexedGroup(MutableSequence, ABC):
                 indices.append(0)
         order = np.argsort(indices)
         return [unordered[i] for i in order]
-        
+
+    def _validate(self, result: ValidationResult):
+        [e._validate(result) for e in self._list]
+
     def _save(self, *args):
         if len(args) > 0 and type(args[0]) is h5py.File:
             h = args[0]
@@ -475,4 +585,3 @@ class IndexedGroup(MutableSequence, ABC):
         for e in self._list:
             e._save(*args)  # Group save functions handle the write to disk
         self._order_names(h=h)  # Enforce order in the group names
-

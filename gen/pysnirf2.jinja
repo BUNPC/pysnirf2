@@ -3,15 +3,15 @@
 {% endmacro %}
 {% macro declare_members(NODE) %}
     {%- for CHILD in NODE.children %}
-    {%- if TYPES.GROUP in CHILD.name %}
-    _{{ CHILD.name }} = AbsentGroup()  # {{ CHILD.type }}
+    {%- if TYPES.GROUP in CHILD.type %}
+    _{{ CHILD.name }} = AbsentGroup  # {{ CHILD.type }}
     {% else  %}
-    _{{ CHILD.name }} = AbsentDataset()  # {{ CHILD.type }}
+    _{{ CHILD.name }} = AbsentDataset  # {{ CHILD.type }}
     {% endif -%}    
-    {% endfor -%}
+    {% endfor %}
+    _snirfnames = [{% for CHILD in NODE.children %}'{{ CHILD.name }}', {% endfor -%}]
 {% endmacro %}
 {% macro init_members(NODE) %}
-    self.__snirfnames = [{% for CHILD in NODE.children %}'{{ CHILD.name }}', {% endfor %}]
     {% for CHILD in NODE.children %}
     {% if TYPES.INDEXED_GROUP in CHILD.type %}
     self.{{- CHILD.name }} = {{ sentencecase(CHILD.name) }}(self, self._cfg)  # Indexed group
@@ -43,8 +43,10 @@
             {% else %}
             self._{{- CHILD.name }} = _read_dataset(self._h['{{ CHILD.name }}'])
             {% endif %}
-        {% endif %}
-        {% if (TYPES.REQUIRED in CHILD.type) and not ((TYPES.REQUIRED + '1' in CHILD.type) or (TYPES.REQUIRED + '2' in CHILD.type)) %}
+        else:  # if the dataset is found on disk but dynamic_loading=True
+            self._{{- CHILD.name }} = PresentDataset
+    else:  # if the dataset is not found on disk
+        self._{{- CHILD.name }} = AbsentDataset
         {% endif %}
     {% endif %}
     {% endfor %}
@@ -56,37 +58,39 @@
     {% if TYPES.INDEXED_GROUP in CHILD.type %}
         return self._{{ CHILD.name }}
     {% elif TYPES.GROUP in CHILD.type %}
+        if self._{{ CHILD.name }} is AbsentGroup:
+            return None
         return self._{{ CHILD.name }}
     {% else %}
-        if type(self._{{ CHILD.name }}) is AbsentDataset:
-            if self._cfg.dynamic_loading:
-                if '{{ CHILD.name }}' in self._h:
+        if self._{{ CHILD.name }} is AbsentDataset:
+            return None
+        if self._cfg.dynamic_loading and self._{{ CHILD.name }} is PresentDataset and '{{ CHILD.name }}' in self._h:
         {% if (TYPES.ARRAY_1D in CHILD.type) or (TYPES.ARRAY_2D in CHILD.type) %}
             {% if TYPES.VARLEN_STRING in CHILD.type %}
-                    return _read_string_array(self._h['{{ CHILD.name }}'])
+                return _read_string_array(self._h['{{ CHILD.name }}'])
             {% elif TYPES.INT_VALUE in CHILD.type %}
-                    return _read_int_array(self._h['{{ CHILD.name }}'])
+                return _read_int_array(self._h['{{ CHILD.name }}'])
             {% elif TYPES.FLOAT_VALUE in CHILD.type %}
-                    return _read_float_array(self._h['{{ CHILD.name }}'])
+                return _read_float_array(self._h['{{ CHILD.name }}'])
             {% else %}
-                    return _read_dataset(self._h['{{ CHILD.name }}'])
+                return _read_dataset(self._h['{{ CHILD.name }}'])
             {% endif %}
         {% else %}
             {% if TYPES.VARLEN_STRING in CHILD.type %}
-                    return _read_string(self._h['{{ CHILD.name }}'])
+                return _read_string(self._h['{{ CHILD.name }}'])
             {% elif TYPES.INT_VALUE in CHILD.type %}
-                    return _read_int(self._h['{{ CHILD.name }}'])
+                return _read_int(self._h['{{ CHILD.name }}'])
             {% elif TYPES.FLOAT_VALUE in CHILD.type %}
-                    return _read_float(self._h['{{ CHILD.name }}'])
+                return _read_float(self._h['{{ CHILD.name }}'])
             {% else %}
-                    return _read_dataset(self._h['{{ CHILD.name }}'])
+                return _read_dataset(self._h['{{ CHILD.name }}'])
             {% endif %}
         {% endif %}
-                    self._cfg.logger.info('Dynamically loaded %s/{{ CHILD.name }} from %s', self.location, self.filename)
-            else:
-                return None
-        else:
+                self._cfg.logger.info('Dynamically loaded %s/{{ CHILD.name }} from %s', self.location, self.filename)
+        elif self._{{ CHILD.name }} is not AbsentDataset:
             return self._{{ CHILD.name }}
+        else:
+            return None
     {% endif %}
 
     @{{ CHILD.name }}.setter
@@ -99,9 +103,9 @@
         {% if TYPES.INDEXED_GROUP in CHILD.type %}
         raise AttributeError('IndexedGroup ' + str(type(self._{{ CHILD.name }})) + ' cannot be deleted')
         {% elif TYPES.GROUP in CHILD.type %}
-        self._{{ CHILD.name }} = AbsentGroup()
+        self._{{ CHILD.name }} = AbsentGroup
         {% else %}
-        self._{{ CHILD.name }} = AbsentDataset()
+        self._{{ CHILD.name }} = AbsentDataset
         {% endif %}
         self._cfg.logger.info('Deleted %s/{{ CHILD.name }} from %s', self.location, self.filename)
 
@@ -127,7 +131,7 @@
     {% if TYPES.INDEXED_GROUP in CHILD.type %}
         self.{{ CHILD.name }}._save(*args)
     {% elif TYPES.GROUP in CHILD.type %}
-        if type(self._{{ CHILD.name }}) is AbsentGroup:
+        if self._{{ CHILD.name }}.is_empty():
             if '{{ CHILD.name }}' in file:
                 del file['{{ CHILD.name }}']
                 self._cfg.logger.info('Deleted Group %s/{{ CHILD.name }} from %s', self.location, file)
@@ -139,7 +143,7 @@
             del file[name]
             self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         data = self.{{ CHILD.name }}
-        if type(data) is not AbsentDataset and data is not None:
+        if data not in [AbsentDataset, None]:
         {% if (TYPES.ARRAY_1D in CHILD.type) or (TYPES.ARRAY_2D in CHILD.type) %}
             {% if TYPES.VARLEN_STRING in CHILD.type %}
             _create_dataset_string_array(file, name, data)
@@ -162,6 +166,48 @@
             {% endif %}
         {% endif %}
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
+    {% endif %}
+    {% endfor %}
+{% endmacro %}
+{% macro gen_validator(NODE) %}
+    def _validate(self, result: ValidationResult):
+    {% for CHILD in NODE.children %}
+    {% if TYPES.INDEXED_GROUP in CHILD.type %}
+        self.{{ CHILD.name }}._validate(*args)
+    {% elif TYPES.GROUP in CHILD.type %}
+        name = self.location + '/{{ CHILD.name }}'
+        if self._{{ CHILD.name }} is AbsentGroup and '{{ CHILD.name }}' is not in self._h:
+        {% if TYPES.REQUIRED in CHILD.type %}
+            result.add(name, 'REQUIRED_GROUP_MISSING')
+        {% else %}
+            result.add(name, 'OPTIONAL_GROUP_MISSING')
+        {% endif %}
+        else:
+            self.{{ CHILD.name }}._validate(*args)
+    {% else %}
+        name = self.location + '/{{ CHILD.name }}'
+        if data not in [AbsentDataset, None]:
+        {% if (TYPES.ARRAY_1D in CHILD.type) or (TYPES.ARRAY_2D in CHILD.type) %}
+            {% if TYPES.VARLEN_STRING in CHILD.type %}
+            _create_dataset_string_array(file, name, data)
+            {% elif TYPES.INT_VALUE in CHILD.type %}
+            _create_dataset_int_array(file, name, data)
+            {% elif TYPES.FLOAT_VALUE in CHILD.type %}
+            _create_dataset_float_array(file, name, data)
+            {% else %}
+            _create_dataset(file, name, data)
+            {% endif %}
+        {% else %}
+            {% if TYPES.VARLEN_STRING in CHILD.type %}
+            _create_dataset_string(file, name, data)
+            {% elif TYPES.INT_VALUE in CHILD.type %}
+            _create_dataset_int(file, name, data)
+            {% elif TYPES.FLOAT_VALUE in CHILD.type %}
+            _create_dataset_float(file, name, data)
+            {% else %}
+            _create_dataset(file, name, data)
+            {% endif %}
+        {% endif %}
     {% endif %}
     {% endfor %}
 {% endmacro %}
