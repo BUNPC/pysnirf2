@@ -7,9 +7,13 @@ Created on Wed Dec  1 13:21:30 2021
 
 import os
 import numpy as np
-from pysnirf2 import Snirf
+from pysnirf2 import *
 import h5py
 
 testfile = 'tests/data/subjA_run01.snirf'
 
 s = Snirf(testfile)
+print(s)
+valid, result = s.validate()
+
+print(result)

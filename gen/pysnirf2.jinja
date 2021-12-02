@@ -14,10 +14,10 @@
 {% macro init_members(NODE) %}
     {% for CHILD in NODE.children %}
     {% if TYPES.INDEXED_GROUP in CHILD.type %}
-    self.{{- CHILD.name }} = {{ sentencecase(CHILD.name) }}(self, self._cfg)  # Indexed group
+    self.{{ CHILD.name }} = {{ sentencecase(CHILD.name) }}(self, self._cfg)  # Indexed group
     {% elif TYPES.GROUP in CHILD.type %}
     if '{{ CHILD.name }}' in self._h:
-        self._{{- CHILD.name }} = {{ sentencecase(CHILD.name) }}(self._h['{{ CHILD.name }}'].id, self._cfg)  # Group
+        self._{{ CHILD.name }} = {{ sentencecase(CHILD.name) }}(self._h['{{ CHILD.name }}'].id, self._cfg)  # Group
     else:
         self._{{ CHILD.name }} = {{ sentencecase(CHILD.name) }}(self.location + '/' + '{{ CHILD.name }}', self._cfg)  # Anonymous group (wrapper only)
     {% else %}
@@ -25,28 +25,28 @@
         if not self._cfg.dynamic_loading:
         {% if (TYPES.ARRAY_1D in CHILD.type) or (TYPES.ARRAY_2D in CHILD.type) %}
             {% if TYPES.VARLEN_STRING in CHILD.type %}
-            self._{{- CHILD.name }} = _read_string_array(self._h['{{ CHILD.name }}'])
+            self._{{ CHILD.name }} = _read_string_array(self._h['{{ CHILD.name }}'])
             {% elif TYPES.INT_VALUE in CHILD.type %}
-            self._{{- CHILD.name }} = _read_int_array(self._h['{{ CHILD.name }}'])
+            self._{{ CHILD.name }} = _read_int_array(self._h['{{ CHILD.name }}'])
             {% elif TYPES.FLOAT_VALUE in CHILD.type %}
-            self._{{- CHILD.name }} = _read_float_array(self._h['{{ CHILD.name }}'])
+            self._{{ CHILD.name }} = _read_float_array(self._h['{{ CHILD.name }}'])
             {% else %}
-            self._{{- CHILD.name }} = _read_dataset(self._h['{{ CHILD.name }}'])
+            self._{{ CHILD.name }} = _read_dataset(self._h['{{ CHILD.name }}'])
             {% endif %}
         {% else %}
             {% if TYPES.VARLEN_STRING in CHILD.type %}
-            self._{{- CHILD.name }} = _read_string(self._h['{{ CHILD.name }}'])
+            self._{{ CHILD.name }} = _read_string(self._h['{{ CHILD.name }}'])
             {% elif TYPES.INT_VALUE in CHILD.type %}
-            self._{{- CHILD.name }} = _read_int(self._h['{{ CHILD.name }}'])
+            self._{{ CHILD.name }} = _read_int(self._h['{{ CHILD.name }}'])
             {% elif TYPES.FLOAT_VALUE in CHILD.type %}
-            self._{{- CHILD.name }} = _read_float(self._h['{{ CHILD.name }}'])
+            self._{{ CHILD.name }} = _read_float(self._h['{{ CHILD.name }}'])
             {% else %}
-            self._{{- CHILD.name }} = _read_dataset(self._h['{{ CHILD.name }}'])
+            self._{{ CHILD.name }} = _read_dataset(self._h['{{ CHILD.name }}'])
             {% endif %}
         else:  # if the dataset is found on disk but dynamic_loading=True
-            self._{{- CHILD.name }} = PresentDataset
+            self._{{ CHILD.name }} = PresentDataset
     else:  # if the dataset is not found on disk
-        self._{{- CHILD.name }} = AbsentDataset
+        self._{{ CHILD.name }} = AbsentDataset
         {% endif %}
     {% endif %}
     {% endfor %}
@@ -58,13 +58,13 @@
     {% if TYPES.INDEXED_GROUP in CHILD.type %}
         return self._{{ CHILD.name }}
     {% elif TYPES.GROUP in CHILD.type %}
-        if self._{{ CHILD.name }} is AbsentGroup:
+        if type(self._{{ CHILD.name }}) is type(AbsentGroup):
             return None
         return self._{{ CHILD.name }}
     {% else %}
-        if self._{{ CHILD.name }} is AbsentDataset:
+        if type(self._{{ CHILD.name }}) is type(AbsentDataset):
             return None
-        if self._cfg.dynamic_loading and self._{{ CHILD.name }} is PresentDataset and '{{ CHILD.name }}' in self._h:
+        if self._cfg.dynamic_loading and type(self._{{ CHILD.name }}) is type(PresentDataset) and '{{ CHILD.name }}' in self._h:
         {% if (TYPES.ARRAY_1D in CHILD.type) or (TYPES.ARRAY_2D in CHILD.type) %}
             {% if TYPES.VARLEN_STRING in CHILD.type %}
             return _read_string_array(self._h['{{ CHILD.name }}'])
@@ -143,7 +143,7 @@
             del file[name]
             self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         data = self.{{ CHILD.name }}
-        if data not in [AbsentDataset, None]:
+        if type(self._{{ CHILD.name }}) not in [type(AbsentDataset), type(None)]:
         {% if (TYPES.ARRAY_1D in CHILD.type) or (TYPES.ARRAY_2D in CHILD.type) %}
             {% if TYPES.VARLEN_STRING in CHILD.type %}
             _create_dataset_string_array(file, name, data)
@@ -173,9 +173,9 @@
     def _validate(self, result: ValidationResult):
     {% for CHILD in NODE.children %}
     {% if TYPES.INDEXED_GROUP in CHILD.type %}
-        self.{{ CHILD.name }}._validate(*args)
+        self.{{ CHILD.name }}._validate(result)
     {% elif TYPES.GROUP in CHILD.type %}
-        if self._{{ CHILD.name }} is AbsentGroup and '{{ CHILD.name }}' not in self._h:
+        if type(self._{{ CHILD.name }}) is type(AbsentGroup) and '{{ CHILD.name }}' not in self._h:
             name = self.location + '/{{ CHILD.name }}'
         {% if TYPES.REQUIRED in CHILD.type %}
             result.add(name, 'REQUIRED_GROUP_MISSING')
@@ -183,35 +183,75 @@
             result.add(name, 'OPTIONAL_GROUP_MISSING')
         {% endif %}
         else:
-            self.{{ CHILD.name }}._validate(*args)
+            self.{{ CHILD.name }}._validate(result)
     {% else %}
         name = self.location + '/{{ CHILD.name }}'
-        if data not in [AbsentDataset, None]:
+        if type(self._{{ CHILD.name }}) in [type(AbsentDataset), type(None)] and '{{ CHILD.name }}' not in self._h:
         {% if TYPES.REQUIRED in CHILD.type %}
             result.add(name, 'REQUIRED_GROUP_MISSING')
         {% else %}
             result.add(name, 'OPTIONAL_GROUP_MISSING')
         {% endif %}
         else:
-        {% if (TYPES.ARRAY_1D in CHILD.type) or (TYPES.ARRAY_2D in CHILD.type) %}
+            # Validate unwritten datasets after writing them to this tempfile
+            tmp = h5py.File(TemporaryFile(), 'w')
+            if '{{ CHILD.name }}' not in self._h:
+        {% if TYPES.ARRAY_1D in CHILD.type %}
             {% if TYPES.VARLEN_STRING in CHILD.type %}
-            _create_dataset_string_array(file, name, data)
+                dataset = _create_dataset_string_array(tmp, '{{ CHILD.name }}', self._{{ CHILD.name }})
+            else:
+                dataset = self._h['{{ CHILD.name }}']
+            result.add(name, _validate_string_array(dataset, ndims=[1]))
             {% elif TYPES.INT_VALUE in CHILD.type %}
-            _create_dataset_int_array(file, name, data)
+                dataset = _create_dataset_int_array(tmp, '{{ CHILD.name }}', self._{{ CHILD.name }})
+            else:
+                dataset = self._h['{{ CHILD.name }}']
+            result.add(name, _validate_int_array(dataset, ndims=[1]))
             {% elif TYPES.FLOAT_VALUE in CHILD.type %}
-            _create_dataset_float_array(file, name, data)
+                dataset = _create_dataset_float_array(tmp, '{{ CHILD.name }}', self._{{ CHILD.name }})
+            else:
+                dataset = self._h['{{ CHILD.name }}']
+            result.add(name, _validate_float_array(dataset, ndims=[1]))
             {% else %}
-            _create_dataset(file, name, data)
+            ### TEMPLATE ERROR: NO VALIDATOR FUNCTION MATCHING {{ CHILD.name }}
+            {% endif %}
+        {% elif TYPES.ARRAY_2D in CHILD.type %}
+            {% if TYPES.VARLEN_STRING in CHILD.type %}
+                dataset = _create_dataset_string_array(tmp, '{{ CHILD.name }}', self._{{ CHILD.name }})
+            else:
+                dataset = self._h['{{ CHILD.name }}']
+            result.add(name, _validate_string_array(dataset, ndims=[1]))
+            {% elif TYPES.INT_VALUE in CHILD.type %}
+                dataset = _create_dataset_int_array(tmp, '{{ CHILD.name }}', self._{{ CHILD.name }})
+            else:
+                dataset = self._h['{{ CHILD.name }}']
+            result.add(name, _validate_int_array(dataset, ndims=[1]))
+            {% elif TYPES.FLOAT_VALUE in CHILD.type %}
+                dataset = _create_dataset_float_array(tmp, '{{ CHILD.name }}', self._{{ CHILD.name }})
+            else:
+                dataset = self._h['{{ CHILD.name }}']
+            result.add(name, _validate_float_array(dataset, ndims=[1]))
+            {% else %}
+            ### TEMPLATE ERROR: NO VALIDATOR FUNCTION MATCHING {{ CHILD.name }}
             {% endif %}
         {% else %}
             {% if TYPES.VARLEN_STRING in CHILD.type %}
-            _create_dataset_string(file, name, data)
+                dataset = _create_dataset_string(tmp, '{{ CHILD.name }}', self._{{ CHILD.name }})
+            else:
+                dataset = self._h['{{ CHILD.name }}']
+            result.add(name, _validate_string_array(dataset, ndims=[2]))
             {% elif TYPES.INT_VALUE in CHILD.type %}
-            _create_dataset_int(file, name, data)
+                dataset = _create_dataset_int(tmp, '{{ CHILD.name }}', self._{{ CHILD.name }})
+            else:
+                dataset = self._h['{{ CHILD.name }}']
+            result.add(name, _validate_int_array(dataset, ndims=[2]))
             {% elif TYPES.FLOAT_VALUE in CHILD.type %}
-            _create_dataset_float(file, name, data)
+                dataset = _create_dataset_float(tmp, '{{ CHILD.name }}', self._{{ CHILD.name }})
+            else:
+                dataset = self._h['{{ CHILD.name }}']
+            result.add(name, _validate_float_array(dataset, ndims=[2]))
             {% else %}
-            _create_dataset(file, name, data)
+            ### TEMPLATE ERROR: NO VALIDATOR FUNCTION MATCHING {{ CHILD.name }}
             {% endif %}
         {% endif %}
     {% endif %}
@@ -311,6 +351,14 @@ class Snirf(Group):
             new_file.close()
         else:
             self._save(self._h.file)
+
+    def validate(self):
+        '''
+        Returns True, ValidationResult
+        '''
+        result = ValidationResult()
+        self._validate(result)
+        return (result.is_valid(), result)
 
     def close(self):
         self._cfg.logger.info('Closing Snirf file %s', self.filename)

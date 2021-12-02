@@ -116,18 +116,18 @@ def _read_dataset(h_dataset: h5py.Dataset):
     if type(h_dataset) is not h5py.Dataset:
         raise TypeError("'dataset' must be type h5py.Dataset")
     if h_dataset.size > 1:
-        if _DTYPE_FIXED_LEN_STR in h_dataset.dtype or _DTYPE_VAR_LEN_STR in h_dataset.dtype:
+        if _DTYPE_FIXED_LEN_STR in h_dataset.dtype or _DTYPE_VAR_LEN_STR in h_dataset.dtype.str:
             return _read_string_array(h_dataset)
-        elif _DTYPE_INT in h_dataset.dtype:
+        elif _DTYPE_INT in h_dataset.dtype.str:
             return _read_int_array(h_dataset)
-        elif _DTYPE_FLOAT32 in h_dataset.dtype or _DTYPE_FLOAT64 in h_dataset.dtype:
+        elif _DTYPE_FLOAT32 in h_dataset.dtype.str or _DTYPE_FLOAT64 in h_dataset.dtype.str:
             return _read_float_array(h_dataset)
     else:
-        if _DTYPE_FIXED_LEN_STR in h_dataset.dtype or _DTYPE_VAR_LEN_STR in h_dataset.dtype:
+        if _DTYPE_FIXED_LEN_STR in h_dataset.dtype.str or _DTYPE_VAR_LEN_STR in h_dataset.dtype.str:
             return _read_string(h_dataset)
-        elif _DTYPE_INT in h_dataset.dtype:
+        elif _DTYPE_INT in h_dataset.dtype.str:
             return _read_int(h_dataset)
-        elif _DTYPE_FLOAT32 in h_dataset.dtype or _DTYPE_FLOAT64 in h_dataset.dtype:
+        elif _DTYPE_FLOAT32 in h_dataset.dtype.str or _DTYPE_FLOAT64 in h_dataset.dtype.str:
             return _read_float(h_dataset)
     raise TypeError("Dataset dtype='" + str(h_dataset.dtype)
                     + "' not recognized. Expecting dtype to contain one of these: "
@@ -135,9 +135,9 @@ def _read_dataset(h_dataset: h5py.Dataset):
 
 
 def _read_string(dataset: h5py.Dataset):
-    # Because many SNIRF files are saved with string values in length 1 arrays
     if type(dataset) is not h5py.Dataset:
         raise TypeError("'dataset' must be type h5py.Dataset")
+    # Because many SNIRF files are saved with string values in length 1 arrays
     if dataset.ndim > 0:
         return str(dataset[0].decode('ascii'))
     else:
@@ -145,7 +145,6 @@ def _read_string(dataset: h5py.Dataset):
 
 
 def _read_int(dataset: h5py.Dataset):
-    # Because many SNIRF files are saved with string values in length 1 arrays
     if type(dataset) is not h5py.Dataset:
         raise TypeError("'dataset' must be type h5py.Dataset")
     if dataset.ndim > 0:
@@ -155,7 +154,6 @@ def _read_int(dataset: h5py.Dataset):
 
 
 def _read_float(dataset: h5py.Dataset):
-    # Because many SNIRF files are saved with string values in length 1 arrays
     if type(dataset) is not h5py.Dataset:
         raise TypeError("'dataset' must be type h5py.Dataset")
     if dataset.ndim > 0:
@@ -184,98 +182,41 @@ def _read_float_array(dataset: h5py.Dataset):
 
 # -- Validation types ---------------------------------------
 
-class ValidationResultCodes:
-    _codes = {
-            # OK (Severity 0)
-            'OK': (0 << 1, 0, 'OK'),
-            # Errors (Severity 1)
-            'REQUIRED_DATASET_MISSING': (0 << 1, 1, 'a specified required dataset is missing from the group or file'),
-            'REQUIRED_GROUP_MISSING': (0 << 1, 1, 'a specified required group is missing from the group or file'),
-            'INVALID_DATASET_TYPE': (0 << 1, 1, 'the HDF5 Dataset is not stored in a sensible format'),
-            'INVALID_ARRAY_DIMENSIONS': (0 << 1, 1, 'the HDF5 Dataset is not stored in a sensible shape'),
-            'INVALID_MEASUREMENTLIST': (0 << 1, 1, 'the measurementList does not match the second dimension of dataTimeSeries'),
-            'INVALID_TIME': (0 << 1, 1, 'time does not match the first dimension of of dataTimeSeries'),
-            'INVALID_INDEX': (0 << 1, 1, 'an index is negative'),
-            'INVALID_SOURCE_INDEX': (0 << 1, 1, 'sourceIndex exceeds probe/sourceLabels'),
-            'INVALID_DETECTOR_INDEX': (0 << 1, 1, 'detectorIndex exceeds probe/detectorLabels'),
-            'INVALID_PROBE_LABEL': (0 << 1, 1, 'a duplicate sourceLabel or detectorLabel appears'),
-            'INVALID_WAVELENGTH_INDEX': (0 << 1, 1, 'waveLengthIndex exceeds probe/wavelengths, probe/wavelengthsEmission, or probe/sourceLabels'),
-            'INVALID_DATATYPE_INDEX': (0 << 1, 1, 'dataTypeIndex exceeds probe/frequencies, probe/timeDelays, probe/timeDelayWidths, probe/momentOrders, probe/correlationTimeDelayWidths or probe/correlationTimeDelays'),
-            'INVALID_PROBE_MODULE_INDEX': (0 << 1, 1, 'sourceModuleIndex and detectorModuleIndex are used along with moduleIndex'),
-            'INVALID_LANDMARKPOS': (0 << 1, 1, 'a value in the last column of landmarkPos2D or landmarkPos3D'),
-            'INVALID_STIM_DATALABELS': (0 << 1, 1, 'the length of stim/dataLabels exceeds the columns of stim/data'),
-            # Warnings (Severity 2)
-            'UNRECOGNIZED_GROUP_NAME': (0 << 1, 2, 'unspecified group is a part of the file'),
-            'UNRECOGNIZED_DATASET_NAME': (0 << 1, 2, 'unspecified dataset is a part of the file'),
-            'UNRECOGNIZED_DATATYPELABEL': (0 << 1, 2, 'dataTypeLabel is not one of the recognized values listed in the Appendix'),
-            'UNRECOGNIZED_DATATYPE': (0 << 1, 2, 'dataType is not one of the recognized values listed in the Appendix'),
-            'INDEX_OF_ZERO': (0 << 1, 2, 'index of zero is usually undefined'),
-            'FIXED_LENGTH_STRING': (0 << 1, 2, 'Strings of fixed length are '),
-            # Info (Severity 3)
-            'OPTIONAL_GROUP_MISSING': (0 << 1, 3, 'OK (missing optional group)'),
-            }
-
-    def __getitem__(self, item):
-        return self._codes[item]
-
-    def keys(self):
-        return self._codes.keys()
-
-
-# -- Validation functions ---------------------------------------
-
-
-def _validate_string(dataset: h5py.Dataset):
-    # Because many SNIRF files are saved with string values in length 1 arrays
-    if type(dataset) is not h5py.Dataset:
-        raise TypeError("'dataset' must be type h5py.Dataset")
-    if dataset.ndim > 0:
-        return str(dataset[0].decode('ascii'))
-    else:
-        return str(dataset[()].decode('ascii'))
-
-
-def _validate_int(dataset: h5py.Dataset):
-    # Because many SNIRF files are saved with string values in length 1 arrays
-    if type(dataset) is not h5py.Dataset:
-        raise TypeError("'dataset' must be type h5py.Dataset")
-    if dataset.ndim > 0:
-        return int(dataset[0])
-    else:
-        return int(dataset[()])
-
-
-def _validate_float(dataset: h5py.Dataset):
-    # Because many SNIRF files are saved with string values in length 1 arrays
-    if type(dataset) is not h5py.Dataset:
-        raise TypeError("'dataset' must be type h5py.Dataset")
-    if dataset.ndim > 0:
-        return float(dataset[0])
-    else:
-        return float(dataset[()])
-
-
-def _validate_string_array(dataset: h5py.Dataset, ndim: int):
-    if type(dataset) is not h5py.Dataset:
-        raise TypeError("'dataset' must be type h5py.Dataset")
-    return np.array(dataset).astype(str)
-
-
-def _validate_int_array(dataset: h5py.Dataset, ndim: int):
-    if type(dataset) is not h5py.Dataset:
-        raise TypeError("'dataset' must be type h5py.Dataset")
-    return np.array(dataset).astype(int)
-
-
-def _validate_float_array(dataset: h5py.Dataset, ndim: int):
-    if type(dataset) is not h5py.Dataset:
-        raise TypeError("'dataset' must be type h5py.Dataset")
-    return np.array(dataset).astype(float)
-
 
 class ValidationResult:
 
     _locations = {}  # HDF locations associated with errors or an additional validation result
+    _codes = {
+            # OK (Severity 0)
+            'OK': (0 << 1, 0, 'OK'),
+            # Errors (Severity 1)
+            'INVALID_FILE_NAME': (0 << 1, 1, 'Valid SNIRF files must end with .snirf'),
+            'INVALID_FILE': (0 << 1, 1, 'The file could not be opened'),
+            'REQUIRED_DATASET_MISSING': (0 << 1, 1, 'A required dataset is missing from the file'),
+            'REQUIRED_GROUP_MISSING': (0 << 1, 1, 'A required Group is missing from the file'),
+            'INVALID_DATASET_TYPE': (0 << 1, 1, 'An HDF5 Dataset is not stored in the specified format'),
+            'INVALID_DATASET_SHAPE': (0 << 1, 1, 'An HDF5 Dataset is not stored in the specified shape. Strings and scalars should never be stored as arrays of length 1.'),
+            'INVALID_MEASUREMENTLIST': (0 << 1, 1, 'The number of measurementList elements does not match the second dimension of dataTimeSeries'),
+            'INVALID_TIME': (0 << 1, 1, 'The length of the data/time vector does not match the first dimension of data/dataTimeSeries'),
+            'INVALID_INDEX': (0 << 1, 1, 'An index is negative'),
+            'INVALID_SOURCE_INDEX': (0 << 1, 1, 'measurementList/sourceIndex exceeds probe/sourceLabels'),
+            'INVALID_DETECTOR_INDEX': (0 << 1, 1, 'measurementList/detectorIndex exceeds probe/detectorLabels'),
+            'INVALID_PROBE_LABEL': (0 << 1, 1, 'a duplicate sourceLabel or detectorLabel appears'),
+            'INVALID_WAVELENGTH_INDEX': (0 << 1, 1, 'measurementList/waveLengthIndex exceeds probe/wavelengths, probe/wavelengthsEmission, or probe/sourceLabels'),
+            'INVALID_DATATYPE_INDEX': (0 << 1, 1, 'measurementList/dataTypeIndex exceeds probe/frequencies, probe/timeDelays, probe/timeDelayWidths, probe/momentOrders, probe/correlationTimeDelayWidths or probe/correlationTimeDelays'),
+            'INVALID_PROBE_MODULE_INDEX': (0 << 1, 1, 'sourceModuleIndex and detectorModuleIndex are used along with moduleIndex'),
+    #            'INVALID_LANDMARKPOS': (0 << 1, 1, 'A value in the last column of landmarkPos2D or landmarkPos3D exceeds the length of'),
+            'INVALID_STIM_DATALABELS': (0 << 1, 1, 'The length of stim/dataLabels exceeds the columns of stim/data'),
+            # Warnings (Severity 2)
+            'UNRECOGNIZED_GROUP_NAME': (0 << 1, 2, 'An unspecified Group is a part of the file'),
+            'UNRECOGNIZED_DATASET_NAME': (0 << 1, 2, 'An unspecified Dataset is a part of the file in an unexpected place'),
+            'UNRECOGNIZED_DATATYPELABEL': (0 << 1, 2, 'measurementList/dataTypeLabel is not one of the recognized values listed in the Appendix'),
+            'UNRECOGNIZED_DATATYPE': (0 << 1, 2, 'measurementList/dataType is not one of the recognized values listed in the Appendix'),
+            'INDEX_OF_ZERO': (0 << 1, 2, 'An index of zero is usually undefined'),
+            'FIXED_LENGTH_STRING': (0 << 1, 2, 'The use of fixed-length strings is discouraged and may be banned by a future spec version. Rewrite this file with pysnirf2 to use variable length strings'),
+            # Info (Severity 3)
+            'OPTIONAL_GROUP_MISSING': (0 << 1, 3, 'OK (missing optional group)'),
+            }
 
     def is_valid(self):
         """
@@ -284,9 +225,92 @@ class ValidationResult:
         return False
 
     def add(self, location, key):
-        if ValidationResultCodes not in ValidationResultCodes.keys():
-            raise KeyError("'" + key + "' is not a valid result code.")
-        self._locations[location] = ValidationResultCodes[key]
+        if key not in self._codes.keys():
+            raise KeyError("Invalid code '" + key + "'")
+        # Locations is nested tuple (code, (id, level, msg))
+        self._locations[location] = (key, self._codes[key])
+        
+    def __repr__(self):
+        s = ''
+        for key in self._locations:
+            if self._locations[key][1][1] > 0:  # If not OK
+                print(self._locations[key])
+                s += key + ':  ' + self._locations[key][0] + '\n'  # location: code
+        return s
+        
+    
+
+
+# -- Validation functions ---------------------------------------
+
+
+def _validate_string(dataset: h5py.Dataset):
+    if type(dataset) is not h5py.Dataset:
+        raise TypeError("'dataset' must be type h5py.Dataset")
+    if dataset.size > 1 or dataset.ndim > 0:
+        return 'INVALID_DATASET_SHAPE'
+    if _DTYPE_VAR_LEN_STR in dataset.dtype.str:
+        return 'OK'
+    elif _DTYPE_FIXED_LEN_STR in dataset.dtype.str:
+        return 'FIXED_LENGTH_STRING'
+    else:
+        return 'INVALID_DATASET_TYPE'
+
+
+def _validate_int(dataset: h5py.Dataset):
+    if type(dataset) is not h5py.Dataset:
+        raise TypeError("'dataset' must be type h5py.Dataset")
+    if dataset.size > 1 or dataset.ndim > 0:
+        return 'INVALID_DATASET_SHAPE'
+    if _DTYPE_INT in dataset.dtype.str:
+        return 'OK'
+    else:
+        return 'INVALID_DATASET_TYPE'
+
+
+def _validate_float(dataset: h5py.Dataset):
+    if type(dataset) is not h5py.Dataset:
+        raise TypeError("'dataset' must be type h5py.Dataset")
+    if dataset.size > 1 or dataset.ndim > 0:
+        return 'INVALID_DATASET_SHAPE'
+    if _DTYPE_FLOAT32 in dataset.dtype.str or _DTYPE_FLOAT64 in dataset.dtype.str:
+        return 'OK'
+    else:
+        return 'INVALID_DATASET_TYPE'
+
+
+def _validate_string_array(dataset: h5py.Dataset, ndims=[1]):
+    if type(dataset) is not h5py.Dataset:
+        raise TypeError("'dataset' must be type h5py.Dataset")
+    if dataset.ndim not in ndims:
+        return 'INVALID_DATASET_SHAPE'
+    if _DTYPE_VAR_LEN_STR in dataset.dtype.str:
+        return 'OK'
+    elif _DTYPE_FIXED_LEN_STR in dataset.dtype.str:
+        return 'FIXED_LENGTH_STRING'
+    else:
+        return 'INVALID_DATASET_TYPE'
+
+
+def _validate_int_array(dataset: h5py.Dataset, ndims=[1]):
+    if type(dataset) is not h5py.Dataset:
+        raise TypeError("'dataset' must be type h5py.Dataset")
+    if dataset.ndim not in ndims:
+        return 'INVALID_DATASET_SHAPE'
+    if _DTYPE_INT in dataset.dtype.str:
+        return 'OK'
+    else:
+        return 'INVALID_DATASET_TYPE'
+
+def _validate_float_array(dataset: h5py.Dataset, ndims=[1]):
+    if type(dataset) is not h5py.Dataset:
+        raise TypeError("'dataset' must be type h5py.Dataset")
+    if dataset.ndim not in ndims:
+        return 'INVALID_DATASET_SHAPE'
+    if _DTYPE_FLOAT32 in dataset.dtype.str or _DTYPE_FLOAT64 in dataset.dtype.str:
+        return 'OK'
+    else:
+        return 'INVALID_DATASET_TYPE'
 
 
 # -----------------------------------------
