@@ -8,6 +8,7 @@ from collections.abc import MutableSequence
 from tempfile import TemporaryFile
 import logging
 
+
 _loggers = {}
 def _create_logger(name, log_file, level=logging.INFO):
     if name in _loggers.keys():
@@ -19,6 +20,7 @@ def _create_logger(name, log_file, level=logging.INFO):
     logger.addHandler(handler)
     _loggers[name] = logger
     return logger
+
 
 # Package-wide logger
 _logger = _create_logger('pysnirf2', 'pysnirf2.log')
@@ -32,7 +34,11 @@ if sys.version_info[0] < 3:
 _varlen_str_type = h5py.string_dtype(encoding='ascii', length=None)  # Length=None creates HDF5 variable length string
 _DTYPE_FLOAT = 'f8'
 _DTYPE_INT = 'i4'
-_DTYPE_STR = 'S'  # Not sure how robust this is, but fixed length strings will always at least contain S
+_DTYPE_FIXED_LEN_STR = 'S'  # Not sure how robust this is, but fixed length strings will always at least contain S
+_DTYPE_VAR_LEN_STR = 'S'  # Not sure how robust this is, but fixed length strings will always at least contain S
+
+
+# -- Dataset creators  ---------------------------------------
 
 
 def _create_dataset(file, name, data):
@@ -100,7 +106,7 @@ def _create_dataset_float_array(file: h5py.File, name: str, data: np.ndarray):
     return file.create_dataset(name, dtype=_DTYPE_FLOAT, data=array)
 
 
-# -----------------------------------------
+# -- Dataset readers  ---------------------------------------
 
 
 def _read_dataset(h_dataset: h5py.Dataset):
@@ -111,21 +117,22 @@ def _read_dataset(h_dataset: h5py.Dataset):
     if type(h_dataset) is not h5py.Dataset:
         raise TypeError("'dataset' must be type h5py.Dataset")
     if h_dataset.size > 1:
-        if _DTYPE_STR in h_dataset.dtype:
+        if _DTYPE_FIXED_LEN_STR in h_dataset.dtype or _DTYPE_VAR_LEN_STR in h_dataset.dtype:
             return _read_string_array(h_dataset)
         elif _DTYPE_INT in h_dataset.dtype:
             return _read_int_array(h_dataset)
         elif _DTYPE_FLOAT in h_dataset.dtype:
             return _read_float_array(h_dataset)
     else:
-        if _DTYPE_STR in h_dataset.dtype:
+        if _DTYPE_FIXED_LEN_STR in h_dataset.dtype or _DTYPE_VAR_LEN_STR in h_dataset.dtype:
             return _read_string(h_dataset)
         elif _DTYPE_INT in h_dataset.dtype:
             return _read_int(h_dataset)
         elif _DTYPE_FLOAT in h_dataset.dtype:
             return _read_float(h_dataset)
     raise TypeError("Dataset dtype='" + str(h_dataset.dtype)
-    + "' not recognized. Expecting dtype to contain one of these: " + str([_DTYPE_STR, _DTYPE_INT, _DTYPE_FLOAT]))
+                    + "' not recognized. Expecting dtype to contain one of these: "
+                    + str([_DTYPE_FIXED_LEN_STR, _DTYPE_VAR_LEN_STR, _DTYPE_INT, _DTYPE_FLOAT]))
 
 
 def _read_string(dataset: h5py.Dataset):
@@ -204,6 +211,7 @@ class ValidationResultCodes:
             'UNRECOGNIZED_DATATYPELABEL': (0 << 1, 2, 'dataTypeLabel is not one of the recognized values listed in the Appendix'),
             'UNRECOGNIZED_DATATYPE': (0 << 1, 2, 'dataType is not one of the recognized values listed in the Appendix'),
             'INDEX_OF_ZERO': (0 << 1, 2, 'index of zero is usually undefined'),
+            'FIXED_LENGTH_STRING': (0 << 1, 2, 'Strings of fixed length are '),
             # Info (Severity 3)
             'OPTIONAL_GROUP_MISSING': (0 << 1, 3, 'OK (missing optional group)'),
             }
@@ -214,6 +222,56 @@ class ValidationResultCodes:
     def keys(self):
         return self._codes.keys()
 
+
+# -- Validation functions ---------------------------------------
+
+
+def _validate_string(dataset: h5py.Dataset):
+    # Because many SNIRF files are saved with string values in length 1 arrays
+    if type(dataset) is not h5py.Dataset:
+        raise TypeError("'dataset' must be type h5py.Dataset")
+    if dataset.ndim > 0:
+        return str(dataset[0].decode('ascii'))
+    else:
+        return str(dataset[()].decode('ascii'))
+
+
+def _validate_int(dataset: h5py.Dataset):
+    # Because many SNIRF files are saved with string values in length 1 arrays
+    if type(dataset) is not h5py.Dataset:
+        raise TypeError("'dataset' must be type h5py.Dataset")
+    if dataset.ndim > 0:
+        return int(dataset[0])
+    else:
+        return int(dataset[()])
+
+
+def _validate_float(dataset: h5py.Dataset):
+    # Because many SNIRF files are saved with string values in length 1 arrays
+    if type(dataset) is not h5py.Dataset:
+        raise TypeError("'dataset' must be type h5py.Dataset")
+    if dataset.ndim > 0:
+        return float(dataset[0])
+    else:
+        return float(dataset[()])
+
+
+def _validate_string_array(dataset: h5py.Dataset):
+    if type(dataset) is not h5py.Dataset:
+        raise TypeError("'dataset' must be type h5py.Dataset")
+    return np.array(dataset).astype(str)
+
+
+def _validate_int_array(dataset: h5py.Dataset):
+    if type(dataset) is not h5py.Dataset:
+        raise TypeError("'dataset' must be type h5py.Dataset")
+    return np.array(dataset).astype(int)
+
+
+def _validate_float_array(dataset: h5py.Dataset):
+    if type(dataset) is not h5py.Dataset:
+        raise TypeError("'dataset' must be type h5py.Dataset")
+    return np.array(dataset).astype(float)
 
 
 class ValidationResult:
@@ -326,7 +384,7 @@ class Group(ABC):
                 file = self._h.file
             self._cfg.logger.info('Group-level save of %s in %s', self.location, file)
             self._save(file)
-            
+
     @property
     def filename(self):
         """
@@ -408,7 +466,7 @@ class IndexedGroup(MutableSequence, ABC):
         denotes the first sub-group of data element name, and /.../name2
         denotes the 2nd element, and so on.
     """
-    
+
     _name: str = ''  # The specified prefix to this indexed group's members, i.e. nirs, data, stim, aux, measurementList
     _element: Group = None  # The type of Group which belongs to this IndexedGroup
 
@@ -422,7 +480,7 @@ class IndexedGroup(MutableSequence, ABC):
         self._populate_list()
         self._cfg.logger.info('IndexedGroup %s at %s in %s initalized with %i instances of %s', self.__class__.__name__,
                               self._parent.location, self.filename, len(self._list), self._element)
-    
+
     @property
     def filename(self):
         return self._parent.filename
@@ -432,7 +490,7 @@ class IndexedGroup(MutableSequence, ABC):
     def __getitem__(self, i): return self._list[i]
 
     def __delitem__(self, i): del self._list[i]
-    
+
     def __setitem__(self, i, item):
         self._check_type(item)
         if not item.location in [e.location for e in self._list]:
@@ -502,7 +560,7 @@ class IndexedGroup(MutableSequence, ABC):
         self._list.append(self._element(location, self._cfg))
         self._cfg.logger.info('%i th %s appended to IndexedGroup %s at %s in %s', len(self._list),
                           self._element, self.__class__.__name__, self._parent.location, self.filename)
-    
+
     def _populate_list(self):
         """
         Add all the appropriate groups in parent to the list
@@ -512,14 +570,14 @@ class IndexedGroup(MutableSequence, ABC):
         for name in names:
             if name in self._parent._h:
                 self._list.append(self._element(self._parent._h[name].id, self._cfg))
-    
+
     def _check_type(self, item):
         if type(item) is not self._element:
             raise TypeError('elements of ' + str(self.__class__.__name__) +
                             ' must be ' + str(self._element) + ', not ' +
                             str(type(item))
                             )
-        
+
     def _order_names(self, h=None):
         '''
         Enforce the format of the names of HDF5 groups within a group or file on disk. i.e. IndexedGroup stim's elements
@@ -587,7 +645,7 @@ class IndexedGroup(MutableSequence, ABC):
         self._order_names(h=h)  # Enforce order in the group names
 
 
-# generated by sstucker on 2021-12-01
+# generated by sstucker on 2021-12-02
 # version 1.0 SNIRF specification parsed from https://raw.githubusercontent.com/fNIRS/snirf/v1.0/snirf_specification.md
 
 
@@ -652,8 +710,8 @@ class MetaDataTags(Group):
         if self._SubjectID is AbsentDataset:
             return None
         if self._cfg.dynamic_loading and self._SubjectID is PresentDataset and 'SubjectID' in self._h:
-                return _read_string(self._h['SubjectID'])
-                self._cfg.logger.info('Dynamically loaded %s/SubjectID from %s', self.location, self.filename)
+            return _read_string(self._h['SubjectID'])
+            self._cfg.logger.info('Dynamically loaded %s/SubjectID from %s', self.location, self.filename)
         elif self._SubjectID is not AbsentDataset:
             return self._SubjectID
         else:
@@ -674,8 +732,8 @@ class MetaDataTags(Group):
         if self._MeasurementDate is AbsentDataset:
             return None
         if self._cfg.dynamic_loading and self._MeasurementDate is PresentDataset and 'MeasurementDate' in self._h:
-                return _read_string(self._h['MeasurementDate'])
-                self._cfg.logger.info('Dynamically loaded %s/MeasurementDate from %s', self.location, self.filename)
+            return _read_string(self._h['MeasurementDate'])
+            self._cfg.logger.info('Dynamically loaded %s/MeasurementDate from %s', self.location, self.filename)
         elif self._MeasurementDate is not AbsentDataset:
             return self._MeasurementDate
         else:
@@ -696,8 +754,8 @@ class MetaDataTags(Group):
         if self._MeasurementTime is AbsentDataset:
             return None
         if self._cfg.dynamic_loading and self._MeasurementTime is PresentDataset and 'MeasurementTime' in self._h:
-                return _read_string(self._h['MeasurementTime'])
-                self._cfg.logger.info('Dynamically loaded %s/MeasurementTime from %s', self.location, self.filename)
+            return _read_string(self._h['MeasurementTime'])
+            self._cfg.logger.info('Dynamically loaded %s/MeasurementTime from %s', self.location, self.filename)
         elif self._MeasurementTime is not AbsentDataset:
             return self._MeasurementTime
         else:
@@ -718,8 +776,8 @@ class MetaDataTags(Group):
         if self._LengthUnit is AbsentDataset:
             return None
         if self._cfg.dynamic_loading and self._LengthUnit is PresentDataset and 'LengthUnit' in self._h:
-                return _read_string(self._h['LengthUnit'])
-                self._cfg.logger.info('Dynamically loaded %s/LengthUnit from %s', self.location, self.filename)
+            return _read_string(self._h['LengthUnit'])
+            self._cfg.logger.info('Dynamically loaded %s/LengthUnit from %s', self.location, self.filename)
         elif self._LengthUnit is not AbsentDataset:
             return self._LengthUnit
         else:
@@ -740,8 +798,8 @@ class MetaDataTags(Group):
         if self._TimeUnit is AbsentDataset:
             return None
         if self._cfg.dynamic_loading and self._TimeUnit is PresentDataset and 'TimeUnit' in self._h:
-                return _read_string(self._h['TimeUnit'])
-                self._cfg.logger.info('Dynamically loaded %s/TimeUnit from %s', self.location, self.filename)
+            return _read_string(self._h['TimeUnit'])
+            self._cfg.logger.info('Dynamically loaded %s/TimeUnit from %s', self.location, self.filename)
         elif self._TimeUnit is not AbsentDataset:
             return self._TimeUnit
         else:
@@ -762,8 +820,8 @@ class MetaDataTags(Group):
         if self._FrequencyUnit is AbsentDataset:
             return None
         if self._cfg.dynamic_loading and self._FrequencyUnit is PresentDataset and 'FrequencyUnit' in self._h:
-                return _read_string(self._h['FrequencyUnit'])
-                self._cfg.logger.info('Dynamically loaded %s/FrequencyUnit from %s', self.location, self.filename)
+            return _read_string(self._h['FrequencyUnit'])
+            self._cfg.logger.info('Dynamically loaded %s/FrequencyUnit from %s', self.location, self.filename)
         elif self._FrequencyUnit is not AbsentDataset:
             return self._FrequencyUnit
         else:
@@ -843,6 +901,38 @@ class MetaDataTags(Group):
         if data not in [AbsentDataset, None]:
             _create_dataset_string(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
+
+    def _validate(self, result: ValidationResult):
+        name = self.location + '/SubjectID'
+        if data not in [AbsentDataset, None]:
+            result.add(name, 'REQUIRED_GROUP_MISSING')
+        else:
+            _create_dataset_string(file, name, data)
+        name = self.location + '/MeasurementDate'
+        if data not in [AbsentDataset, None]:
+            result.add(name, 'REQUIRED_GROUP_MISSING')
+        else:
+            _create_dataset_string(file, name, data)
+        name = self.location + '/MeasurementTime'
+        if data not in [AbsentDataset, None]:
+            result.add(name, 'REQUIRED_GROUP_MISSING')
+        else:
+            _create_dataset_string(file, name, data)
+        name = self.location + '/LengthUnit'
+        if data not in [AbsentDataset, None]:
+            result.add(name, 'REQUIRED_GROUP_MISSING')
+        else:
+            _create_dataset_string(file, name, data)
+        name = self.location + '/TimeUnit'
+        if data not in [AbsentDataset, None]:
+            result.add(name, 'REQUIRED_GROUP_MISSING')
+        else:
+            _create_dataset_string(file, name, data)
+        name = self.location + '/FrequencyUnit'
+        if data not in [AbsentDataset, None]:
+            result.add(name, 'REQUIRED_GROUP_MISSING')
+        else:
+            _create_dataset_string(file, name, data)
 
 
 
@@ -935,8 +1025,8 @@ class Probe(Group):
         if self._wavelengths is AbsentDataset:
             return None
         if self._cfg.dynamic_loading and self._wavelengths is PresentDataset and 'wavelengths' in self._h:
-                return _read_float_array(self._h['wavelengths'])
-                self._cfg.logger.info('Dynamically loaded %s/wavelengths from %s', self.location, self.filename)
+            return _read_float_array(self._h['wavelengths'])
+            self._cfg.logger.info('Dynamically loaded %s/wavelengths from %s', self.location, self.filename)
         elif self._wavelengths is not AbsentDataset:
             return self._wavelengths
         else:
@@ -957,8 +1047,8 @@ class Probe(Group):
         if self._wavelengthsEmission is AbsentDataset:
             return None
         if self._cfg.dynamic_loading and self._wavelengthsEmission is PresentDataset and 'wavelengthsEmission' in self._h:
-                return _read_float_array(self._h['wavelengthsEmission'])
-                self._cfg.logger.info('Dynamically loaded %s/wavelengthsEmission from %s', self.location, self.filename)
+            return _read_float_array(self._h['wavelengthsEmission'])
+            self._cfg.logger.info('Dynamically loaded %s/wavelengthsEmission from %s', self.location, self.filename)
         elif self._wavelengthsEmission is not AbsentDataset:
             return self._wavelengthsEmission
         else:
@@ -979,8 +1069,8 @@ class Probe(Group):
         if self._sourcePos2D is AbsentDataset:
             return None
         if self._cfg.dynamic_loading and self._sourcePos2D is PresentDataset and 'sourcePos2D' in self._h:
-                return _read_float_array(self._h['sourcePos2D'])
-                self._cfg.logger.info('Dynamically loaded %s/sourcePos2D from %s', self.location, self.filename)
+            return _read_float_array(self._h['sourcePos2D'])
+            self._cfg.logger.info('Dynamically loaded %s/sourcePos2D from %s', self.location, self.filename)
         elif self._sourcePos2D is not AbsentDataset:
             return self._sourcePos2D
         else:
@@ -1001,8 +1091,8 @@ class Probe(Group):
         if self._sourcePos3D is AbsentDataset:
             return None
         if self._cfg.dynamic_loading and self._sourcePos3D is PresentDataset and 'sourcePos3D' in self._h:
-                return _read_float_array(self._h['sourcePos3D'])
-                self._cfg.logger.info('Dynamically loaded %s/sourcePos3D from %s', self.location, self.filename)
+            return _read_float_array(self._h['sourcePos3D'])
+            self._cfg.logger.info('Dynamically loaded %s/sourcePos3D from %s', self.location, self.filename)
         elif self._sourcePos3D is not AbsentDataset:
             return self._sourcePos3D
         else:
@@ -1023,8 +1113,8 @@ class Probe(Group):
         if self._detectorPos2D is AbsentDataset:
             return None
         if self._cfg.dynamic_loading and self._detectorPos2D is PresentDataset and 'detectorPos2D' in self._h:
-                return _read_float_array(self._h['detectorPos2D'])
-                self._cfg.logger.info('Dynamically loaded %s/detectorPos2D from %s', self.location, self.filename)
+            return _read_float_array(self._h['detectorPos2D'])
+            self._cfg.logger.info('Dynamically loaded %s/detectorPos2D from %s', self.location, self.filename)
         elif self._detectorPos2D is not AbsentDataset:
             return self._detectorPos2D
         else:
@@ -1045,8 +1135,8 @@ class Probe(Group):
         if self._detectorPos3D is AbsentDataset:
             return None
         if self._cfg.dynamic_loading and self._detectorPos3D is PresentDataset and 'detectorPos3D' in self._h:
-                return _read_float_array(self._h['detectorPos3D'])
-                self._cfg.logger.info('Dynamically loaded %s/detectorPos3D from %s', self.location, self.filename)
+            return _read_float_array(self._h['detectorPos3D'])
+            self._cfg.logger.info('Dynamically loaded %s/detectorPos3D from %s', self.location, self.filename)
         elif self._detectorPos3D is not AbsentDataset:
             return self._detectorPos3D
         else:
@@ -1067,8 +1157,8 @@ class Probe(Group):
         if self._frequencies is AbsentDataset:
             return None
         if self._cfg.dynamic_loading and self._frequencies is PresentDataset and 'frequencies' in self._h:
-                return _read_float_array(self._h['frequencies'])
-                self._cfg.logger.info('Dynamically loaded %s/frequencies from %s', self.location, self.filename)
+            return _read_float_array(self._h['frequencies'])
+            self._cfg.logger.info('Dynamically loaded %s/frequencies from %s', self.location, self.filename)
         elif self._frequencies is not AbsentDataset:
             return self._frequencies
         else:
@@ -1089,8 +1179,8 @@ class Probe(Group):
         if self._timeDelays is AbsentDataset:
             return None
         if self._cfg.dynamic_loading and self._timeDelays is PresentDataset and 'timeDelays' in self._h:
-                return _read_float_array(self._h['timeDelays'])
-                self._cfg.logger.info('Dynamically loaded %s/timeDelays from %s', self.location, self.filename)
+            return _read_float_array(self._h['timeDelays'])
+            self._cfg.logger.info('Dynamically loaded %s/timeDelays from %s', self.location, self.filename)
         elif self._timeDelays is not AbsentDataset:
             return self._timeDelays
         else:
@@ -1111,8 +1201,8 @@ class Probe(Group):
         if self._timeDelayWidths is AbsentDataset:
             return None
         if self._cfg.dynamic_loading and self._timeDelayWidths is PresentDataset and 'timeDelayWidths' in self._h:
-                return _read_float_array(self._h['timeDelayWidths'])
-                self._cfg.logger.info('Dynamically loaded %s/timeDelayWidths from %s', self.location, self.filename)
+            return _read_float_array(self._h['timeDelayWidths'])
+            self._cfg.logger.info('Dynamically loaded %s/timeDelayWidths from %s', self.location, self.filename)
         elif self._timeDelayWidths is not AbsentDataset:
             return self._timeDelayWidths
         else:
@@ -1133,8 +1223,8 @@ class Probe(Group):
         if self._momentOrders is AbsentDataset:
             return None
         if self._cfg.dynamic_loading and self._momentOrders is PresentDataset and 'momentOrders' in self._h:
-                return _read_float_array(self._h['momentOrders'])
-                self._cfg.logger.info('Dynamically loaded %s/momentOrders from %s', self.location, self.filename)
+            return _read_float_array(self._h['momentOrders'])
+            self._cfg.logger.info('Dynamically loaded %s/momentOrders from %s', self.location, self.filename)
         elif self._momentOrders is not AbsentDataset:
             return self._momentOrders
         else:
@@ -1155,8 +1245,8 @@ class Probe(Group):
         if self._correlationTimeDelays is AbsentDataset:
             return None
         if self._cfg.dynamic_loading and self._correlationTimeDelays is PresentDataset and 'correlationTimeDelays' in self._h:
-                return _read_float_array(self._h['correlationTimeDelays'])
-                self._cfg.logger.info('Dynamically loaded %s/correlationTimeDelays from %s', self.location, self.filename)
+            return _read_float_array(self._h['correlationTimeDelays'])
+            self._cfg.logger.info('Dynamically loaded %s/correlationTimeDelays from %s', self.location, self.filename)
         elif self._correlationTimeDelays is not AbsentDataset:
             return self._correlationTimeDelays
         else:
@@ -1177,8 +1267,8 @@ class Probe(Group):
         if self._correlationTimeDelayWidths is AbsentDataset:
             return None
         if self._cfg.dynamic_loading and self._correlationTimeDelayWidths is PresentDataset and 'correlationTimeDelayWidths' in self._h:
-                return _read_float_array(self._h['correlationTimeDelayWidths'])
-                self._cfg.logger.info('Dynamically loaded %s/correlationTimeDelayWidths from %s', self.location, self.filename)
+            return _read_float_array(self._h['correlationTimeDelayWidths'])
+            self._cfg.logger.info('Dynamically loaded %s/correlationTimeDelayWidths from %s', self.location, self.filename)
         elif self._correlationTimeDelayWidths is not AbsentDataset:
             return self._correlationTimeDelayWidths
         else:
@@ -1199,8 +1289,8 @@ class Probe(Group):
         if self._sourceLabels is AbsentDataset:
             return None
         if self._cfg.dynamic_loading and self._sourceLabels is PresentDataset and 'sourceLabels' in self._h:
-                return _read_string_array(self._h['sourceLabels'])
-                self._cfg.logger.info('Dynamically loaded %s/sourceLabels from %s', self.location, self.filename)
+            return _read_string_array(self._h['sourceLabels'])
+            self._cfg.logger.info('Dynamically loaded %s/sourceLabels from %s', self.location, self.filename)
         elif self._sourceLabels is not AbsentDataset:
             return self._sourceLabels
         else:
@@ -1221,8 +1311,8 @@ class Probe(Group):
         if self._detectorLabels is AbsentDataset:
             return None
         if self._cfg.dynamic_loading and self._detectorLabels is PresentDataset and 'detectorLabels' in self._h:
-                return _read_string_array(self._h['detectorLabels'])
-                self._cfg.logger.info('Dynamically loaded %s/detectorLabels from %s', self.location, self.filename)
+            return _read_string_array(self._h['detectorLabels'])
+            self._cfg.logger.info('Dynamically loaded %s/detectorLabels from %s', self.location, self.filename)
         elif self._detectorLabels is not AbsentDataset:
             return self._detectorLabels
         else:
@@ -1243,8 +1333,8 @@ class Probe(Group):
         if self._landmarkPos2D is AbsentDataset:
             return None
         if self._cfg.dynamic_loading and self._landmarkPos2D is PresentDataset and 'landmarkPos2D' in self._h:
-                return _read_float_array(self._h['landmarkPos2D'])
-                self._cfg.logger.info('Dynamically loaded %s/landmarkPos2D from %s', self.location, self.filename)
+            return _read_float_array(self._h['landmarkPos2D'])
+            self._cfg.logger.info('Dynamically loaded %s/landmarkPos2D from %s', self.location, self.filename)
         elif self._landmarkPos2D is not AbsentDataset:
             return self._landmarkPos2D
         else:
@@ -1265,8 +1355,8 @@ class Probe(Group):
         if self._landmarkPos3D is AbsentDataset:
             return None
         if self._cfg.dynamic_loading and self._landmarkPos3D is PresentDataset and 'landmarkPos3D' in self._h:
-                return _read_float_array(self._h['landmarkPos3D'])
-                self._cfg.logger.info('Dynamically loaded %s/landmarkPos3D from %s', self.location, self.filename)
+            return _read_float_array(self._h['landmarkPos3D'])
+            self._cfg.logger.info('Dynamically loaded %s/landmarkPos3D from %s', self.location, self.filename)
         elif self._landmarkPos3D is not AbsentDataset:
             return self._landmarkPos3D
         else:
@@ -1287,8 +1377,8 @@ class Probe(Group):
         if self._landmarkLabels is AbsentDataset:
             return None
         if self._cfg.dynamic_loading and self._landmarkLabels is PresentDataset and 'landmarkLabels' in self._h:
-                return _read_string_array(self._h['landmarkLabels'])
-                self._cfg.logger.info('Dynamically loaded %s/landmarkLabels from %s', self.location, self.filename)
+            return _read_string_array(self._h['landmarkLabels'])
+            self._cfg.logger.info('Dynamically loaded %s/landmarkLabels from %s', self.location, self.filename)
         elif self._landmarkLabels is not AbsentDataset:
             return self._landmarkLabels
         else:
@@ -1309,8 +1399,8 @@ class Probe(Group):
         if self._useLocalIndex is AbsentDataset:
             return None
         if self._cfg.dynamic_loading and self._useLocalIndex is PresentDataset and 'useLocalIndex' in self._h:
-                return _read_int(self._h['useLocalIndex'])
-                self._cfg.logger.info('Dynamically loaded %s/useLocalIndex from %s', self.location, self.filename)
+            return _read_int(self._h['useLocalIndex'])
+            self._cfg.logger.info('Dynamically loaded %s/useLocalIndex from %s', self.location, self.filename)
         elif self._useLocalIndex is not AbsentDataset:
             return self._useLocalIndex
         else:
@@ -1487,6 +1577,98 @@ class Probe(Group):
             _create_dataset_int(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
 
+    def _validate(self, result: ValidationResult):
+        name = self.location + '/wavelengths'
+        if data not in [AbsentDataset, None]:
+            result.add(name, 'REQUIRED_GROUP_MISSING')
+        else:
+            _create_dataset_float_array(file, name, data)
+        name = self.location + '/wavelengthsEmission'
+        if data not in [AbsentDataset, None]:
+            result.add(name, 'OPTIONAL_GROUP_MISSING')
+        else:
+            _create_dataset_float_array(file, name, data)
+        name = self.location + '/sourcePos2D'
+        if data not in [AbsentDataset, None]:
+            result.add(name, 'REQUIRED_GROUP_MISSING')
+        else:
+            _create_dataset_float_array(file, name, data)
+        name = self.location + '/sourcePos3D'
+        if data not in [AbsentDataset, None]:
+            result.add(name, 'REQUIRED_GROUP_MISSING')
+        else:
+            _create_dataset_float_array(file, name, data)
+        name = self.location + '/detectorPos2D'
+        if data not in [AbsentDataset, None]:
+            result.add(name, 'REQUIRED_GROUP_MISSING')
+        else:
+            _create_dataset_float_array(file, name, data)
+        name = self.location + '/detectorPos3D'
+        if data not in [AbsentDataset, None]:
+            result.add(name, 'REQUIRED_GROUP_MISSING')
+        else:
+            _create_dataset_float_array(file, name, data)
+        name = self.location + '/frequencies'
+        if data not in [AbsentDataset, None]:
+            result.add(name, 'OPTIONAL_GROUP_MISSING')
+        else:
+            _create_dataset_float_array(file, name, data)
+        name = self.location + '/timeDelays'
+        if data not in [AbsentDataset, None]:
+            result.add(name, 'OPTIONAL_GROUP_MISSING')
+        else:
+            _create_dataset_float_array(file, name, data)
+        name = self.location + '/timeDelayWidths'
+        if data not in [AbsentDataset, None]:
+            result.add(name, 'OPTIONAL_GROUP_MISSING')
+        else:
+            _create_dataset_float_array(file, name, data)
+        name = self.location + '/momentOrders'
+        if data not in [AbsentDataset, None]:
+            result.add(name, 'OPTIONAL_GROUP_MISSING')
+        else:
+            _create_dataset_float_array(file, name, data)
+        name = self.location + '/correlationTimeDelays'
+        if data not in [AbsentDataset, None]:
+            result.add(name, 'OPTIONAL_GROUP_MISSING')
+        else:
+            _create_dataset_float_array(file, name, data)
+        name = self.location + '/correlationTimeDelayWidths'
+        if data not in [AbsentDataset, None]:
+            result.add(name, 'OPTIONAL_GROUP_MISSING')
+        else:
+            _create_dataset_float_array(file, name, data)
+        name = self.location + '/sourceLabels'
+        if data not in [AbsentDataset, None]:
+            result.add(name, 'OPTIONAL_GROUP_MISSING')
+        else:
+            _create_dataset_string_array(file, name, data)
+        name = self.location + '/detectorLabels'
+        if data not in [AbsentDataset, None]:
+            result.add(name, 'OPTIONAL_GROUP_MISSING')
+        else:
+            _create_dataset_string_array(file, name, data)
+        name = self.location + '/landmarkPos2D'
+        if data not in [AbsentDataset, None]:
+            result.add(name, 'OPTIONAL_GROUP_MISSING')
+        else:
+            _create_dataset_float_array(file, name, data)
+        name = self.location + '/landmarkPos3D'
+        if data not in [AbsentDataset, None]:
+            result.add(name, 'OPTIONAL_GROUP_MISSING')
+        else:
+            _create_dataset_float_array(file, name, data)
+        name = self.location + '/landmarkLabels'
+        if data not in [AbsentDataset, None]:
+            result.add(name, 'OPTIONAL_GROUP_MISSING')
+        else:
+            _create_dataset_string_array(file, name, data)
+        name = self.location + '/useLocalIndex'
+        if data not in [AbsentDataset, None]:
+            result.add(name, 'OPTIONAL_GROUP_MISSING')
+        else:
+            _create_dataset_int(file, name, data)
+
 
 
 class NirsElement(Group):
@@ -1619,6 +1801,21 @@ class NirsElement(Group):
             self.probe._save(*args)
         self.aux._save(*args)
 
+    def _validate(self, result: ValidationResult):
+        if self._metaDataTags is AbsentGroup and 'metaDataTags' not in self._h:
+            name = self.location + '/metaDataTags'
+            result.add(name, 'REQUIRED_GROUP_MISSING')
+        else:
+            self.metaDataTags._validate(*args)
+        self.data._validate(*args)
+        self.stim._validate(*args)
+        if self._probe is AbsentGroup and 'probe' not in self._h:
+            name = self.location + '/probe'
+            result.add(name, 'REQUIRED_GROUP_MISSING')
+        else:
+            self.probe._validate(*args)
+        self.aux._validate(*args)
+
 
 class Nirs(IndexedGroup):
 
@@ -1652,8 +1849,8 @@ class DataElement(Group):
         if self._dataTimeSeries is AbsentDataset:
             return None
         if self._cfg.dynamic_loading and self._dataTimeSeries is PresentDataset and 'dataTimeSeries' in self._h:
-                return _read_float_array(self._h['dataTimeSeries'])
-                self._cfg.logger.info('Dynamically loaded %s/dataTimeSeries from %s', self.location, self.filename)
+            return _read_float_array(self._h['dataTimeSeries'])
+            self._cfg.logger.info('Dynamically loaded %s/dataTimeSeries from %s', self.location, self.filename)
         elif self._dataTimeSeries is not AbsentDataset:
             return self._dataTimeSeries
         else:
@@ -1674,8 +1871,8 @@ class DataElement(Group):
         if self._time is AbsentDataset:
             return None
         if self._cfg.dynamic_loading and self._time is PresentDataset and 'time' in self._h:
-                return _read_float_array(self._h['time'])
-                self._cfg.logger.info('Dynamically loaded %s/time from %s', self.location, self.filename)
+            return _read_float_array(self._h['time'])
+            self._cfg.logger.info('Dynamically loaded %s/time from %s', self.location, self.filename)
         elif self._time is not AbsentDataset:
             return self._time
         else:
@@ -1738,6 +1935,19 @@ class DataElement(Group):
             _create_dataset_float_array(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         self.measurementList._save(*args)
+
+    def _validate(self, result: ValidationResult):
+        name = self.location + '/dataTimeSeries'
+        if data not in [AbsentDataset, None]:
+            result.add(name, 'REQUIRED_GROUP_MISSING')
+        else:
+            _create_dataset_float_array(file, name, data)
+        name = self.location + '/time'
+        if data not in [AbsentDataset, None]:
+            result.add(name, 'REQUIRED_GROUP_MISSING')
+        else:
+            _create_dataset_float_array(file, name, data)
+        self.measurementList._validate(*args)
 
 
 class Data(IndexedGroup):
@@ -1866,8 +2076,8 @@ class MeasurementListElement(Group):
         if self._sourceIndex is AbsentDataset:
             return None
         if self._cfg.dynamic_loading and self._sourceIndex is PresentDataset and 'sourceIndex' in self._h:
-                return _read_int(self._h['sourceIndex'])
-                self._cfg.logger.info('Dynamically loaded %s/sourceIndex from %s', self.location, self.filename)
+            return _read_int(self._h['sourceIndex'])
+            self._cfg.logger.info('Dynamically loaded %s/sourceIndex from %s', self.location, self.filename)
         elif self._sourceIndex is not AbsentDataset:
             return self._sourceIndex
         else:
@@ -1888,8 +2098,8 @@ class MeasurementListElement(Group):
         if self._detectorIndex is AbsentDataset:
             return None
         if self._cfg.dynamic_loading and self._detectorIndex is PresentDataset and 'detectorIndex' in self._h:
-                return _read_int(self._h['detectorIndex'])
-                self._cfg.logger.info('Dynamically loaded %s/detectorIndex from %s', self.location, self.filename)
+            return _read_int(self._h['detectorIndex'])
+            self._cfg.logger.info('Dynamically loaded %s/detectorIndex from %s', self.location, self.filename)
         elif self._detectorIndex is not AbsentDataset:
             return self._detectorIndex
         else:
@@ -1910,8 +2120,8 @@ class MeasurementListElement(Group):
         if self._wavelengthIndex is AbsentDataset:
             return None
         if self._cfg.dynamic_loading and self._wavelengthIndex is PresentDataset and 'wavelengthIndex' in self._h:
-                return _read_int(self._h['wavelengthIndex'])
-                self._cfg.logger.info('Dynamically loaded %s/wavelengthIndex from %s', self.location, self.filename)
+            return _read_int(self._h['wavelengthIndex'])
+            self._cfg.logger.info('Dynamically loaded %s/wavelengthIndex from %s', self.location, self.filename)
         elif self._wavelengthIndex is not AbsentDataset:
             return self._wavelengthIndex
         else:
@@ -1932,8 +2142,8 @@ class MeasurementListElement(Group):
         if self._wavelengthActual is AbsentDataset:
             return None
         if self._cfg.dynamic_loading and self._wavelengthActual is PresentDataset and 'wavelengthActual' in self._h:
-                return _read_float(self._h['wavelengthActual'])
-                self._cfg.logger.info('Dynamically loaded %s/wavelengthActual from %s', self.location, self.filename)
+            return _read_float(self._h['wavelengthActual'])
+            self._cfg.logger.info('Dynamically loaded %s/wavelengthActual from %s', self.location, self.filename)
         elif self._wavelengthActual is not AbsentDataset:
             return self._wavelengthActual
         else:
@@ -1954,8 +2164,8 @@ class MeasurementListElement(Group):
         if self._wavelengthEmissionActual is AbsentDataset:
             return None
         if self._cfg.dynamic_loading and self._wavelengthEmissionActual is PresentDataset and 'wavelengthEmissionActual' in self._h:
-                return _read_float(self._h['wavelengthEmissionActual'])
-                self._cfg.logger.info('Dynamically loaded %s/wavelengthEmissionActual from %s', self.location, self.filename)
+            return _read_float(self._h['wavelengthEmissionActual'])
+            self._cfg.logger.info('Dynamically loaded %s/wavelengthEmissionActual from %s', self.location, self.filename)
         elif self._wavelengthEmissionActual is not AbsentDataset:
             return self._wavelengthEmissionActual
         else:
@@ -1976,8 +2186,8 @@ class MeasurementListElement(Group):
         if self._dataType is AbsentDataset:
             return None
         if self._cfg.dynamic_loading and self._dataType is PresentDataset and 'dataType' in self._h:
-                return _read_int(self._h['dataType'])
-                self._cfg.logger.info('Dynamically loaded %s/dataType from %s', self.location, self.filename)
+            return _read_int(self._h['dataType'])
+            self._cfg.logger.info('Dynamically loaded %s/dataType from %s', self.location, self.filename)
         elif self._dataType is not AbsentDataset:
             return self._dataType
         else:
@@ -1998,8 +2208,8 @@ class MeasurementListElement(Group):
         if self._dataTypeLabel is AbsentDataset:
             return None
         if self._cfg.dynamic_loading and self._dataTypeLabel is PresentDataset and 'dataTypeLabel' in self._h:
-                return _read_string(self._h['dataTypeLabel'])
-                self._cfg.logger.info('Dynamically loaded %s/dataTypeLabel from %s', self.location, self.filename)
+            return _read_string(self._h['dataTypeLabel'])
+            self._cfg.logger.info('Dynamically loaded %s/dataTypeLabel from %s', self.location, self.filename)
         elif self._dataTypeLabel is not AbsentDataset:
             return self._dataTypeLabel
         else:
@@ -2020,8 +2230,8 @@ class MeasurementListElement(Group):
         if self._dataTypeIndex is AbsentDataset:
             return None
         if self._cfg.dynamic_loading and self._dataTypeIndex is PresentDataset and 'dataTypeIndex' in self._h:
-                return _read_int(self._h['dataTypeIndex'])
-                self._cfg.logger.info('Dynamically loaded %s/dataTypeIndex from %s', self.location, self.filename)
+            return _read_int(self._h['dataTypeIndex'])
+            self._cfg.logger.info('Dynamically loaded %s/dataTypeIndex from %s', self.location, self.filename)
         elif self._dataTypeIndex is not AbsentDataset:
             return self._dataTypeIndex
         else:
@@ -2042,8 +2252,8 @@ class MeasurementListElement(Group):
         if self._sourcePower is AbsentDataset:
             return None
         if self._cfg.dynamic_loading and self._sourcePower is PresentDataset and 'sourcePower' in self._h:
-                return _read_float(self._h['sourcePower'])
-                self._cfg.logger.info('Dynamically loaded %s/sourcePower from %s', self.location, self.filename)
+            return _read_float(self._h['sourcePower'])
+            self._cfg.logger.info('Dynamically loaded %s/sourcePower from %s', self.location, self.filename)
         elif self._sourcePower is not AbsentDataset:
             return self._sourcePower
         else:
@@ -2064,8 +2274,8 @@ class MeasurementListElement(Group):
         if self._detectorGain is AbsentDataset:
             return None
         if self._cfg.dynamic_loading and self._detectorGain is PresentDataset and 'detectorGain' in self._h:
-                return _read_float(self._h['detectorGain'])
-                self._cfg.logger.info('Dynamically loaded %s/detectorGain from %s', self.location, self.filename)
+            return _read_float(self._h['detectorGain'])
+            self._cfg.logger.info('Dynamically loaded %s/detectorGain from %s', self.location, self.filename)
         elif self._detectorGain is not AbsentDataset:
             return self._detectorGain
         else:
@@ -2086,8 +2296,8 @@ class MeasurementListElement(Group):
         if self._moduleIndex is AbsentDataset:
             return None
         if self._cfg.dynamic_loading and self._moduleIndex is PresentDataset and 'moduleIndex' in self._h:
-                return _read_int(self._h['moduleIndex'])
-                self._cfg.logger.info('Dynamically loaded %s/moduleIndex from %s', self.location, self.filename)
+            return _read_int(self._h['moduleIndex'])
+            self._cfg.logger.info('Dynamically loaded %s/moduleIndex from %s', self.location, self.filename)
         elif self._moduleIndex is not AbsentDataset:
             return self._moduleIndex
         else:
@@ -2108,8 +2318,8 @@ class MeasurementListElement(Group):
         if self._sourceModuleIndex is AbsentDataset:
             return None
         if self._cfg.dynamic_loading and self._sourceModuleIndex is PresentDataset and 'sourceModuleIndex' in self._h:
-                return _read_int(self._h['sourceModuleIndex'])
-                self._cfg.logger.info('Dynamically loaded %s/sourceModuleIndex from %s', self.location, self.filename)
+            return _read_int(self._h['sourceModuleIndex'])
+            self._cfg.logger.info('Dynamically loaded %s/sourceModuleIndex from %s', self.location, self.filename)
         elif self._sourceModuleIndex is not AbsentDataset:
             return self._sourceModuleIndex
         else:
@@ -2130,8 +2340,8 @@ class MeasurementListElement(Group):
         if self._detectorModuleIndex is AbsentDataset:
             return None
         if self._cfg.dynamic_loading and self._detectorModuleIndex is PresentDataset and 'detectorModuleIndex' in self._h:
-                return _read_int(self._h['detectorModuleIndex'])
-                self._cfg.logger.info('Dynamically loaded %s/detectorModuleIndex from %s', self.location, self.filename)
+            return _read_int(self._h['detectorModuleIndex'])
+            self._cfg.logger.info('Dynamically loaded %s/detectorModuleIndex from %s', self.location, self.filename)
         elif self._detectorModuleIndex is not AbsentDataset:
             return self._detectorModuleIndex
         else:
@@ -2268,6 +2478,73 @@ class MeasurementListElement(Group):
             _create_dataset_int(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
 
+    def _validate(self, result: ValidationResult):
+        name = self.location + '/sourceIndex'
+        if data not in [AbsentDataset, None]:
+            result.add(name, 'REQUIRED_GROUP_MISSING')
+        else:
+            _create_dataset_int(file, name, data)
+        name = self.location + '/detectorIndex'
+        if data not in [AbsentDataset, None]:
+            result.add(name, 'REQUIRED_GROUP_MISSING')
+        else:
+            _create_dataset_int(file, name, data)
+        name = self.location + '/wavelengthIndex'
+        if data not in [AbsentDataset, None]:
+            result.add(name, 'REQUIRED_GROUP_MISSING')
+        else:
+            _create_dataset_int(file, name, data)
+        name = self.location + '/wavelengthActual'
+        if data not in [AbsentDataset, None]:
+            result.add(name, 'OPTIONAL_GROUP_MISSING')
+        else:
+            _create_dataset_float(file, name, data)
+        name = self.location + '/wavelengthEmissionActual'
+        if data not in [AbsentDataset, None]:
+            result.add(name, 'OPTIONAL_GROUP_MISSING')
+        else:
+            _create_dataset_float(file, name, data)
+        name = self.location + '/dataType'
+        if data not in [AbsentDataset, None]:
+            result.add(name, 'REQUIRED_GROUP_MISSING')
+        else:
+            _create_dataset_int(file, name, data)
+        name = self.location + '/dataTypeLabel'
+        if data not in [AbsentDataset, None]:
+            result.add(name, 'OPTIONAL_GROUP_MISSING')
+        else:
+            _create_dataset_string(file, name, data)
+        name = self.location + '/dataTypeIndex'
+        if data not in [AbsentDataset, None]:
+            result.add(name, 'REQUIRED_GROUP_MISSING')
+        else:
+            _create_dataset_int(file, name, data)
+        name = self.location + '/sourcePower'
+        if data not in [AbsentDataset, None]:
+            result.add(name, 'OPTIONAL_GROUP_MISSING')
+        else:
+            _create_dataset_float(file, name, data)
+        name = self.location + '/detectorGain'
+        if data not in [AbsentDataset, None]:
+            result.add(name, 'OPTIONAL_GROUP_MISSING')
+        else:
+            _create_dataset_float(file, name, data)
+        name = self.location + '/moduleIndex'
+        if data not in [AbsentDataset, None]:
+            result.add(name, 'OPTIONAL_GROUP_MISSING')
+        else:
+            _create_dataset_int(file, name, data)
+        name = self.location + '/sourceModuleIndex'
+        if data not in [AbsentDataset, None]:
+            result.add(name, 'OPTIONAL_GROUP_MISSING')
+        else:
+            _create_dataset_int(file, name, data)
+        name = self.location + '/detectorModuleIndex'
+        if data not in [AbsentDataset, None]:
+            result.add(name, 'OPTIONAL_GROUP_MISSING')
+        else:
+            _create_dataset_int(file, name, data)
+
 
 class MeasurementList(IndexedGroup):
 
@@ -2307,8 +2584,8 @@ class StimElement(Group):
         if self._name is AbsentDataset:
             return None
         if self._cfg.dynamic_loading and self._name is PresentDataset and 'name' in self._h:
-                return _read_string(self._h['name'])
-                self._cfg.logger.info('Dynamically loaded %s/name from %s', self.location, self.filename)
+            return _read_string(self._h['name'])
+            self._cfg.logger.info('Dynamically loaded %s/name from %s', self.location, self.filename)
         elif self._name is not AbsentDataset:
             return self._name
         else:
@@ -2329,8 +2606,8 @@ class StimElement(Group):
         if self._data is AbsentDataset:
             return None
         if self._cfg.dynamic_loading and self._data is PresentDataset and 'data' in self._h:
-                return _read_float_array(self._h['data'])
-                self._cfg.logger.info('Dynamically loaded %s/data from %s', self.location, self.filename)
+            return _read_float_array(self._h['data'])
+            self._cfg.logger.info('Dynamically loaded %s/data from %s', self.location, self.filename)
         elif self._data is not AbsentDataset:
             return self._data
         else:
@@ -2351,8 +2628,8 @@ class StimElement(Group):
         if self._dataLabels is AbsentDataset:
             return None
         if self._cfg.dynamic_loading and self._dataLabels is PresentDataset and 'dataLabels' in self._h:
-                return _read_string_array(self._h['dataLabels'])
-                self._cfg.logger.info('Dynamically loaded %s/dataLabels from %s', self.location, self.filename)
+            return _read_string_array(self._h['dataLabels'])
+            self._cfg.logger.info('Dynamically loaded %s/dataLabels from %s', self.location, self.filename)
         elif self._dataLabels is not AbsentDataset:
             return self._dataLabels
         else:
@@ -2409,6 +2686,23 @@ class StimElement(Group):
             _create_dataset_string_array(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
 
+    def _validate(self, result: ValidationResult):
+        name = self.location + '/name'
+        if data not in [AbsentDataset, None]:
+            result.add(name, 'OPTIONAL_GROUP_MISSING')
+        else:
+            _create_dataset_string(file, name, data)
+        name = self.location + '/data'
+        if data not in [AbsentDataset, None]:
+            result.add(name, 'OPTIONAL_GROUP_MISSING')
+        else:
+            _create_dataset_float_array(file, name, data)
+        name = self.location + '/dataLabels'
+        if data not in [AbsentDataset, None]:
+            result.add(name, 'OPTIONAL_GROUP_MISSING')
+        else:
+            _create_dataset_string_array(file, name, data)
+
 
 class Stim(IndexedGroup):
 
@@ -2452,8 +2746,8 @@ class AuxElement(Group):
         if self._name is AbsentDataset:
             return None
         if self._cfg.dynamic_loading and self._name is PresentDataset and 'name' in self._h:
-                return _read_string(self._h['name'])
-                self._cfg.logger.info('Dynamically loaded %s/name from %s', self.location, self.filename)
+            return _read_string(self._h['name'])
+            self._cfg.logger.info('Dynamically loaded %s/name from %s', self.location, self.filename)
         elif self._name is not AbsentDataset:
             return self._name
         else:
@@ -2474,8 +2768,8 @@ class AuxElement(Group):
         if self._dataTimeSeries is AbsentDataset:
             return None
         if self._cfg.dynamic_loading and self._dataTimeSeries is PresentDataset and 'dataTimeSeries' in self._h:
-                return _read_float_array(self._h['dataTimeSeries'])
-                self._cfg.logger.info('Dynamically loaded %s/dataTimeSeries from %s', self.location, self.filename)
+            return _read_float_array(self._h['dataTimeSeries'])
+            self._cfg.logger.info('Dynamically loaded %s/dataTimeSeries from %s', self.location, self.filename)
         elif self._dataTimeSeries is not AbsentDataset:
             return self._dataTimeSeries
         else:
@@ -2496,8 +2790,8 @@ class AuxElement(Group):
         if self._time is AbsentDataset:
             return None
         if self._cfg.dynamic_loading and self._time is PresentDataset and 'time' in self._h:
-                return _read_float_array(self._h['time'])
-                self._cfg.logger.info('Dynamically loaded %s/time from %s', self.location, self.filename)
+            return _read_float_array(self._h['time'])
+            self._cfg.logger.info('Dynamically loaded %s/time from %s', self.location, self.filename)
         elif self._time is not AbsentDataset:
             return self._time
         else:
@@ -2518,8 +2812,8 @@ class AuxElement(Group):
         if self._timeOffset is AbsentDataset:
             return None
         if self._cfg.dynamic_loading and self._timeOffset is PresentDataset and 'timeOffset' in self._h:
-                return _read_float_array(self._h['timeOffset'])
-                self._cfg.logger.info('Dynamically loaded %s/timeOffset from %s', self.location, self.filename)
+            return _read_float_array(self._h['timeOffset'])
+            self._cfg.logger.info('Dynamically loaded %s/timeOffset from %s', self.location, self.filename)
         elif self._timeOffset is not AbsentDataset:
             return self._timeOffset
         else:
@@ -2584,6 +2878,28 @@ class AuxElement(Group):
             _create_dataset_float_array(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
 
+    def _validate(self, result: ValidationResult):
+        name = self.location + '/name'
+        if data not in [AbsentDataset, None]:
+            result.add(name, 'OPTIONAL_GROUP_MISSING')
+        else:
+            _create_dataset_string(file, name, data)
+        name = self.location + '/dataTimeSeries'
+        if data not in [AbsentDataset, None]:
+            result.add(name, 'OPTIONAL_GROUP_MISSING')
+        else:
+            _create_dataset_float_array(file, name, data)
+        name = self.location + '/time'
+        if data not in [AbsentDataset, None]:
+            result.add(name, 'OPTIONAL_GROUP_MISSING')
+        else:
+            _create_dataset_float_array(file, name, data)
+        name = self.location + '/timeOffset'
+        if data not in [AbsentDataset, None]:
+            result.add(name, 'OPTIONAL_GROUP_MISSING')
+        else:
+            _create_dataset_float_array(file, name, data)
+
 
 class Aux(IndexedGroup):
 
@@ -2641,8 +2957,8 @@ class Snirf():
         if self._formatVersion is AbsentDataset:
             return None
         if self._cfg.dynamic_loading and self._formatVersion is PresentDataset and 'formatVersion' in self._h:
-                return _read_string(self._h['formatVersion'])
-                self._cfg.logger.info('Dynamically loaded %s/formatVersion from %s', self.location, self.filename)
+            return _read_string(self._h['formatVersion'])
+            self._cfg.logger.info('Dynamically loaded %s/formatVersion from %s', self.location, self.filename)
         elif self._formatVersion is not AbsentDataset:
             return self._formatVersion
         else:
@@ -2697,6 +3013,14 @@ class Snirf():
             _create_dataset_string(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         self.nirs._save(*args)
+
+    def _validate(self, result: ValidationResult):
+        name = self.location + '/formatVersion'
+        if data not in [AbsentDataset, None]:
+            result.add(name, 'REQUIRED_GROUP_MISSING')
+        else:
+            _create_dataset_string(file, name, data)
+        self.nirs._validate(*args)
 
 
     # overload

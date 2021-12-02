@@ -67,26 +67,26 @@
         if self._cfg.dynamic_loading and self._{{ CHILD.name }} is PresentDataset and '{{ CHILD.name }}' in self._h:
         {% if (TYPES.ARRAY_1D in CHILD.type) or (TYPES.ARRAY_2D in CHILD.type) %}
             {% if TYPES.VARLEN_STRING in CHILD.type %}
-                return _read_string_array(self._h['{{ CHILD.name }}'])
+            return _read_string_array(self._h['{{ CHILD.name }}'])
             {% elif TYPES.INT_VALUE in CHILD.type %}
-                return _read_int_array(self._h['{{ CHILD.name }}'])
+            return _read_int_array(self._h['{{ CHILD.name }}'])
             {% elif TYPES.FLOAT_VALUE in CHILD.type %}
-                return _read_float_array(self._h['{{ CHILD.name }}'])
+            return _read_float_array(self._h['{{ CHILD.name }}'])
             {% else %}
-                return _read_dataset(self._h['{{ CHILD.name }}'])
+            return _read_dataset(self._h['{{ CHILD.name }}'])
             {% endif %}
         {% else %}
             {% if TYPES.VARLEN_STRING in CHILD.type %}
-                return _read_string(self._h['{{ CHILD.name }}'])
+            return _read_string(self._h['{{ CHILD.name }}'])
             {% elif TYPES.INT_VALUE in CHILD.type %}
-                return _read_int(self._h['{{ CHILD.name }}'])
+            return _read_int(self._h['{{ CHILD.name }}'])
             {% elif TYPES.FLOAT_VALUE in CHILD.type %}
-                return _read_float(self._h['{{ CHILD.name }}'])
+            return _read_float(self._h['{{ CHILD.name }}'])
             {% else %}
-                return _read_dataset(self._h['{{ CHILD.name }}'])
+            return _read_dataset(self._h['{{ CHILD.name }}'])
             {% endif %}
         {% endif %}
-                self._cfg.logger.info('Dynamically loaded %s/{{ CHILD.name }} from %s', self.location, self.filename)
+            self._cfg.logger.info('Dynamically loaded %s/{{ CHILD.name }} from %s', self.location, self.filename)
         elif self._{{ CHILD.name }} is not AbsentDataset:
             return self._{{ CHILD.name }}
         else:
@@ -175,8 +175,8 @@
     {% if TYPES.INDEXED_GROUP in CHILD.type %}
         self.{{ CHILD.name }}._validate(*args)
     {% elif TYPES.GROUP in CHILD.type %}
-        name = self.location + '/{{ CHILD.name }}'
-        if self._{{ CHILD.name }} is AbsentGroup and '{{ CHILD.name }}' is not in self._h:
+        if self._{{ CHILD.name }} is AbsentGroup and '{{ CHILD.name }}' not in self._h:
+            name = self.location + '/{{ CHILD.name }}'
         {% if TYPES.REQUIRED in CHILD.type %}
             result.add(name, 'REQUIRED_GROUP_MISSING')
         {% else %}
@@ -187,6 +187,12 @@
     {% else %}
         name = self.location + '/{{ CHILD.name }}'
         if data not in [AbsentDataset, None]:
+        {% if TYPES.REQUIRED in CHILD.type %}
+            result.add(name, 'REQUIRED_GROUP_MISSING')
+        {% else %}
+            result.add(name, 'OPTIONAL_GROUP_MISSING')
+        {% endif %}
+        else:
         {% if (TYPES.ARRAY_1D in CHILD.type) or (TYPES.ARRAY_2D in CHILD.type) %}
             {% if TYPES.VARLEN_STRING in CHILD.type %}
             _create_dataset_string_array(file, name, data)
@@ -227,6 +233,7 @@ class {{ sentencecase(GROUP.name) -}}(Group):
     {{ init_members(GROUP) | indent }}
 {{ gen_properties(GROUP) }}
 {{ gen_writer(GROUP) }}
+{{ gen_validator(GROUP) }}
 
 
 {% endfor %}
@@ -240,6 +247,7 @@ class {{ sentencecase(INDEXED_GROUP.name) -}}Element(Group):
     {{ init_members(INDEXED_GROUP) | indent }}
 {{ gen_properties(INDEXED_GROUP) }}
 {{ gen_writer(INDEXED_GROUP) }}
+{{ gen_validator(INDEXED_GROUP) }}
 
 class {{ sentencecase(INDEXED_GROUP.name) -}}(IndexedGroup):
 
@@ -284,6 +292,7 @@ class Snirf():
     {{ init_members(ROOT) | indent }}
 {{ gen_properties(ROOT) }}
 {{ gen_writer(ROOT) }}
+{{ gen_validator(ROOT) }}
 
     # overload
     def save(self, path: str):

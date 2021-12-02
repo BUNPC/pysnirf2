@@ -8,6 +8,7 @@ from collections.abc import MutableSequence
 from tempfile import TemporaryFile
 import logging
 
+
 _loggers = {}
 def _create_logger(name, log_file, level=logging.INFO):
     if name in _loggers.keys():
@@ -20,6 +21,7 @@ def _create_logger(name, log_file, level=logging.INFO):
     _loggers[name] = logger
     return logger
 
+
 # Package-wide logger
 _logger = _create_logger('pysnirf2', 'pysnirf2.log')
 _logger.info('Opened pysnirf2.log')
@@ -30,9 +32,14 @@ if sys.version_info[0] < 3:
 # -- methods to cast data prior to writing to and after reading from h5py interfaces------
 
 _varlen_str_type = h5py.string_dtype(encoding='ascii', length=None)  # Length=None creates HDF5 variable length string
-_DTYPE_FLOAT = 'f8'
+_DTYPE_FLOAT32 = 'f4'
+_DTYPE_FLOAT64 = 'f8'
 _DTYPE_INT = 'i4'
-_DTYPE_STR = 'S'  # Not sure how robust this is, but fixed length strings will always at least contain S
+_DTYPE_FIXED_LEN_STR = 'S'  # Not sure how robust this is, but fixed length strings will always at least contain S
+_DTYPE_VAR_LEN_STR = 'O'  # Variable length string
+
+
+# -- Dataset creators  ---------------------------------------
 
 
 def _create_dataset(file, name, data):
@@ -42,8 +49,6 @@ def _create_dataset(file, name, data):
     saved to an HDF5 file.
 
     Returns None if input is invalid and an h5py.Dataset instance if successful.
-
-    Supported dtype str values: 'O', _DTYPE_FLOAT, _DTYPE_INT
     """
     try:
         if len(data) > 1:
@@ -76,7 +81,7 @@ def _create_dataset_int(file: h5py.File, name: str, data: int):
 
 
 def _create_dataset_float(file: h5py.File, name: str, data: float):
-    return file.create_dataset(name, dtype=_DTYPE_FLOAT, data=float(data))
+    return file.create_dataset(name, dtype=_DTYPE_FLOAT64, data=float(data))
 
 
 def _create_dataset_string_array(file: h5py.File, name: str, data: np.ndarray):
@@ -97,10 +102,10 @@ def _create_dataset_float_array(file: h5py.File, name: str, data: np.ndarray):
     array = np.array(data).astype(float)
     if data.size is 0:
         array = AbsentDataset
-    return file.create_dataset(name, dtype=_DTYPE_FLOAT, data=array)
+    return file.create_dataset(name, dtype=_DTYPE_FLOAT64, data=array)
 
 
-# -----------------------------------------
+# -- Dataset readers  ---------------------------------------
 
 
 def _read_dataset(h_dataset: h5py.Dataset):
@@ -111,21 +116,22 @@ def _read_dataset(h_dataset: h5py.Dataset):
     if type(h_dataset) is not h5py.Dataset:
         raise TypeError("'dataset' must be type h5py.Dataset")
     if h_dataset.size > 1:
-        if _DTYPE_STR in h_dataset.dtype:
+        if _DTYPE_FIXED_LEN_STR in h_dataset.dtype or _DTYPE_VAR_LEN_STR in h_dataset.dtype:
             return _read_string_array(h_dataset)
         elif _DTYPE_INT in h_dataset.dtype:
             return _read_int_array(h_dataset)
-        elif _DTYPE_FLOAT in h_dataset.dtype:
+        elif _DTYPE_FLOAT32 in h_dataset.dtype or _DTYPE_FLOAT64 in h_dataset.dtype:
             return _read_float_array(h_dataset)
     else:
-        if _DTYPE_STR in h_dataset.dtype:
+        if _DTYPE_FIXED_LEN_STR in h_dataset.dtype or _DTYPE_VAR_LEN_STR in h_dataset.dtype:
             return _read_string(h_dataset)
         elif _DTYPE_INT in h_dataset.dtype:
             return _read_int(h_dataset)
-        elif _DTYPE_FLOAT in h_dataset.dtype:
+        elif _DTYPE_FLOAT32 in h_dataset.dtype or _DTYPE_FLOAT64 in h_dataset.dtype:
             return _read_float(h_dataset)
     raise TypeError("Dataset dtype='" + str(h_dataset.dtype)
-    + "' not recognized. Expecting dtype to contain one of these: " + str([_DTYPE_STR, _DTYPE_INT, _DTYPE_FLOAT]))
+                    + "' not recognized. Expecting dtype to contain one of these: "
+                    + str([_DTYPE_FIXED_LEN_STR, _DTYPE_VAR_LEN_STR, _DTYPE_INT, _DTYPE_FLOAT32, _DTYPE_FLOAT64]))
 
 
 def _read_string(dataset: h5py.Dataset):
@@ -204,6 +210,7 @@ class ValidationResultCodes:
             'UNRECOGNIZED_DATATYPELABEL': (0 << 1, 2, 'dataTypeLabel is not one of the recognized values listed in the Appendix'),
             'UNRECOGNIZED_DATATYPE': (0 << 1, 2, 'dataType is not one of the recognized values listed in the Appendix'),
             'INDEX_OF_ZERO': (0 << 1, 2, 'index of zero is usually undefined'),
+            'FIXED_LENGTH_STRING': (0 << 1, 2, 'Strings of fixed length are '),
             # Info (Severity 3)
             'OPTIONAL_GROUP_MISSING': (0 << 1, 3, 'OK (missing optional group)'),
             }
@@ -214,6 +221,56 @@ class ValidationResultCodes:
     def keys(self):
         return self._codes.keys()
 
+
+# -- Validation functions ---------------------------------------
+
+
+def _validate_string(dataset: h5py.Dataset):
+    # Because many SNIRF files are saved with string values in length 1 arrays
+    if type(dataset) is not h5py.Dataset:
+        raise TypeError("'dataset' must be type h5py.Dataset")
+    if dataset.ndim > 0:
+        return str(dataset[0].decode('ascii'))
+    else:
+        return str(dataset[()].decode('ascii'))
+
+
+def _validate_int(dataset: h5py.Dataset):
+    # Because many SNIRF files are saved with string values in length 1 arrays
+    if type(dataset) is not h5py.Dataset:
+        raise TypeError("'dataset' must be type h5py.Dataset")
+    if dataset.ndim > 0:
+        return int(dataset[0])
+    else:
+        return int(dataset[()])
+
+
+def _validate_float(dataset: h5py.Dataset):
+    # Because many SNIRF files are saved with string values in length 1 arrays
+    if type(dataset) is not h5py.Dataset:
+        raise TypeError("'dataset' must be type h5py.Dataset")
+    if dataset.ndim > 0:
+        return float(dataset[0])
+    else:
+        return float(dataset[()])
+
+
+def _validate_string_array(dataset: h5py.Dataset, ndim: int):
+    if type(dataset) is not h5py.Dataset:
+        raise TypeError("'dataset' must be type h5py.Dataset")
+    return np.array(dataset).astype(str)
+
+
+def _validate_int_array(dataset: h5py.Dataset, ndim: int):
+    if type(dataset) is not h5py.Dataset:
+        raise TypeError("'dataset' must be type h5py.Dataset")
+    return np.array(dataset).astype(int)
+
+
+def _validate_float_array(dataset: h5py.Dataset, ndim: int):
+    if type(dataset) is not h5py.Dataset:
+        raise TypeError("'dataset' must be type h5py.Dataset")
+    return np.array(dataset).astype(float)
 
 
 class ValidationResult:
@@ -326,7 +383,7 @@ class Group(ABC):
                 file = self._h.file
             self._cfg.logger.info('Group-level save of %s in %s', self.location, file)
             self._save(file)
-            
+
     @property
     def filename(self):
         """
@@ -408,7 +465,7 @@ class IndexedGroup(MutableSequence, ABC):
         denotes the first sub-group of data element name, and /.../name2
         denotes the 2nd element, and so on.
     """
-    
+
     _name: str = ''  # The specified prefix to this indexed group's members, i.e. nirs, data, stim, aux, measurementList
     _element: Group = None  # The type of Group which belongs to this IndexedGroup
 
@@ -422,7 +479,7 @@ class IndexedGroup(MutableSequence, ABC):
         self._populate_list()
         self._cfg.logger.info('IndexedGroup %s at %s in %s initalized with %i instances of %s', self.__class__.__name__,
                               self._parent.location, self.filename, len(self._list), self._element)
-    
+
     @property
     def filename(self):
         return self._parent.filename
@@ -432,7 +489,7 @@ class IndexedGroup(MutableSequence, ABC):
     def __getitem__(self, i): return self._list[i]
 
     def __delitem__(self, i): del self._list[i]
-    
+
     def __setitem__(self, i, item):
         self._check_type(item)
         if not item.location in [e.location for e in self._list]:
@@ -502,7 +559,7 @@ class IndexedGroup(MutableSequence, ABC):
         self._list.append(self._element(location, self._cfg))
         self._cfg.logger.info('%i th %s appended to IndexedGroup %s at %s in %s', len(self._list),
                           self._element, self.__class__.__name__, self._parent.location, self.filename)
-    
+
     def _populate_list(self):
         """
         Add all the appropriate groups in parent to the list
@@ -512,14 +569,14 @@ class IndexedGroup(MutableSequence, ABC):
         for name in names:
             if name in self._parent._h:
                 self._list.append(self._element(self._parent._h[name].id, self._cfg))
-    
+
     def _check_type(self, item):
         if type(item) is not self._element:
             raise TypeError('elements of ' + str(self.__class__.__name__) +
                             ' must be ' + str(self._element) + ', not ' +
                             str(type(item))
                             )
-        
+
     def _order_names(self, h=None):
         '''
         Enforce the format of the names of HDF5 groups within a group or file on disk. i.e. IndexedGroup stim's elements
