@@ -32,10 +32,11 @@ if sys.version_info[0] < 3:
 # -- methods to cast data prior to writing to and after reading from h5py interfaces------
 
 _varlen_str_type = h5py.string_dtype(encoding='ascii', length=None)  # Length=None creates HDF5 variable length string
-_DTYPE_FLOAT = 'f8'
+_DTYPE_FLOAT32 = 'f4'
+_DTYPE_FLOAT64 = 'f8'
 _DTYPE_INT = 'i4'
 _DTYPE_FIXED_LEN_STR = 'S'  # Not sure how robust this is, but fixed length strings will always at least contain S
-_DTYPE_VAR_LEN_STR = 'S'  # Not sure how robust this is, but fixed length strings will always at least contain S
+_DTYPE_VAR_LEN_STR = 'O'  # Variable length string
 
 
 # -- Dataset creators  ---------------------------------------
@@ -48,8 +49,6 @@ def _create_dataset(file, name, data):
     saved to an HDF5 file.
 
     Returns None if input is invalid and an h5py.Dataset instance if successful.
-
-    Supported dtype str values: 'O', _DTYPE_FLOAT, _DTYPE_INT
     """
     try:
         if len(data) > 1:
@@ -82,7 +81,7 @@ def _create_dataset_int(file: h5py.File, name: str, data: int):
 
 
 def _create_dataset_float(file: h5py.File, name: str, data: float):
-    return file.create_dataset(name, dtype=_DTYPE_FLOAT, data=float(data))
+    return file.create_dataset(name, dtype=_DTYPE_FLOAT64, data=float(data))
 
 
 def _create_dataset_string_array(file: h5py.File, name: str, data: np.ndarray):
@@ -103,7 +102,7 @@ def _create_dataset_float_array(file: h5py.File, name: str, data: np.ndarray):
     array = np.array(data).astype(float)
     if data.size is 0:
         array = AbsentDataset
-    return file.create_dataset(name, dtype=_DTYPE_FLOAT, data=array)
+    return file.create_dataset(name, dtype=_DTYPE_FLOAT64, data=array)
 
 
 # -- Dataset readers  ---------------------------------------
@@ -121,18 +120,18 @@ def _read_dataset(h_dataset: h5py.Dataset):
             return _read_string_array(h_dataset)
         elif _DTYPE_INT in h_dataset.dtype:
             return _read_int_array(h_dataset)
-        elif _DTYPE_FLOAT in h_dataset.dtype:
+        elif _DTYPE_FLOAT32 in h_dataset.dtype or _DTYPE_FLOAT64 in h_dataset.dtype:
             return _read_float_array(h_dataset)
     else:
         if _DTYPE_FIXED_LEN_STR in h_dataset.dtype or _DTYPE_VAR_LEN_STR in h_dataset.dtype:
             return _read_string(h_dataset)
         elif _DTYPE_INT in h_dataset.dtype:
             return _read_int(h_dataset)
-        elif _DTYPE_FLOAT in h_dataset.dtype:
+        elif _DTYPE_FLOAT32 in h_dataset.dtype or _DTYPE_FLOAT64 in h_dataset.dtype:
             return _read_float(h_dataset)
     raise TypeError("Dataset dtype='" + str(h_dataset.dtype)
                     + "' not recognized. Expecting dtype to contain one of these: "
-                    + str([_DTYPE_FIXED_LEN_STR, _DTYPE_VAR_LEN_STR, _DTYPE_INT, _DTYPE_FLOAT]))
+                    + str([_DTYPE_FIXED_LEN_STR, _DTYPE_VAR_LEN_STR, _DTYPE_INT, _DTYPE_FLOAT32, _DTYPE_FLOAT64]))
 
 
 def _read_string(dataset: h5py.Dataset):
@@ -256,19 +255,19 @@ def _validate_float(dataset: h5py.Dataset):
         return float(dataset[()])
 
 
-def _validate_string_array(dataset: h5py.Dataset):
+def _validate_string_array(dataset: h5py.Dataset, ndim: int):
     if type(dataset) is not h5py.Dataset:
         raise TypeError("'dataset' must be type h5py.Dataset")
     return np.array(dataset).astype(str)
 
 
-def _validate_int_array(dataset: h5py.Dataset):
+def _validate_int_array(dataset: h5py.Dataset, ndim: int):
     if type(dataset) is not h5py.Dataset:
         raise TypeError("'dataset' must be type h5py.Dataset")
     return np.array(dataset).astype(int)
 
 
-def _validate_float_array(dataset: h5py.Dataset):
+def _validate_float_array(dataset: h5py.Dataset, ndim: int):
     if type(dataset) is not h5py.Dataset:
         raise TypeError("'dataset' must be type h5py.Dataset")
     return np.array(dataset).astype(float)
@@ -2910,14 +2909,15 @@ class Aux(IndexedGroup):
         super().__init__(h, cfg)
 
 
-class Snirf():
+class Snirf(Group):
     
     _name = '/'
     _formatVersion = AbsentDataset  # "s"*
     _nirs = AbsentDataset  # {i}*
     _snirfnames = ['formatVersion', 'nirs', ]
 
-
+    
+    # overload
     def __init__(self, *args, dynamic_loading: bool = False, logfile: bool = False):
         self._cfg = SnirfConfig()
         self._cfg.dynamic_loading = dynamic_loading
@@ -3024,9 +3024,6 @@ class Snirf():
 
 
     # overload
-    def save(self, path: str):
-        ...
-
     def save(self, *args):
         '''
         Save changes you have made to the Snirf object to disk. If a filepath is supplied, the changes will be
@@ -3043,23 +3040,12 @@ class Snirf():
         else:
             self._save(self._h.file)
 
-    @property
-    def filename(self):
-        return self._h.filename
-
-    @property
-    def location(self):
-        return self._h.name
-
     def close(self):
         self._cfg.logger.info('Closing Snirf file %s', self.filename)
         self._h.close()
 
     def __enter__(self):
         return self
-
-#    def __exit__(self):
-#        self.close()
 
 #    def __del__(self):
 #        self.close()
@@ -3070,29 +3056,6 @@ class Snirf():
                 return self._h[key]
         else:
             return None
-
-    def __contains__(self, key):
-        return key in self._h;
-
-    def __repr__(self):
-        props = [p for p in dir(self) if ('_' not in p and not callable(getattr(self, p)))]
-        out = str(self.__class__.__name__) + ' at /' + '\n'
-        for prop in props:
-            attr = getattr(self, prop)
-            out += prop + ': '
-            if type(attr) is np.ndarray or type(attr) is list:
-                if np.size(attr) > 32:
-                    out += '<' + str(np.shape(attr)) + ' array of ' + str(attr.dtype) + '>'
-                else:
-                    out += str(attr)
-            else:
-                prepr = str(attr)
-                if len(prepr) < 64:
-                    out += prepr
-                else:
-                    out += '\n' + prepr
-            out += '\n'
-        return out[:-1]
 
 # Extend metaDataTags to support loading and saving of unspecified datasets
 

@@ -259,11 +259,12 @@ class {{ sentencecase(INDEXED_GROUP.name) -}}(IndexedGroup):
 
 
 {% endfor %}
-class Snirf():
+class Snirf(Group):
     
     _name = '/'
 {{ declare_members(ROOT) }}
-
+    
+    # overload
     def __init__(self, *args, dynamic_loading: bool = False, logfile: bool = False):
         self._cfg = SnirfConfig()
         self._cfg.dynamic_loading = dynamic_loading
@@ -295,9 +296,6 @@ class Snirf():
 {{ gen_validator(ROOT) }}
 
     # overload
-    def save(self, path: str):
-        ...
-
     def save(self, *args):
         '''
         Save changes you have made to the Snirf object to disk. If a filepath is supplied, the changes will be
@@ -314,23 +312,12 @@ class Snirf():
         else:
             self._save(self._h.file)
 
-    @property
-    def filename(self):
-        return self._h.filename
-
-    @property
-    def location(self):
-        return self._h.name
-
     def close(self):
         self._cfg.logger.info('Closing Snirf file %s', self.filename)
         self._h.close()
 
     def __enter__(self):
         return self
-
-#    def __exit__(self):
-#        self.close()
 
 #    def __del__(self):
 #        self.close()
@@ -341,28 +328,5 @@ class Snirf():
                 return self._h[key]
         else:
             return None
-
-    def __contains__(self, key):
-        return key in self._h;
-
-    def __repr__(self):
-        props = [p for p in dir(self) if ('_' not in p and not callable(getattr(self, p)))]
-        out = str(self.__class__.__name__) + ' at /' + '\n'
-        for prop in props:
-            attr = getattr(self, prop)
-            out += prop + ': '
-            if type(attr) is np.ndarray or type(attr) is list:
-                if np.size(attr) > 32:
-                    out += '<' + str(np.shape(attr)) + ' array of ' + str(attr.dtype) + '>'
-                else:
-                    out += str(attr)
-            else:
-                prepr = str(attr)
-                if len(prepr) < 64:
-                    out += prepr
-                else:
-                    out += '\n' + prepr
-            out += '\n'
-        return out[:-1]
 
 {{ FOOTER }}
