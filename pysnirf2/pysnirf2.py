@@ -182,31 +182,33 @@ def _read_float_array(dataset: h5py.Dataset):
 
 # -- Validation types ---------------------------------------
 
+SEVERITY_OK = 0
+SEVERITY_INFO = 1
+SEVERITY_WARNING = 2
+SEVERITY_ERROR = 3
 
 class ValidationResult:
 
     _locations = {}  # HDF locations associated with errors or an additional validation result
     _codes = {
-            # OK (Severity 0)
-            'OK': (0 << 1, 0, 'OK'),
             # Errors (Severity 1)
-            'INVALID_FILE_NAME': (0 << 1, 1, 'Valid SNIRF files must end with .snirf'),
-            'INVALID_FILE': (0 << 1, 1, 'The file could not be opened'),
-            'REQUIRED_DATASET_MISSING': (0 << 1, 1, 'A required dataset is missing from the file'),
-            'REQUIRED_GROUP_MISSING': (0 << 1, 1, 'A required Group is missing from the file'),
-            'INVALID_DATASET_TYPE': (0 << 1, 1, 'An HDF5 Dataset is not stored in the specified format'),
-            'INVALID_DATASET_SHAPE': (0 << 1, 1, 'An HDF5 Dataset is not stored in the specified shape. Strings and scalars should never be stored as arrays of length 1.'),
-            'INVALID_MEASUREMENTLIST': (0 << 1, 1, 'The number of measurementList elements does not match the second dimension of dataTimeSeries'),
-            'INVALID_TIME': (0 << 1, 1, 'The length of the data/time vector does not match the first dimension of data/dataTimeSeries'),
-            'INVALID_INDEX': (0 << 1, 1, 'An index is negative'),
-            'INVALID_SOURCE_INDEX': (0 << 1, 1, 'measurementList/sourceIndex exceeds probe/sourceLabels'),
-            'INVALID_DETECTOR_INDEX': (0 << 1, 1, 'measurementList/detectorIndex exceeds probe/detectorLabels'),
-            'INVALID_PROBE_LABEL': (0 << 1, 1, 'a duplicate sourceLabel or detectorLabel appears'),
-            'INVALID_WAVELENGTH_INDEX': (0 << 1, 1, 'measurementList/waveLengthIndex exceeds probe/wavelengths, probe/wavelengthsEmission, or probe/sourceLabels'),
-            'INVALID_DATATYPE_INDEX': (0 << 1, 1, 'measurementList/dataTypeIndex exceeds probe/frequencies, probe/timeDelays, probe/timeDelayWidths, probe/momentOrders, probe/correlationTimeDelayWidths or probe/correlationTimeDelays'),
-            'INVALID_PROBE_MODULE_INDEX': (0 << 1, 1, 'sourceModuleIndex and detectorModuleIndex are used along with moduleIndex'),
-    #            'INVALID_LANDMARKPOS': (0 << 1, 1, 'A value in the last column of landmarkPos2D or landmarkPos3D exceeds the length of'),
-            'INVALID_STIM_DATALABELS': (0 << 1, 1, 'The length of stim/dataLabels exceeds the columns of stim/data'),
+            'INVALID_FILE_NAME': (0 << 1, 3, 'Valid SNIRF files must end with .snirf'),
+            'INVALID_FILE': (0 << 1, 3, 'The file could not be opened'),
+            'REQUIRED_DATASET_MISSING': (0 << 1, 3, 'A required dataset is missing from the file'),
+            'REQUIRED_GROUP_MISSING': (0 << 1, 3, 'A required Group is missing from the file'),
+            'INVALID_DATASET_TYPE': (0 << 1, 3, 'An HDF5 Dataset is not stored in the specified format'),
+            'INVALID_DATASET_SHAPE': (0 << 1, 3, 'An HDF5 Dataset is not stored in the specified shape. Strings and scalars should never be stored as arrays of length 1.'),
+            'INVALID_MEASUREMENTLIST': (0 << 1, 3, 'The number of measurementList elements does not match the second dimension of dataTimeSeries'),
+            'INVALID_TIME': (0 << 1, 3, 'The length of the data/time vector does not match the first dimension of data/dataTimeSeries'),
+            'INVALID_INDEX': (0 << 1, 3, 'An index is negative'),
+            'INVALID_SOURCE_INDEX': (0 << 1, 3, 'measurementList/sourceIndex exceeds probe/sourceLabels'),
+            'INVALID_DETECTOR_INDEX': (0 << 1, 3, 'measurementList/detectorIndex exceeds probe/detectorLabels'),
+            'INVALID_PROBE_LABEL': (0 << 1, 3, 'a duplicate sourceLabel or detectorLabel appears'),
+            'INVALID_WAVELENGTH_INDEX': (0 << 1, 3, 'measurementList/waveLengthIndex exceeds probe/wavelengths, probe/wavelengthsEmission, or probe/sourceLabels'),
+            'INVALID_DATATYPE_INDEX': (0 << 1, 3, 'measurementList/dataTypeIndex exceeds probe/frequencies, probe/timeDelays, probe/timeDelayWidths, probe/momentOrders, probe/correlationTimeDelayWidths or probe/correlationTimeDelays'),
+            'INVALID_PROBE_MODULE_INDEX': (0 << 1, 3, 'sourceModuleIndex and detectorModuleIndex are used along with moduleIndex'),
+    #            'INVALID_LANDMARKPOS': (0 << 1, 3, 'A value in the last column of landmarkPos2D or landmarkPos3D exceeds the length of'),
+            'INVALID_STIM_DATALABELS': (0 << 1, 3, 'The length of stim/dataLabels exceeds the columns of stim/data'),
             # Warnings (Severity 2)
             'UNRECOGNIZED_GROUP_NAME': (0 << 1, 2, 'An unspecified Group is a part of the file'),
             'UNRECOGNIZED_DATASET_NAME': (0 << 1, 2, 'An unspecified Dataset is a part of the file in an unexpected place'),
@@ -214,33 +216,33 @@ class ValidationResult:
             'UNRECOGNIZED_DATATYPE': (0 << 1, 2, 'measurementList/dataType is not one of the recognized values listed in the Appendix'),
             'INDEX_OF_ZERO': (0 << 1, 2, 'An index of zero is usually undefined'),
             'FIXED_LENGTH_STRING': (0 << 1, 2, 'The use of fixed-length strings is discouraged and may be banned by a future spec version. Rewrite this file with pysnirf2 to use variable length strings'),
-            # Info (Severity 3)
-            'OPTIONAL_GROUP_MISSING': (0 << 1, 3, 'OK (missing optional group)'),
+            # Info (Severity 1)
+            'OPTIONAL_GROUP_MISSING': (0 << 1, 1, 'OK (missing optional Group)'),
+            'OPTIONAL_DATASET_MISSING': (0 << 1, 1, 'OK (missing optional Dataset)'),
+            # OK (Severity 0)
+            'OK': (0 << 1, 0, 'OK'),
             }
 
     def is_valid(self):
-        """
-        :return: True if the file is valid
-        """
-        return False
+        return not any([severity[1][1] > 1 for severity in self._locations.values()])
 
     def add(self, location, key):
         if key not in self._codes.keys():
             raise KeyError("Invalid code '" + key + "'")
         # Locations is nested tuple (code, (id, level, msg))
         self._locations[location] = (key, self._codes[key])
+        print('\n', location, key, self._codes[key][0])
+        
+    def display(self, severity=1):
+        longest_key = max([len(key) for key in self._locations.keys()])
+        for key in self._locations:
+            if self._locations[key][1][1] >= severity:
+                print(key.ljust(longest_key) + '   ' + self._locations[key][0])
         
     def __repr__(self):
-        s = ''
-        for key in self._locations:
-            if self._locations[key][1][1] > 0:  # If not OK
-                print(self._locations[key])
-                s += key + ':  ' + self._locations[key][0] + '\n'  # location: code
-        return s
+        return object.__repr__(self) + ' is_valid ' + str(self.is_valid()) 
         
     
-
-
 # -- Validation functions ---------------------------------------
 
 
@@ -928,7 +930,8 @@ class MetaDataTags(Group):
     def _validate(self, result: ValidationResult):
         name = self.location + '/SubjectID'
         if type(self._SubjectID) in [type(AbsentDataset), type(None)] and 'SubjectID' not in self._h:
-            result.add(name, 'REQUIRED_GROUP_MISSING')
+            result.add(name, 'REQUIRED_DATASET_MISSING')
+            print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
@@ -936,10 +939,12 @@ class MetaDataTags(Group):
                 dataset = _create_dataset_string(tmp, 'SubjectID', self._SubjectID)
             else:
                 dataset = self._h['SubjectID']
-            result.add(name, _validate_string_array(dataset, ndims=[2]))
+            result.add(name, _validate_string(dataset))
+            print(dataset)
         name = self.location + '/MeasurementDate'
         if type(self._MeasurementDate) in [type(AbsentDataset), type(None)] and 'MeasurementDate' not in self._h:
-            result.add(name, 'REQUIRED_GROUP_MISSING')
+            result.add(name, 'REQUIRED_DATASET_MISSING')
+            print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
@@ -947,10 +952,12 @@ class MetaDataTags(Group):
                 dataset = _create_dataset_string(tmp, 'MeasurementDate', self._MeasurementDate)
             else:
                 dataset = self._h['MeasurementDate']
-            result.add(name, _validate_string_array(dataset, ndims=[2]))
+            result.add(name, _validate_string(dataset))
+            print(dataset)
         name = self.location + '/MeasurementTime'
         if type(self._MeasurementTime) in [type(AbsentDataset), type(None)] and 'MeasurementTime' not in self._h:
-            result.add(name, 'REQUIRED_GROUP_MISSING')
+            result.add(name, 'REQUIRED_DATASET_MISSING')
+            print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
@@ -958,10 +965,12 @@ class MetaDataTags(Group):
                 dataset = _create_dataset_string(tmp, 'MeasurementTime', self._MeasurementTime)
             else:
                 dataset = self._h['MeasurementTime']
-            result.add(name, _validate_string_array(dataset, ndims=[2]))
+            result.add(name, _validate_string(dataset))
+            print(dataset)
         name = self.location + '/LengthUnit'
         if type(self._LengthUnit) in [type(AbsentDataset), type(None)] and 'LengthUnit' not in self._h:
-            result.add(name, 'REQUIRED_GROUP_MISSING')
+            result.add(name, 'REQUIRED_DATASET_MISSING')
+            print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
@@ -969,10 +978,12 @@ class MetaDataTags(Group):
                 dataset = _create_dataset_string(tmp, 'LengthUnit', self._LengthUnit)
             else:
                 dataset = self._h['LengthUnit']
-            result.add(name, _validate_string_array(dataset, ndims=[2]))
+            result.add(name, _validate_string(dataset))
+            print(dataset)
         name = self.location + '/TimeUnit'
         if type(self._TimeUnit) in [type(AbsentDataset), type(None)] and 'TimeUnit' not in self._h:
-            result.add(name, 'REQUIRED_GROUP_MISSING')
+            result.add(name, 'REQUIRED_DATASET_MISSING')
+            print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
@@ -980,10 +991,12 @@ class MetaDataTags(Group):
                 dataset = _create_dataset_string(tmp, 'TimeUnit', self._TimeUnit)
             else:
                 dataset = self._h['TimeUnit']
-            result.add(name, _validate_string_array(dataset, ndims=[2]))
+            result.add(name, _validate_string(dataset))
+            print(dataset)
         name = self.location + '/FrequencyUnit'
         if type(self._FrequencyUnit) in [type(AbsentDataset), type(None)] and 'FrequencyUnit' not in self._h:
-            result.add(name, 'REQUIRED_GROUP_MISSING')
+            result.add(name, 'REQUIRED_DATASET_MISSING')
+            print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
@@ -991,7 +1004,8 @@ class MetaDataTags(Group):
                 dataset = _create_dataset_string(tmp, 'FrequencyUnit', self._FrequencyUnit)
             else:
                 dataset = self._h['FrequencyUnit']
-            result.add(name, _validate_string_array(dataset, ndims=[2]))
+            result.add(name, _validate_string(dataset))
+            print(dataset)
 
 
 
@@ -1639,7 +1653,8 @@ class Probe(Group):
     def _validate(self, result: ValidationResult):
         name = self.location + '/wavelengths'
         if type(self._wavelengths) in [type(AbsentDataset), type(None)] and 'wavelengths' not in self._h:
-            result.add(name, 'REQUIRED_GROUP_MISSING')
+            result.add(name, 'REQUIRED_DATASET_MISSING')
+            print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
@@ -1648,9 +1663,11 @@ class Probe(Group):
             else:
                 dataset = self._h['wavelengths']
             result.add(name, _validate_float_array(dataset, ndims=[1]))
+            print(dataset)
         name = self.location + '/wavelengthsEmission'
         if type(self._wavelengthsEmission) in [type(AbsentDataset), type(None)] and 'wavelengthsEmission' not in self._h:
-            result.add(name, 'OPTIONAL_GROUP_MISSING')
+            result.add(name, 'OPTIONAL_DATASET_MISSING')
+            print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
@@ -1659,9 +1676,11 @@ class Probe(Group):
             else:
                 dataset = self._h['wavelengthsEmission']
             result.add(name, _validate_float_array(dataset, ndims=[1]))
+            print(dataset)
         name = self.location + '/sourcePos2D'
         if type(self._sourcePos2D) in [type(AbsentDataset), type(None)] and 'sourcePos2D' not in self._h:
-            result.add(name, 'REQUIRED_GROUP_MISSING')
+            result.add(name, 'REQUIRED_DATASET_MISSING')
+            print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
@@ -1669,10 +1688,12 @@ class Probe(Group):
                 dataset = _create_dataset_float_array(tmp, 'sourcePos2D', self._sourcePos2D)
             else:
                 dataset = self._h['sourcePos2D']
-            result.add(name, _validate_float_array(dataset, ndims=[1]))
+            result.add(name, _validate_float_array(dataset, ndims=[2]))
+            print(dataset)
         name = self.location + '/sourcePos3D'
         if type(self._sourcePos3D) in [type(AbsentDataset), type(None)] and 'sourcePos3D' not in self._h:
-            result.add(name, 'REQUIRED_GROUP_MISSING')
+            result.add(name, 'REQUIRED_DATASET_MISSING')
+            print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
@@ -1680,10 +1701,12 @@ class Probe(Group):
                 dataset = _create_dataset_float_array(tmp, 'sourcePos3D', self._sourcePos3D)
             else:
                 dataset = self._h['sourcePos3D']
-            result.add(name, _validate_float_array(dataset, ndims=[1]))
+            result.add(name, _validate_float_array(dataset, ndims=[2]))
+            print(dataset)
         name = self.location + '/detectorPos2D'
         if type(self._detectorPos2D) in [type(AbsentDataset), type(None)] and 'detectorPos2D' not in self._h:
-            result.add(name, 'REQUIRED_GROUP_MISSING')
+            result.add(name, 'REQUIRED_DATASET_MISSING')
+            print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
@@ -1691,10 +1714,12 @@ class Probe(Group):
                 dataset = _create_dataset_float_array(tmp, 'detectorPos2D', self._detectorPos2D)
             else:
                 dataset = self._h['detectorPos2D']
-            result.add(name, _validate_float_array(dataset, ndims=[1]))
+            result.add(name, _validate_float_array(dataset, ndims=[2]))
+            print(dataset)
         name = self.location + '/detectorPos3D'
         if type(self._detectorPos3D) in [type(AbsentDataset), type(None)] and 'detectorPos3D' not in self._h:
-            result.add(name, 'REQUIRED_GROUP_MISSING')
+            result.add(name, 'REQUIRED_DATASET_MISSING')
+            print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
@@ -1702,10 +1727,12 @@ class Probe(Group):
                 dataset = _create_dataset_float_array(tmp, 'detectorPos3D', self._detectorPos3D)
             else:
                 dataset = self._h['detectorPos3D']
-            result.add(name, _validate_float_array(dataset, ndims=[1]))
+            result.add(name, _validate_float_array(dataset, ndims=[2]))
+            print(dataset)
         name = self.location + '/frequencies'
         if type(self._frequencies) in [type(AbsentDataset), type(None)] and 'frequencies' not in self._h:
-            result.add(name, 'OPTIONAL_GROUP_MISSING')
+            result.add(name, 'OPTIONAL_DATASET_MISSING')
+            print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
@@ -1714,9 +1741,11 @@ class Probe(Group):
             else:
                 dataset = self._h['frequencies']
             result.add(name, _validate_float_array(dataset, ndims=[1]))
+            print(dataset)
         name = self.location + '/timeDelays'
         if type(self._timeDelays) in [type(AbsentDataset), type(None)] and 'timeDelays' not in self._h:
-            result.add(name, 'OPTIONAL_GROUP_MISSING')
+            result.add(name, 'OPTIONAL_DATASET_MISSING')
+            print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
@@ -1725,9 +1754,11 @@ class Probe(Group):
             else:
                 dataset = self._h['timeDelays']
             result.add(name, _validate_float_array(dataset, ndims=[1]))
+            print(dataset)
         name = self.location + '/timeDelayWidths'
         if type(self._timeDelayWidths) in [type(AbsentDataset), type(None)] and 'timeDelayWidths' not in self._h:
-            result.add(name, 'OPTIONAL_GROUP_MISSING')
+            result.add(name, 'OPTIONAL_DATASET_MISSING')
+            print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
@@ -1736,9 +1767,11 @@ class Probe(Group):
             else:
                 dataset = self._h['timeDelayWidths']
             result.add(name, _validate_float_array(dataset, ndims=[1]))
+            print(dataset)
         name = self.location + '/momentOrders'
         if type(self._momentOrders) in [type(AbsentDataset), type(None)] and 'momentOrders' not in self._h:
-            result.add(name, 'OPTIONAL_GROUP_MISSING')
+            result.add(name, 'OPTIONAL_DATASET_MISSING')
+            print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
@@ -1747,9 +1780,11 @@ class Probe(Group):
             else:
                 dataset = self._h['momentOrders']
             result.add(name, _validate_float_array(dataset, ndims=[1]))
+            print(dataset)
         name = self.location + '/correlationTimeDelays'
         if type(self._correlationTimeDelays) in [type(AbsentDataset), type(None)] and 'correlationTimeDelays' not in self._h:
-            result.add(name, 'OPTIONAL_GROUP_MISSING')
+            result.add(name, 'OPTIONAL_DATASET_MISSING')
+            print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
@@ -1758,9 +1793,11 @@ class Probe(Group):
             else:
                 dataset = self._h['correlationTimeDelays']
             result.add(name, _validate_float_array(dataset, ndims=[1]))
+            print(dataset)
         name = self.location + '/correlationTimeDelayWidths'
         if type(self._correlationTimeDelayWidths) in [type(AbsentDataset), type(None)] and 'correlationTimeDelayWidths' not in self._h:
-            result.add(name, 'OPTIONAL_GROUP_MISSING')
+            result.add(name, 'OPTIONAL_DATASET_MISSING')
+            print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
@@ -1769,9 +1806,11 @@ class Probe(Group):
             else:
                 dataset = self._h['correlationTimeDelayWidths']
             result.add(name, _validate_float_array(dataset, ndims=[1]))
+            print(dataset)
         name = self.location + '/sourceLabels'
         if type(self._sourceLabels) in [type(AbsentDataset), type(None)] and 'sourceLabels' not in self._h:
-            result.add(name, 'OPTIONAL_GROUP_MISSING')
+            result.add(name, 'OPTIONAL_DATASET_MISSING')
+            print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
@@ -1780,9 +1819,11 @@ class Probe(Group):
             else:
                 dataset = self._h['sourceLabels']
             result.add(name, _validate_string_array(dataset, ndims=[1]))
+            print(dataset)
         name = self.location + '/detectorLabels'
         if type(self._detectorLabels) in [type(AbsentDataset), type(None)] and 'detectorLabels' not in self._h:
-            result.add(name, 'OPTIONAL_GROUP_MISSING')
+            result.add(name, 'OPTIONAL_DATASET_MISSING')
+            print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
@@ -1791,9 +1832,11 @@ class Probe(Group):
             else:
                 dataset = self._h['detectorLabels']
             result.add(name, _validate_string_array(dataset, ndims=[1]))
+            print(dataset)
         name = self.location + '/landmarkPos2D'
         if type(self._landmarkPos2D) in [type(AbsentDataset), type(None)] and 'landmarkPos2D' not in self._h:
-            result.add(name, 'OPTIONAL_GROUP_MISSING')
+            result.add(name, 'OPTIONAL_DATASET_MISSING')
+            print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
@@ -1801,10 +1844,12 @@ class Probe(Group):
                 dataset = _create_dataset_float_array(tmp, 'landmarkPos2D', self._landmarkPos2D)
             else:
                 dataset = self._h['landmarkPos2D']
-            result.add(name, _validate_float_array(dataset, ndims=[1]))
+            result.add(name, _validate_float_array(dataset, ndims=[2]))
+            print(dataset)
         name = self.location + '/landmarkPos3D'
         if type(self._landmarkPos3D) in [type(AbsentDataset), type(None)] and 'landmarkPos3D' not in self._h:
-            result.add(name, 'OPTIONAL_GROUP_MISSING')
+            result.add(name, 'OPTIONAL_DATASET_MISSING')
+            print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
@@ -1812,10 +1857,12 @@ class Probe(Group):
                 dataset = _create_dataset_float_array(tmp, 'landmarkPos3D', self._landmarkPos3D)
             else:
                 dataset = self._h['landmarkPos3D']
-            result.add(name, _validate_float_array(dataset, ndims=[1]))
+            result.add(name, _validate_float_array(dataset, ndims=[2]))
+            print(dataset)
         name = self.location + '/landmarkLabels'
         if type(self._landmarkLabels) in [type(AbsentDataset), type(None)] and 'landmarkLabels' not in self._h:
-            result.add(name, 'OPTIONAL_GROUP_MISSING')
+            result.add(name, 'OPTIONAL_DATASET_MISSING')
+            print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
@@ -1824,9 +1871,11 @@ class Probe(Group):
             else:
                 dataset = self._h['landmarkLabels']
             result.add(name, _validate_string_array(dataset, ndims=[1]))
+            print(dataset)
         name = self.location + '/useLocalIndex'
         if type(self._useLocalIndex) in [type(AbsentDataset), type(None)] and 'useLocalIndex' not in self._h:
-            result.add(name, 'OPTIONAL_GROUP_MISSING')
+            result.add(name, 'OPTIONAL_DATASET_MISSING')
+            print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
@@ -1834,7 +1883,8 @@ class Probe(Group):
                 dataset = _create_dataset_int(tmp, 'useLocalIndex', self._useLocalIndex)
             else:
                 dataset = self._h['useLocalIndex']
-            result.add(name, _validate_int_array(dataset, ndims=[2]))
+            result.add(name, _validate_int(dataset))
+            print(dataset)
 
 
 
@@ -1969,18 +2019,23 @@ class NirsElement(Group):
         self.aux._save(*args)
 
     def _validate(self, result: ValidationResult):
+        name = self.location + '/metaDataTags'
         if type(self._metaDataTags) is type(AbsentGroup) and 'metaDataTags' not in self._h:
-            name = self.location + '/metaDataTags'
             result.add(name, 'REQUIRED_GROUP_MISSING')
+            print(name, 'not found')
         else:
             self.metaDataTags._validate(result)
+        name = self.location + '/data'
         self.data._validate(result)
+        name = self.location + '/stim'
         self.stim._validate(result)
+        name = self.location + '/probe'
         if type(self._probe) is type(AbsentGroup) and 'probe' not in self._h:
-            name = self.location + '/probe'
             result.add(name, 'REQUIRED_GROUP_MISSING')
+            print(name, 'not found')
         else:
             self.probe._validate(result)
+        name = self.location + '/aux'
         self.aux._validate(result)
 
 
@@ -2106,7 +2161,8 @@ class DataElement(Group):
     def _validate(self, result: ValidationResult):
         name = self.location + '/dataTimeSeries'
         if type(self._dataTimeSeries) in [type(AbsentDataset), type(None)] and 'dataTimeSeries' not in self._h:
-            result.add(name, 'REQUIRED_GROUP_MISSING')
+            result.add(name, 'REQUIRED_DATASET_MISSING')
+            print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
@@ -2114,10 +2170,12 @@ class DataElement(Group):
                 dataset = _create_dataset_float_array(tmp, 'dataTimeSeries', self._dataTimeSeries)
             else:
                 dataset = self._h['dataTimeSeries']
-            result.add(name, _validate_float_array(dataset, ndims=[1]))
+            result.add(name, _validate_float_array(dataset, ndims=[2]))
+            print(dataset)
         name = self.location + '/time'
         if type(self._time) in [type(AbsentDataset), type(None)] and 'time' not in self._h:
-            result.add(name, 'REQUIRED_GROUP_MISSING')
+            result.add(name, 'REQUIRED_DATASET_MISSING')
+            print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
@@ -2126,6 +2184,8 @@ class DataElement(Group):
             else:
                 dataset = self._h['time']
             result.add(name, _validate_float_array(dataset, ndims=[1]))
+            print(dataset)
+        name = self.location + '/measurementList'
         self.measurementList._validate(result)
 
 
@@ -2660,7 +2720,8 @@ class MeasurementListElement(Group):
     def _validate(self, result: ValidationResult):
         name = self.location + '/sourceIndex'
         if type(self._sourceIndex) in [type(AbsentDataset), type(None)] and 'sourceIndex' not in self._h:
-            result.add(name, 'REQUIRED_GROUP_MISSING')
+            result.add(name, 'REQUIRED_DATASET_MISSING')
+            print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
@@ -2668,10 +2729,12 @@ class MeasurementListElement(Group):
                 dataset = _create_dataset_int(tmp, 'sourceIndex', self._sourceIndex)
             else:
                 dataset = self._h['sourceIndex']
-            result.add(name, _validate_int_array(dataset, ndims=[2]))
+            result.add(name, _validate_int(dataset))
+            print(dataset)
         name = self.location + '/detectorIndex'
         if type(self._detectorIndex) in [type(AbsentDataset), type(None)] and 'detectorIndex' not in self._h:
-            result.add(name, 'REQUIRED_GROUP_MISSING')
+            result.add(name, 'REQUIRED_DATASET_MISSING')
+            print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
@@ -2679,10 +2742,12 @@ class MeasurementListElement(Group):
                 dataset = _create_dataset_int(tmp, 'detectorIndex', self._detectorIndex)
             else:
                 dataset = self._h['detectorIndex']
-            result.add(name, _validate_int_array(dataset, ndims=[2]))
+            result.add(name, _validate_int(dataset))
+            print(dataset)
         name = self.location + '/wavelengthIndex'
         if type(self._wavelengthIndex) in [type(AbsentDataset), type(None)] and 'wavelengthIndex' not in self._h:
-            result.add(name, 'REQUIRED_GROUP_MISSING')
+            result.add(name, 'REQUIRED_DATASET_MISSING')
+            print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
@@ -2690,10 +2755,12 @@ class MeasurementListElement(Group):
                 dataset = _create_dataset_int(tmp, 'wavelengthIndex', self._wavelengthIndex)
             else:
                 dataset = self._h['wavelengthIndex']
-            result.add(name, _validate_int_array(dataset, ndims=[2]))
+            result.add(name, _validate_int(dataset))
+            print(dataset)
         name = self.location + '/wavelengthActual'
         if type(self._wavelengthActual) in [type(AbsentDataset), type(None)] and 'wavelengthActual' not in self._h:
-            result.add(name, 'OPTIONAL_GROUP_MISSING')
+            result.add(name, 'OPTIONAL_DATASET_MISSING')
+            print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
@@ -2701,10 +2768,12 @@ class MeasurementListElement(Group):
                 dataset = _create_dataset_float(tmp, 'wavelengthActual', self._wavelengthActual)
             else:
                 dataset = self._h['wavelengthActual']
-            result.add(name, _validate_float_array(dataset, ndims=[2]))
+            result.add(name, _validate_float(dataset))
+            print(dataset)
         name = self.location + '/wavelengthEmissionActual'
         if type(self._wavelengthEmissionActual) in [type(AbsentDataset), type(None)] and 'wavelengthEmissionActual' not in self._h:
-            result.add(name, 'OPTIONAL_GROUP_MISSING')
+            result.add(name, 'OPTIONAL_DATASET_MISSING')
+            print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
@@ -2712,10 +2781,12 @@ class MeasurementListElement(Group):
                 dataset = _create_dataset_float(tmp, 'wavelengthEmissionActual', self._wavelengthEmissionActual)
             else:
                 dataset = self._h['wavelengthEmissionActual']
-            result.add(name, _validate_float_array(dataset, ndims=[2]))
+            result.add(name, _validate_float(dataset))
+            print(dataset)
         name = self.location + '/dataType'
         if type(self._dataType) in [type(AbsentDataset), type(None)] and 'dataType' not in self._h:
-            result.add(name, 'REQUIRED_GROUP_MISSING')
+            result.add(name, 'REQUIRED_DATASET_MISSING')
+            print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
@@ -2723,10 +2794,12 @@ class MeasurementListElement(Group):
                 dataset = _create_dataset_int(tmp, 'dataType', self._dataType)
             else:
                 dataset = self._h['dataType']
-            result.add(name, _validate_int_array(dataset, ndims=[2]))
+            result.add(name, _validate_int(dataset))
+            print(dataset)
         name = self.location + '/dataTypeLabel'
         if type(self._dataTypeLabel) in [type(AbsentDataset), type(None)] and 'dataTypeLabel' not in self._h:
-            result.add(name, 'OPTIONAL_GROUP_MISSING')
+            result.add(name, 'OPTIONAL_DATASET_MISSING')
+            print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
@@ -2734,10 +2807,12 @@ class MeasurementListElement(Group):
                 dataset = _create_dataset_string(tmp, 'dataTypeLabel', self._dataTypeLabel)
             else:
                 dataset = self._h['dataTypeLabel']
-            result.add(name, _validate_string_array(dataset, ndims=[2]))
+            result.add(name, _validate_string(dataset))
+            print(dataset)
         name = self.location + '/dataTypeIndex'
         if type(self._dataTypeIndex) in [type(AbsentDataset), type(None)] and 'dataTypeIndex' not in self._h:
-            result.add(name, 'REQUIRED_GROUP_MISSING')
+            result.add(name, 'REQUIRED_DATASET_MISSING')
+            print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
@@ -2745,10 +2820,12 @@ class MeasurementListElement(Group):
                 dataset = _create_dataset_int(tmp, 'dataTypeIndex', self._dataTypeIndex)
             else:
                 dataset = self._h['dataTypeIndex']
-            result.add(name, _validate_int_array(dataset, ndims=[2]))
+            result.add(name, _validate_int(dataset))
+            print(dataset)
         name = self.location + '/sourcePower'
         if type(self._sourcePower) in [type(AbsentDataset), type(None)] and 'sourcePower' not in self._h:
-            result.add(name, 'OPTIONAL_GROUP_MISSING')
+            result.add(name, 'OPTIONAL_DATASET_MISSING')
+            print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
@@ -2756,10 +2833,12 @@ class MeasurementListElement(Group):
                 dataset = _create_dataset_float(tmp, 'sourcePower', self._sourcePower)
             else:
                 dataset = self._h['sourcePower']
-            result.add(name, _validate_float_array(dataset, ndims=[2]))
+            result.add(name, _validate_float(dataset))
+            print(dataset)
         name = self.location + '/detectorGain'
         if type(self._detectorGain) in [type(AbsentDataset), type(None)] and 'detectorGain' not in self._h:
-            result.add(name, 'OPTIONAL_GROUP_MISSING')
+            result.add(name, 'OPTIONAL_DATASET_MISSING')
+            print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
@@ -2767,10 +2846,12 @@ class MeasurementListElement(Group):
                 dataset = _create_dataset_float(tmp, 'detectorGain', self._detectorGain)
             else:
                 dataset = self._h['detectorGain']
-            result.add(name, _validate_float_array(dataset, ndims=[2]))
+            result.add(name, _validate_float(dataset))
+            print(dataset)
         name = self.location + '/moduleIndex'
         if type(self._moduleIndex) in [type(AbsentDataset), type(None)] and 'moduleIndex' not in self._h:
-            result.add(name, 'OPTIONAL_GROUP_MISSING')
+            result.add(name, 'OPTIONAL_DATASET_MISSING')
+            print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
@@ -2778,10 +2859,12 @@ class MeasurementListElement(Group):
                 dataset = _create_dataset_int(tmp, 'moduleIndex', self._moduleIndex)
             else:
                 dataset = self._h['moduleIndex']
-            result.add(name, _validate_int_array(dataset, ndims=[2]))
+            result.add(name, _validate_int(dataset))
+            print(dataset)
         name = self.location + '/sourceModuleIndex'
         if type(self._sourceModuleIndex) in [type(AbsentDataset), type(None)] and 'sourceModuleIndex' not in self._h:
-            result.add(name, 'OPTIONAL_GROUP_MISSING')
+            result.add(name, 'OPTIONAL_DATASET_MISSING')
+            print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
@@ -2789,10 +2872,12 @@ class MeasurementListElement(Group):
                 dataset = _create_dataset_int(tmp, 'sourceModuleIndex', self._sourceModuleIndex)
             else:
                 dataset = self._h['sourceModuleIndex']
-            result.add(name, _validate_int_array(dataset, ndims=[2]))
+            result.add(name, _validate_int(dataset))
+            print(dataset)
         name = self.location + '/detectorModuleIndex'
         if type(self._detectorModuleIndex) in [type(AbsentDataset), type(None)] and 'detectorModuleIndex' not in self._h:
-            result.add(name, 'OPTIONAL_GROUP_MISSING')
+            result.add(name, 'OPTIONAL_DATASET_MISSING')
+            print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
@@ -2800,7 +2885,8 @@ class MeasurementListElement(Group):
                 dataset = _create_dataset_int(tmp, 'detectorModuleIndex', self._detectorModuleIndex)
             else:
                 dataset = self._h['detectorModuleIndex']
-            result.add(name, _validate_int_array(dataset, ndims=[2]))
+            result.add(name, _validate_int(dataset))
+            print(dataset)
 
 
 class MeasurementList(IndexedGroup):
@@ -2946,7 +3032,8 @@ class StimElement(Group):
     def _validate(self, result: ValidationResult):
         name = self.location + '/name'
         if type(self._name) in [type(AbsentDataset), type(None)] and 'name' not in self._h:
-            result.add(name, 'OPTIONAL_GROUP_MISSING')
+            result.add(name, 'OPTIONAL_DATASET_MISSING')
+            print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
@@ -2954,10 +3041,12 @@ class StimElement(Group):
                 dataset = _create_dataset_string(tmp, 'name', self._name)
             else:
                 dataset = self._h['name']
-            result.add(name, _validate_string_array(dataset, ndims=[2]))
+            result.add(name, _validate_string(dataset))
+            print(dataset)
         name = self.location + '/data'
         if type(self._data) in [type(AbsentDataset), type(None)] and 'data' not in self._h:
-            result.add(name, 'OPTIONAL_GROUP_MISSING')
+            result.add(name, 'OPTIONAL_DATASET_MISSING')
+            print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
@@ -2966,9 +3055,11 @@ class StimElement(Group):
             else:
                 dataset = self._h['data']
             result.add(name, _validate_float_array(dataset, ndims=[1]))
+            print(dataset)
         name = self.location + '/dataLabels'
         if type(self._dataLabels) in [type(AbsentDataset), type(None)] and 'dataLabels' not in self._h:
-            result.add(name, 'OPTIONAL_GROUP_MISSING')
+            result.add(name, 'OPTIONAL_DATASET_MISSING')
+            print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
@@ -2977,6 +3068,7 @@ class StimElement(Group):
             else:
                 dataset = self._h['dataLabels']
             result.add(name, _validate_string_array(dataset, ndims=[1]))
+            print(dataset)
 
 
 class Stim(IndexedGroup):
@@ -3156,7 +3248,8 @@ class AuxElement(Group):
     def _validate(self, result: ValidationResult):
         name = self.location + '/name'
         if type(self._name) in [type(AbsentDataset), type(None)] and 'name' not in self._h:
-            result.add(name, 'OPTIONAL_GROUP_MISSING')
+            result.add(name, 'OPTIONAL_DATASET_MISSING')
+            print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
@@ -3164,10 +3257,12 @@ class AuxElement(Group):
                 dataset = _create_dataset_string(tmp, 'name', self._name)
             else:
                 dataset = self._h['name']
-            result.add(name, _validate_string_array(dataset, ndims=[2]))
+            result.add(name, _validate_string(dataset))
+            print(dataset)
         name = self.location + '/dataTimeSeries'
         if type(self._dataTimeSeries) in [type(AbsentDataset), type(None)] and 'dataTimeSeries' not in self._h:
-            result.add(name, 'OPTIONAL_GROUP_MISSING')
+            result.add(name, 'OPTIONAL_DATASET_MISSING')
+            print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
@@ -3175,10 +3270,12 @@ class AuxElement(Group):
                 dataset = _create_dataset_float_array(tmp, 'dataTimeSeries', self._dataTimeSeries)
             else:
                 dataset = self._h['dataTimeSeries']
-            result.add(name, _validate_float_array(dataset, ndims=[1]))
+            result.add(name, _validate_float_array(dataset, ndims=[2]))
+            print(dataset)
         name = self.location + '/time'
         if type(self._time) in [type(AbsentDataset), type(None)] and 'time' not in self._h:
-            result.add(name, 'OPTIONAL_GROUP_MISSING')
+            result.add(name, 'OPTIONAL_DATASET_MISSING')
+            print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
@@ -3187,9 +3284,11 @@ class AuxElement(Group):
             else:
                 dataset = self._h['time']
             result.add(name, _validate_float_array(dataset, ndims=[1]))
+            print(dataset)
         name = self.location + '/timeOffset'
         if type(self._timeOffset) in [type(AbsentDataset), type(None)] and 'timeOffset' not in self._h:
-            result.add(name, 'OPTIONAL_GROUP_MISSING')
+            result.add(name, 'OPTIONAL_DATASET_MISSING')
+            print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
@@ -3198,6 +3297,7 @@ class AuxElement(Group):
             else:
                 dataset = self._h['timeOffset']
             result.add(name, _validate_float_array(dataset, ndims=[1]))
+            print(dataset)
 
 
 class Aux(IndexedGroup):
@@ -3317,7 +3417,8 @@ class Snirf(Group):
     def _validate(self, result: ValidationResult):
         name = self.location + '/formatVersion'
         if type(self._formatVersion) in [type(AbsentDataset), type(None)] and 'formatVersion' not in self._h:
-            result.add(name, 'REQUIRED_GROUP_MISSING')
+            result.add(name, 'REQUIRED_DATASET_MISSING')
+            print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
@@ -3325,7 +3426,9 @@ class Snirf(Group):
                 dataset = _create_dataset_string(tmp, 'formatVersion', self._formatVersion)
             else:
                 dataset = self._h['formatVersion']
-            result.add(name, _validate_string_array(dataset, ndims=[2]))
+            result.add(name, _validate_string(dataset))
+            print(dataset)
+        name = self.location + '/nirs'
         self.nirs._validate(result)
 
 

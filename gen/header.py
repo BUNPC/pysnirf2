@@ -182,31 +182,33 @@ def _read_float_array(dataset: h5py.Dataset):
 
 # -- Validation types ---------------------------------------
 
+SEVERITY_OK = 0
+SEVERITY_INFO = 1
+SEVERITY_WARNING = 2
+SEVERITY_ERROR = 3
 
 class ValidationResult:
 
     _locations = {}  # HDF locations associated with errors or an additional validation result
     _codes = {
-            # OK (Severity 0)
-            'OK': (0 << 1, 0, 'OK'),
             # Errors (Severity 1)
-            'INVALID_FILE_NAME': (0 << 1, 1, 'Valid SNIRF files must end with .snirf'),
-            'INVALID_FILE': (0 << 1, 1, 'The file could not be opened'),
-            'REQUIRED_DATASET_MISSING': (0 << 1, 1, 'A required dataset is missing from the file'),
-            'REQUIRED_GROUP_MISSING': (0 << 1, 1, 'A required Group is missing from the file'),
-            'INVALID_DATASET_TYPE': (0 << 1, 1, 'An HDF5 Dataset is not stored in the specified format'),
-            'INVALID_DATASET_SHAPE': (0 << 1, 1, 'An HDF5 Dataset is not stored in the specified shape. Strings and scalars should never be stored as arrays of length 1.'),
-            'INVALID_MEASUREMENTLIST': (0 << 1, 1, 'The number of measurementList elements does not match the second dimension of dataTimeSeries'),
-            'INVALID_TIME': (0 << 1, 1, 'The length of the data/time vector does not match the first dimension of data/dataTimeSeries'),
-            'INVALID_INDEX': (0 << 1, 1, 'An index is negative'),
-            'INVALID_SOURCE_INDEX': (0 << 1, 1, 'measurementList/sourceIndex exceeds probe/sourceLabels'),
-            'INVALID_DETECTOR_INDEX': (0 << 1, 1, 'measurementList/detectorIndex exceeds probe/detectorLabels'),
-            'INVALID_PROBE_LABEL': (0 << 1, 1, 'a duplicate sourceLabel or detectorLabel appears'),
-            'INVALID_WAVELENGTH_INDEX': (0 << 1, 1, 'measurementList/waveLengthIndex exceeds probe/wavelengths, probe/wavelengthsEmission, or probe/sourceLabels'),
-            'INVALID_DATATYPE_INDEX': (0 << 1, 1, 'measurementList/dataTypeIndex exceeds probe/frequencies, probe/timeDelays, probe/timeDelayWidths, probe/momentOrders, probe/correlationTimeDelayWidths or probe/correlationTimeDelays'),
-            'INVALID_PROBE_MODULE_INDEX': (0 << 1, 1, 'sourceModuleIndex and detectorModuleIndex are used along with moduleIndex'),
-    #            'INVALID_LANDMARKPOS': (0 << 1, 1, 'A value in the last column of landmarkPos2D or landmarkPos3D exceeds the length of'),
-            'INVALID_STIM_DATALABELS': (0 << 1, 1, 'The length of stim/dataLabels exceeds the columns of stim/data'),
+            'INVALID_FILE_NAME': (0 << 1, 3, 'Valid SNIRF files must end with .snirf'),
+            'INVALID_FILE': (0 << 1, 3, 'The file could not be opened'),
+            'REQUIRED_DATASET_MISSING': (0 << 1, 3, 'A required dataset is missing from the file'),
+            'REQUIRED_GROUP_MISSING': (0 << 1, 3, 'A required Group is missing from the file'),
+            'INVALID_DATASET_TYPE': (0 << 1, 3, 'An HDF5 Dataset is not stored in the specified format'),
+            'INVALID_DATASET_SHAPE': (0 << 1, 3, 'An HDF5 Dataset is not stored in the specified shape. Strings and scalars should never be stored as arrays of length 1.'),
+            'INVALID_MEASUREMENTLIST': (0 << 1, 3, 'The number of measurementList elements does not match the second dimension of dataTimeSeries'),
+            'INVALID_TIME': (0 << 1, 3, 'The length of the data/time vector does not match the first dimension of data/dataTimeSeries'),
+            'INVALID_INDEX': (0 << 1, 3, 'An index is negative'),
+            'INVALID_SOURCE_INDEX': (0 << 1, 3, 'measurementList/sourceIndex exceeds probe/sourceLabels'),
+            'INVALID_DETECTOR_INDEX': (0 << 1, 3, 'measurementList/detectorIndex exceeds probe/detectorLabels'),
+            'INVALID_PROBE_LABEL': (0 << 1, 3, 'a duplicate sourceLabel or detectorLabel appears'),
+            'INVALID_WAVELENGTH_INDEX': (0 << 1, 3, 'measurementList/waveLengthIndex exceeds probe/wavelengths, probe/wavelengthsEmission, or probe/sourceLabels'),
+            'INVALID_DATATYPE_INDEX': (0 << 1, 3, 'measurementList/dataTypeIndex exceeds probe/frequencies, probe/timeDelays, probe/timeDelayWidths, probe/momentOrders, probe/correlationTimeDelayWidths or probe/correlationTimeDelays'),
+            'INVALID_PROBE_MODULE_INDEX': (0 << 1, 3, 'sourceModuleIndex and detectorModuleIndex are used along with moduleIndex'),
+    #            'INVALID_LANDMARKPOS': (0 << 1, 3, 'A value in the last column of landmarkPos2D or landmarkPos3D exceeds the length of'),
+            'INVALID_STIM_DATALABELS': (0 << 1, 3, 'The length of stim/dataLabels exceeds the columns of stim/data'),
             # Warnings (Severity 2)
             'UNRECOGNIZED_GROUP_NAME': (0 << 1, 2, 'An unspecified Group is a part of the file'),
             'UNRECOGNIZED_DATASET_NAME': (0 << 1, 2, 'An unspecified Dataset is a part of the file in an unexpected place'),
@@ -214,33 +216,33 @@ class ValidationResult:
             'UNRECOGNIZED_DATATYPE': (0 << 1, 2, 'measurementList/dataType is not one of the recognized values listed in the Appendix'),
             'INDEX_OF_ZERO': (0 << 1, 2, 'An index of zero is usually undefined'),
             'FIXED_LENGTH_STRING': (0 << 1, 2, 'The use of fixed-length strings is discouraged and may be banned by a future spec version. Rewrite this file with pysnirf2 to use variable length strings'),
-            # Info (Severity 3)
-            'OPTIONAL_GROUP_MISSING': (0 << 1, 3, 'OK (missing optional group)'),
+            # Info (Severity 1)
+            'OPTIONAL_GROUP_MISSING': (0 << 1, 1, 'OK (missing optional Group)'),
+            'OPTIONAL_DATASET_MISSING': (0 << 1, 1, 'OK (missing optional Dataset)'),
+            # OK (Severity 0)
+            'OK': (0 << 1, 0, 'OK'),
             }
 
     def is_valid(self):
-        """
-        :return: True if the file is valid
-        """
-        return False
+        return not any([severity[1][1] > 1 for severity in self._locations.values()])
 
     def add(self, location, key):
         if key not in self._codes.keys():
             raise KeyError("Invalid code '" + key + "'")
         # Locations is nested tuple (code, (id, level, msg))
         self._locations[location] = (key, self._codes[key])
+        print('\n', location, key, self._codes[key][0])
+        
+    def display(self, severity=1):
+        longest_key = max([len(key) for key in self._locations.keys()])
+        for key in self._locations:
+            if self._locations[key][1][1] >= severity:
+                print(key.ljust(longest_key) + '   ' + self._locations[key][0])
         
     def __repr__(self):
-        s = ''
-        for key in self._locations:
-            if self._locations[key][1][1] > 0:  # If not OK
-                print(self._locations[key])
-                s += key + ':  ' + self._locations[key][0] + '\n'  # location: code
-        return s
+        return object.__repr__(self) + ' is_valid ' + str(self.is_valid()) 
         
     
-
-
 # -- Validation functions ---------------------------------------
 
 

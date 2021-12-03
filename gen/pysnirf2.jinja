@@ -172,50 +172,51 @@
 {% macro gen_validator(NODE) %}
     def _validate(self, result: ValidationResult):
     {% for CHILD in NODE.children %}
+        name = self.location + '/{{ CHILD.name }}'
     {% if TYPES.INDEXED_GROUP in CHILD.type %}
         self.{{ CHILD.name }}._validate(result)
     {% elif TYPES.GROUP in CHILD.type %}
         if type(self._{{ CHILD.name }}) is type(AbsentGroup) and '{{ CHILD.name }}' not in self._h:
-            name = self.location + '/{{ CHILD.name }}'
         {% if TYPES.REQUIRED in CHILD.type %}
             result.add(name, 'REQUIRED_GROUP_MISSING')
         {% else %}
             result.add(name, 'OPTIONAL_GROUP_MISSING')
         {% endif %}
+            print(name, 'not found')
         else:
             self.{{ CHILD.name }}._validate(result)
     {% else %}
-        name = self.location + '/{{ CHILD.name }}'
         if type(self._{{ CHILD.name }}) in [type(AbsentDataset), type(None)] and '{{ CHILD.name }}' not in self._h:
         {% if TYPES.REQUIRED in CHILD.type %}
-            result.add(name, 'REQUIRED_GROUP_MISSING')
+            result.add(name, 'REQUIRED_DATASET_MISSING')
         {% else %}
-            result.add(name, 'OPTIONAL_GROUP_MISSING')
+            result.add(name, 'OPTIONAL_DATASET_MISSING')
         {% endif %}
+            print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
             if '{{ CHILD.name }}' not in self._h:
-        {% if TYPES.ARRAY_1D in CHILD.type %}
+        {% if TYPES.ARRAY_2D in CHILD.type %}
             {% if TYPES.VARLEN_STRING in CHILD.type %}
                 dataset = _create_dataset_string_array(tmp, '{{ CHILD.name }}', self._{{ CHILD.name }})
             else:
                 dataset = self._h['{{ CHILD.name }}']
-            result.add(name, _validate_string_array(dataset, ndims=[1]))
+            result.add(name, _validate_string_array(dataset, ndims=[2]))
             {% elif TYPES.INT_VALUE in CHILD.type %}
                 dataset = _create_dataset_int_array(tmp, '{{ CHILD.name }}', self._{{ CHILD.name }})
             else:
                 dataset = self._h['{{ CHILD.name }}']
-            result.add(name, _validate_int_array(dataset, ndims=[1]))
+            result.add(name, _validate_int_array(dataset, ndims=[2]))
             {% elif TYPES.FLOAT_VALUE in CHILD.type %}
                 dataset = _create_dataset_float_array(tmp, '{{ CHILD.name }}', self._{{ CHILD.name }})
             else:
                 dataset = self._h['{{ CHILD.name }}']
-            result.add(name, _validate_float_array(dataset, ndims=[1]))
+            result.add(name, _validate_float_array(dataset, ndims=[2]))
             {% else %}
             ### TEMPLATE ERROR: NO VALIDATOR FUNCTION MATCHING {{ CHILD.name }}
             {% endif %}
-        {% elif TYPES.ARRAY_2D in CHILD.type %}
+        {% elif TYPES.ARRAY_1D in CHILD.type %}
             {% if TYPES.VARLEN_STRING in CHILD.type %}
                 dataset = _create_dataset_string_array(tmp, '{{ CHILD.name }}', self._{{ CHILD.name }})
             else:
@@ -239,21 +240,22 @@
                 dataset = _create_dataset_string(tmp, '{{ CHILD.name }}', self._{{ CHILD.name }})
             else:
                 dataset = self._h['{{ CHILD.name }}']
-            result.add(name, _validate_string_array(dataset, ndims=[2]))
+            result.add(name, _validate_string(dataset))
             {% elif TYPES.INT_VALUE in CHILD.type %}
                 dataset = _create_dataset_int(tmp, '{{ CHILD.name }}', self._{{ CHILD.name }})
             else:
                 dataset = self._h['{{ CHILD.name }}']
-            result.add(name, _validate_int_array(dataset, ndims=[2]))
+            result.add(name, _validate_int(dataset))
             {% elif TYPES.FLOAT_VALUE in CHILD.type %}
                 dataset = _create_dataset_float(tmp, '{{ CHILD.name }}', self._{{ CHILD.name }})
             else:
                 dataset = self._h['{{ CHILD.name }}']
-            result.add(name, _validate_float_array(dataset, ndims=[2]))
+            result.add(name, _validate_float(dataset))
             {% else %}
             ### TEMPLATE ERROR: NO VALIDATOR FUNCTION MATCHING {{ CHILD.name }}
             {% endif %}
         {% endif %}
+            print(dataset)
     {% endif %}
     {% endfor %}
 {% endmacro %}
