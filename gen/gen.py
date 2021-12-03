@@ -140,6 +140,7 @@ if __name__ == '__main__':
             'DATE': str(date.today()),
             'INDEXED_GROUPS': [], 
             'GROUPS': [], 
+            'UNSPECIFIED_DATASETS_OK': UNSPECIFIED_DATASETS_OK
             }
     
     #  Build list of groups and indexed groups

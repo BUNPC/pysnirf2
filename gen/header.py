@@ -7,7 +7,14 @@ from warnings import warn
 from collections.abc import MutableSequence
 from tempfile import TemporaryFile
 import logging
+import termcolor
 
+# Colored prints for validator
+
+printr = lambda x: termcolor.cprint(x, 'red')
+printg = lambda x: termcolor.cprint(x, 'green')
+printb = lambda x: termcolor.cprint(x, 'blue')
+printm = lambda x: termcolor.cprint(x, 'magenta')
 
 _loggers = {}
 def _create_logger(name, log_file, level=logging.INFO):
@@ -86,22 +93,16 @@ def _create_dataset_float(file: h5py.File, name: str, data: float):
 
 def _create_dataset_string_array(file: h5py.File, name: str, data: np.ndarray):
     array = np.array(data).astype('O')
-    if data.size is 0:
-        array = AbsentDataset  # Do not save empty or "None" NumPy arrays
     return file.create_dataset(name, dtype=_varlen_str_type, data=array)
 
 
 def _create_dataset_int_array(file: h5py.File, name: str, data: np.ndarray):
     array = np.array(data).astype(int)
-    if data.size is 0:
-        array = AbsentDataset
     return file.create_dataset(name, dtype=_DTYPE_INT, data=array)
 
 
 def _create_dataset_float_array(file: h5py.File, name: str, data: np.ndarray):
     array = np.array(data).astype(float)
-    if data.size is 0:
-        array = AbsentDataset
     return file.create_dataset(name, dtype=_DTYPE_FLOAT64, data=array)
 
 
@@ -188,10 +189,10 @@ class ValidationResult:
     _locations = {}  # HDF locations associated with errors or an additional validation result
 
     _SEVERITY_LEVELS = {
-                        0: 'OK:     ',
-                        1: 'INFO:   ',
-                        2: 'WARNING:',
-                        3: 'FATAL:  ',
+                        0: 'OK     ',
+                        1: 'INFO   ',
+                        2: 'WARNING',
+                        3: 'FATAL  ',
                         }
     _CODES = {
             # Errors (Severity 1)
@@ -213,8 +214,8 @@ class ValidationResult:
     #            'INVALID_LANDMARKPOS': (0 << 1, 3, 'A value in the last column of landmarkPos2D or landmarkPos3D exceeds the length of'),
             'INVALID_STIM_DATALABELS': (0 << 1, 3, 'The length of stim/dataLabels exceeds the columns of stim/data'),
             # Warnings (Severity 2)
-            'UNRECOGNIZED_GROUP_NAME': (0 << 1, 2, 'An unspecified Group is a part of the file'),
-            'UNRECOGNIZED_DATASET_NAME': (0 << 1, 2, 'An unspecified Dataset is a part of the file in an unexpected place'),
+            'UNRECOGNIZED_GROUP': (0 << 1, 2, 'An unspecified Group is a part of the file'),
+            'UNRECOGNIZED_DATASET': (0 << 1, 2, 'An unspecified Dataset is a part of the file in an unexpected place'),
             'UNRECOGNIZED_DATATYPELABEL': (0 << 1, 2, 'measurementList/dataTypeLabel is not one of the recognized values listed in the Appendix'),
             'UNRECOGNIZED_DATATYPE': (0 << 1, 2, 'measurementList/dataType is not one of the recognized values listed in the Appendix'),
             'INDEX_OF_ZERO': (0 << 1, 2, 'An index of zero is usually undefined'),
@@ -227,7 +228,10 @@ class ValidationResult:
             }
 
     def is_valid(self):
-        return not any([severity[1][1] > 1 for severity in self._locations.values()])
+        for value in self._locations.values():
+            if value[1][1] > 2:  # Severity
+                return False
+        return True
 
     def _add(self, location, key):
         if key not in self._CODES.keys():
@@ -239,11 +243,21 @@ class ValidationResult:
     def display(self, severity=1):
         longest_key = max([len(key) for key in self._locations.keys()])
         longest_code = max([len(key[0]) for key in self._locations.keys()])
+        s = object.__repr__(self) + '\n'
+        printed = [0, 0, 0, 0]
         for key in self._locations.keys():
-            if self._locations[key][1][1] >= severity:
-                print(key.ljust(longest_key) + ' ' +
-                      self._SEVERITY_LEVELS[self._locations[key][1][1]] + ' ' +
-                      self._locations[key][0].ljust(longest_code))
+            sev = self._locations[key][1][1]
+            printed[sev] += 1
+            if sev >= severity:
+                s += key.ljust(longest_key) + ' ' + self._SEVERITY_LEVELS[sev] + ' ' + self._locations[key][0].ljust(longest_code) + '\n'
+        print(s)
+        for i in range(0, severity):
+            [printg, printb, printm, printr][i]('Found ' + str(printed[i]) + ' ' + self._SEVERITY_LEVELS[i] + ' (hidden)')            
+        for i in range(severity, 4):
+            [printg, printb, printm, printr][i]('Found ' + str(printed[i]) + ' ' + self._SEVERITY_LEVELS[i])
+        i = int(self.is_valid())
+        [printr, printg][i]('\nFile is ' +['INVALID', 'VALID'][i])
+        
         
     def __repr__(self):
         return object.__repr__(self) + ' is_valid ' + str(self.is_valid()) 
@@ -540,6 +554,9 @@ class IndexedGroup(MutableSequence, ABC):
 
     def __repr__(self):
         return str('<' + 'iterable of ' + str(len(self._list)) + ' ' + str(self._element) + '>')
+
+    def __contains__(self, key):
+        return any([key == e.location.split('/')[-1] for e in self._list])
 
     def is_empty(self):
         if len(self._list) > 0:

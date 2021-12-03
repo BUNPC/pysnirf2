@@ -1,7 +1,7 @@
 Shared Near Infrared Spectroscopy Format (SNIRF) Specification
 ==============================================================
 
-* **Document Version**: v1.0
+* **Document Version**: v1.0.1-development
 * **License**: This document is in the public domain.
 
 ## Table of Content
@@ -23,6 +23,7 @@ Shared Near Infrared Spectroscopy Format (SNIRF) Specification
        * [data.measurementList.wavelengthActual](#nirsidatajmeasurementlistkwavelengthactual)
        * [data.measurementList.wavelengthEmissionActual](#nirsidatajmeasurementlistkwavelengthemissionactual)
        * [data.measurementList.dataType](#nirsidatajmeasurementlistkdatatype)
+       * [data.measurementList.dataUnit](#nirsidatajmeasurementlistkdataunit)
        * [data.measurementList.dataTypeLabel](#nirsidatajmeasurementlistkdatatypelabel)
        * [data.measurementList.dataTypeIndex](#nirsidatajmeasurementlistkdatatypeindex)
        * [data.measurementList.sourcePower](#nirsidatajmeasurementlistksourcepower)
@@ -56,6 +57,7 @@ Shared Near Infrared Spectroscopy Format (SNIRF) Specification
        * [aux](#nirsiauxj)
        * [aux.name](#nirsiauxjname)
        * [aux.dataTimeSeries](#nirsiauxjdatatimeseries)
+       * [aux.dataUnit](#nirsiauxjdataunit)
        * [aux.time](#nirsiauxjtime)
        * [aux.timeOffset](#nirsiauxjtimeoffset)
 - [Appendix](#appendix)
@@ -109,6 +111,9 @@ Note, native datatypes are defined by the build of the software (e.g.
 little/big endian) and are automatically converted by the HDF5 backend for 
 consistent read/write between OS platforms.
 
+The development of the SNIRF specification is conducted in an open manner using the GitHub
+platform. To contribute or provide feedback visit [https://github.com/fNIRS/snirf](https://github.com/fNIRS/snirf).
+
 ## SNIRF file specification
 
 The SNIRF data format must have the initial `H5G` group type `/nirs` at the 
@@ -154,6 +159,7 @@ HDF5 location paths to denote the indices of sub-elements when multiplicity pres
 |            `wavelengthActual`         | * Actual wavelength for a given channel      |   `<f>`        |
 |            `wavelengthEmissionActual` | * Actual emission wavelength for a channel   |   `<f>`        |
 |            `dataType`                 | * Data type for a given channel              |   `<i>`      * |
+|            `dataUnit`                 | * SI unit for a given channel                |   `"s"`        |
 |            `dataTypeLabel`            | * Data type name for a given channel         |   `"s"`        |
 |            `dataTypeIndex`            | * Data type index for a given channel        |   `<i>`      * |
 |            `sourcePower`              | * Source power for a given channel           |   `<f>`        |
@@ -163,7 +169,7 @@ HDF5 location paths to denote the indices of sub-elements when multiplicity pres
 |            `detectorModuleIndex`      | * Index of the detector's parent module      |   `<i>`        |
 |     `stim{i}`                         | * Root-group for stimulus measurements       |   `{i}`        |
 |         `name`                        | * Name of the stimulus data                  |   `"s"`      + |
-|         `data`                        | * Data stream of the stimulus channel        |  `[<f>,...]` + |
+|         `data`                        | * Data stream of the stimulus channel        | `[[<f>,...]]` +|
 |         `dataLabels`                  | * Names of additional columns of stim data   |  `["s",...]`   |
 |     `probe`                           | * Root group for NIRS probe information      |   `{.}`      * |
 |         `wavelengths`                 | * List of wavelengths (in nm)                |  `[<f>,...]` * |
@@ -186,7 +192,8 @@ HDF5 location paths to denote the indices of sub-elements when multiplicity pres
 |         `useLocalIndex`               | * If source/detector index is within a module|   `<i>`        |
 |     `aux{i}`                          | * Root-group for auxiliary measurements      |   `{i}`        |
 |         `name`                        | * Name of the auxiliary channel              |   `"s"`      + |
-|         `dataTimeSeries`              | * Data acquired from the auxiliary channel   | `[[<f>,...]]`+ |
+|         `dataTimeSeries`              | * Data acquired from the auxiliary channel   |  `[<f>,...]` + |
+|         `dataUnit`                    | * SI unit of the auxiliary channel           |   `"s"`        |
 |         `time`                        | * Time (in `TimeUnit`) for auxiliary data    |  `[<f>,...]` + |
 |         `timeOffset`                  | * Time offset of auxiliary channel data      |  `[<f>,...]`   |
 
@@ -195,7 +202,7 @@ In the above table, the used notations are explained below
 * `{.}` represents a simple HDF5 group
 * `{i}` represents an HDF5 group with one or multiple sub-groups (i.e. an indexed-group)
 * `<i>` represents an integer value
-* `<f>` represents an numerical value
+* `<f>` represents a numeric value
 * `"s"` represents a string of arbitrary length
 * `[...]` represents a 1-D vector (dataset), can be empty
 * `[[...]]` represents a 2-D array (dataset), can be empty
@@ -350,7 +357,7 @@ entry
 	
 #### /nirs(i)/data(j)/dataTimeSeries 
 * **Presence**: required
-* **Type**:  numerical 2-D array
+* **Type**:  numeric 2-D array
 * **Location**: `/nirs(i)/data(j)/dataTimeSeries`
 
 This is the actual raw or processed data variable. This variable has dimensions 
@@ -366,7 +373,7 @@ Chunked data is allowed to support real-time streaming of data in this array.
 
 #### /nirs(i)/data(j)/time 
 * **Presence**: required
-* **Type**:  numerical 1-D array
+* **Type**:  numeric 1-D array
 * **Location**: `/nirs(i)/data(j)/time`
 
 The `time` variable. This provides the acquisition time of the measurement 
@@ -442,6 +449,13 @@ Actual (measured) emission wavelength in nm, if available, for the source in a g
 * **Location**: `/nirs(i)/data(j)/measurementList(k)/dataType`
 
 Data-type identifier. See Appendix for list possible values.
+
+#### /nirs(i)/data(j)/measurementList(k)/dataUnit 
+* **Presence**: optional
+* **Type**:  string
+* **Location**: `/nirs(i)/data(j)/measurementList(k)/dataUnit`
+
+International System of Units (SI units) identifier for the given channel. Encoding should follow the [CMIXF-12 standard](https://people.csail.mit.edu/jaffer/MIXF/CMIXF-12), avoiding special unicode symbols like U+03BC (m) or U+00B5 (u) and using '/' rather than 'per' for units such as `V/us`. The recommended export format is in unscaled units such as V, s, Mole.
 
 #### /nirs(i)/data(j)/measurementList(k)/dataTypeLabel 
 * **Presence**: optional
@@ -559,11 +573,11 @@ This is a string describing the j<sup>th</sup> stimulus condition.
 
 #### /nirs(i)/stim(j)/data 
 * **Presence**: required  as part of `stim(i)` 
-* **Type**:  numerical 2-D array
+* **Type**:  numeric 2-D array
 * **Location**: `/nirs(i)/stim(j)/data`
 * **Allowed attribute**: `names`
 
-This is a numerical 2-D array with at least 3 columns, specifying the stimulus 
+This is a numeric 2-D array with at least 3 columns, specifying the stimulus 
 time course for the j<sup>th</sup> condition. Each row corresponds to a 
 specific stimulus trial. The first three columns indicate `[starttime duration value]`.  
 The starttime, in seconds, is the time relative to the time origin when the 
@@ -595,7 +609,7 @@ geometry.  This variable has a number of required fields.
 
 #### /nirs(i)/probe/wavelengths 
 * **Presence**: required 
-* **Type**:  numerical 1-D array
+* **Type**:  numeric 1-D array
 * **Location**: `/nirs(i)/probe/wavelengths`
 
 This field describes the "nominal" wavelengths used (in `nm` unit).  This is indexed by the 
@@ -620,7 +634,7 @@ data are processed data (`dataType=99999`, see Appendix).
 
 #### /nirs(i)/probe/wavelengthsEmission 
 * **Presence**: optional 
-* **Type**:  numerical 1-D array
+* **Type**:  numeric 1-D array
 * **Location**: `/nirs(i)/probe/wavelengthsEmission`
 
 This field is required only for fluorescence data types, and describes the 
@@ -656,7 +670,7 @@ optode in 3D. This field has size `<number of sources> x 3`.
 
 #### /nirs(i)/probe/detectorPos2D
 * **Presence**: at least one of `detectorPos2D` or `detectorPos3D` is required
-* **Type**:  numeric
+* **Type**:  numeric 2-D array
 * **Location**: `/nirs(i)/probe/detectorPos2D`
 
 Same as `probe.sourcePos2D`, but describing the detector positions in a 
@@ -840,7 +854,7 @@ This is string describing the j<sup>th</sup> auxiliary data timecourse.
 
 #### /nirs(i)/aux(j)/dataTimeSeries 
 * **Presence**: optional; required if `aux` is used
-* **Type**:  numeric
+* **Type**:  numeric 1-D array
 * **Location**: `/nirs(i)/aux(j)/dataTimeSeries`
 
 This is the aux data variable. This variable has dimensions of `<number of 
@@ -848,9 +862,16 @@ time points> x 1`.
 
 Chunked data is allowed to support real-time data streaming
 
+#### /nirs(i)/aux(j)/dataUnit 
+* **Presence**: optional
+* **Type**:  string
+* **Location**: `/nirs(i)/aux(j)/dataUnit`
+
+International System of Units (SI units) identifier for the given channel. Encoding should follow the [CMIXF-12 standard](https://people.csail.mit.edu/jaffer/MIXF/CMIXF-12), avoiding special unicode symbols like U+03BC (m) or U+00B5 (u) and using '/' rather than 'per' for units such as `V/us`. The recommended export format is in unscaled units such as V, s, Mole.
+
 #### /nirs(i)/aux(j)/time 
 * **Presence**: optional; required if `aux` is used
-* **Type**:  numeric
+* **Type**:  numeric 1-D array
 * **Location**: `/nirs(i)/aux(j)/time`
 
 The time variable. This provides the acquisition time (in `TimeUnit` units) 

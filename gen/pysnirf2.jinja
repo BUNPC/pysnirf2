@@ -50,6 +50,9 @@
         {% endif %}
     {% endif %}
     {% endfor %}
+    {% if NODE.name in UNSPECIFIED_DATASETS_OK %}
+        # TODO loading of unspecified datasets
+    {% endif %}            
 {% endmacro %}
 {% macro gen_properties(NODE) %}
 {% for CHILD in NODE.children %}
@@ -168,6 +171,9 @@
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
     {% endif %}
     {% endfor %}
+    {% if NODE.name in UNSPECIFIED_DATASETS_OK %}
+        # TODO saving of public attributes
+    {% endif %}
 {% endmacro %}
 {% macro gen_validator(NODE) %}
     def _validate(self, result: ValidationResult):
@@ -176,7 +182,7 @@
     {% if TYPES.INDEXED_GROUP in CHILD.type %}
         self.{{ CHILD.name }}._validate(result)
     {% elif TYPES.GROUP in CHILD.type %}
-        if type(self._{{ CHILD.name }}) is type(AbsentGroup) and '{{ CHILD.name }}' not in self._h:
+        if type(self._{{ CHILD.name }}) in [type(AbsentDataset), type(None)]:
         {% if TYPES.REQUIRED in CHILD.type %}
             result._add(name, 'REQUIRED_GROUP_MISSING')
         {% else %}
@@ -186,7 +192,7 @@
         else:
             self.{{ CHILD.name }}._validate(result)
     {% else %}
-        if type(self._{{ CHILD.name }}) in [type(AbsentDataset), type(None)] and '{{ CHILD.name }}' not in self._h:
+        if type(self._{{ CHILD.name }}) in [type(AbsentDataset), type(None)]:
         {% if TYPES.REQUIRED in CHILD.type %}
             result._add(name, 'REQUIRED_DATASET_MISSING')
         {% else %}
@@ -196,68 +202,79 @@
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
-            if '{{ CHILD.name }}' not in self._h:
+            try:
+                if type(self._{{ CHILD.name }}) is type(AbsentDataset):
         {% if TYPES.ARRAY_2D in CHILD.type %}
             {% if TYPES.VARLEN_STRING in CHILD.type %}
-                dataset = _create_dataset_string_array(tmp, '{{ CHILD.name }}', self._{{ CHILD.name }})
-            else:
-                dataset = self._h['{{ CHILD.name }}']
-            result._add(name, _validate_string_array(dataset, ndims=[2]))
+                    dataset = self._h['{{ CHILD.name }}']
+                else:
+                    dataset = _create_dataset_string_array(tmp, '{{ CHILD.name }}', self._{{ CHILD.name }})
+                result._add(name, _validate_string_array(dataset, ndims=[2]))
             {% elif TYPES.INT_VALUE in CHILD.type %}
-                dataset = _create_dataset_int_array(tmp, '{{ CHILD.name }}', self._{{ CHILD.name }})
-            else:
-                dataset = self._h['{{ CHILD.name }}']
-            result._add(name, _validate_int_array(dataset, ndims=[2]))
+                    dataset = self._h['{{ CHILD.name }}']
+                else:
+                    dataset = _create_dataset_int_array(tmp, '{{ CHILD.name }}', self._{{ CHILD.name }})
+                result._add(name, _validate_int_array(dataset, ndims=[2]))
             {% elif TYPES.FLOAT_VALUE in CHILD.type %}
-                dataset = _create_dataset_float_array(tmp, '{{ CHILD.name }}', self._{{ CHILD.name }})
-            else:
-                dataset = self._h['{{ CHILD.name }}']
-            result._add(name, _validate_float_array(dataset, ndims=[2]))
+                    dataset = self._h['{{ CHILD.name }}']
+                else:
+                    dataset = _create_dataset_float_array(tmp, '{{ CHILD.name }}', self._{{ CHILD.name }})
+                result._add(name, _validate_float_array(dataset, ndims=[2]))
             {% else %}
-            ### TEMPLATE ERROR: NO VALIDATOR FUNCTION MATCHING {{ CHILD.name }}
+                ### TEMPLATE ERROR: NO VALIDATOR FUNCTION MATCHING {{ CHILD.name }}
             {% endif %}
         {% elif TYPES.ARRAY_1D in CHILD.type %}
             {% if TYPES.VARLEN_STRING in CHILD.type %}
-                dataset = _create_dataset_string_array(tmp, '{{ CHILD.name }}', self._{{ CHILD.name }})
-            else:
-                dataset = self._h['{{ CHILD.name }}']
-            result._add(name, _validate_string_array(dataset, ndims=[1]))
+                    dataset = self._h['{{ CHILD.name }}']
+                else:
+                    dataset = _create_dataset_string_array(tmp, '{{ CHILD.name }}', self._{{ CHILD.name }})
+                result._add(name, _validate_string_array(dataset, ndims=[1]))
             {% elif TYPES.INT_VALUE in CHILD.type %}
-                dataset = _create_dataset_int_array(tmp, '{{ CHILD.name }}', self._{{ CHILD.name }})
-            else:
-                dataset = self._h['{{ CHILD.name }}']
-            result._add(name, _validate_int_array(dataset, ndims=[1]))
+                    dataset = self._h['{{ CHILD.name }}']
+                else:
+                    dataset = _create_dataset_int_array(tmp, '{{ CHILD.name }}', self._{{ CHILD.name }})
+                result._add(name, _validate_int_array(dataset, ndims=[1]))
             {% elif TYPES.FLOAT_VALUE in CHILD.type %}
-                dataset = _create_dataset_float_array(tmp, '{{ CHILD.name }}', self._{{ CHILD.name }})
-            else:
-                dataset = self._h['{{ CHILD.name }}']
-            result._add(name, _validate_float_array(dataset, ndims=[1]))
+                    dataset = self._h['{{ CHILD.name }}']
+                else:
+                    dataset = _create_dataset_float_array(tmp, '{{ CHILD.name }}', self._{{ CHILD.name }})
+                result._add(name, _validate_float_array(dataset, ndims=[1]))
             {% else %}
             ### TEMPLATE ERROR: NO VALIDATOR FUNCTION MATCHING {{ CHILD.name }}
             {% endif %}
         {% else %}
             {% if TYPES.VARLEN_STRING in CHILD.type %}
-                dataset = _create_dataset_string(tmp, '{{ CHILD.name }}', self._{{ CHILD.name }})
-            else:
-                dataset = self._h['{{ CHILD.name }}']
-            result._add(name, _validate_string(dataset))
+                    dataset = self._h['{{ CHILD.name }}']
+                else:
+                    dataset = _create_dataset_string(tmp, '{{ CHILD.name }}', self._{{ CHILD.name }})
+                result._add(name, _validate_string(dataset))
             {% elif TYPES.INT_VALUE in CHILD.type %}
-                dataset = _create_dataset_int(tmp, '{{ CHILD.name }}', self._{{ CHILD.name }})
-            else:
-                dataset = self._h['{{ CHILD.name }}']
-            result._add(name, _validate_int(dataset))
+                    dataset = self._h['{{ CHILD.name }}']
+                else:
+                    dataset = _create_dataset_int(tmp, '{{ CHILD.name }}', self._{{ CHILD.name }})
+                result._add(name, _validate_int(dataset))
             {% elif TYPES.FLOAT_VALUE in CHILD.type %}
-                dataset = _create_dataset_float(tmp, '{{ CHILD.name }}', self._{{ CHILD.name }})
-            else:
-                dataset = self._h['{{ CHILD.name }}']
-            result._add(name, _validate_float(dataset))
+                    dataset = self._h['{{ CHILD.name }}']
+                else:
+                    dataset = _create_dataset_float(tmp, '{{ CHILD.name }}', self._{{ CHILD.name }})
+                result._add(name, _validate_float(dataset))
             {% else %}
             ### TEMPLATE ERROR: NO VALIDATOR FUNCTION MATCHING {{ CHILD.name }}
             {% endif %}
         {% endif %}
+            except ValueError:  # If the _create_dataset function can't convert the data
+                result._add(name, 'INVALID_DATASET_TYPE')
             print(dataset)
     {% endif %}
     {% endfor %}
+    {% if not NODE.name in UNSPECIFIED_DATASETS_OK %}
+        for key in self._h.keys():  # TODO attributes too
+            if not any([key.startswith(name) for name in self._snirfnames]):
+                if type(self._h[key]) is h5py.Group:
+                    result._add(self.location + '/' + key, 'UNRECOGNIZED_GROUP')
+                elif type(self._h[key]) is h5py.Dataset:
+                    result._add(self.location + '/' + key, 'UNRECOGNIZED_DATASET')
+    {% endif %}
 {% endmacro %}
 {{ HEADER }}
 

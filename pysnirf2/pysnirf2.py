@@ -7,7 +7,14 @@ from warnings import warn
 from collections.abc import MutableSequence
 from tempfile import TemporaryFile
 import logging
+import termcolor
 
+# Colored prints for validator
+
+printr = lambda x: termcolor.cprint(x, 'red')
+printg = lambda x: termcolor.cprint(x, 'green')
+printb = lambda x: termcolor.cprint(x, 'blue')
+printm = lambda x: termcolor.cprint(x, 'magenta')
 
 _loggers = {}
 def _create_logger(name, log_file, level=logging.INFO):
@@ -86,22 +93,16 @@ def _create_dataset_float(file: h5py.File, name: str, data: float):
 
 def _create_dataset_string_array(file: h5py.File, name: str, data: np.ndarray):
     array = np.array(data).astype('O')
-    if data.size is 0:
-        array = AbsentDataset  # Do not save empty or "None" NumPy arrays
     return file.create_dataset(name, dtype=_varlen_str_type, data=array)
 
 
 def _create_dataset_int_array(file: h5py.File, name: str, data: np.ndarray):
     array = np.array(data).astype(int)
-    if data.size is 0:
-        array = AbsentDataset
     return file.create_dataset(name, dtype=_DTYPE_INT, data=array)
 
 
 def _create_dataset_float_array(file: h5py.File, name: str, data: np.ndarray):
     array = np.array(data).astype(float)
-    if data.size is 0:
-        array = AbsentDataset
     return file.create_dataset(name, dtype=_DTYPE_FLOAT64, data=array)
 
 
@@ -188,10 +189,10 @@ class ValidationResult:
     _locations = {}  # HDF locations associated with errors or an additional validation result
 
     _SEVERITY_LEVELS = {
-                        0: 'OK:     ',
-                        1: 'INFO:   ',
-                        2: 'WARNING:',
-                        3: 'FATAL:  ',
+                        0: 'OK     ',
+                        1: 'INFO   ',
+                        2: 'WARNING',
+                        3: 'FATAL  ',
                         }
     _CODES = {
             # Errors (Severity 1)
@@ -213,8 +214,8 @@ class ValidationResult:
     #            'INVALID_LANDMARKPOS': (0 << 1, 3, 'A value in the last column of landmarkPos2D or landmarkPos3D exceeds the length of'),
             'INVALID_STIM_DATALABELS': (0 << 1, 3, 'The length of stim/dataLabels exceeds the columns of stim/data'),
             # Warnings (Severity 2)
-            'UNRECOGNIZED_GROUP_NAME': (0 << 1, 2, 'An unspecified Group is a part of the file'),
-            'UNRECOGNIZED_DATASET_NAME': (0 << 1, 2, 'An unspecified Dataset is a part of the file in an unexpected place'),
+            'UNRECOGNIZED_GROUP': (0 << 1, 2, 'An unspecified Group is a part of the file'),
+            'UNRECOGNIZED_DATASET': (0 << 1, 2, 'An unspecified Dataset is a part of the file in an unexpected place'),
             'UNRECOGNIZED_DATATYPELABEL': (0 << 1, 2, 'measurementList/dataTypeLabel is not one of the recognized values listed in the Appendix'),
             'UNRECOGNIZED_DATATYPE': (0 << 1, 2, 'measurementList/dataType is not one of the recognized values listed in the Appendix'),
             'INDEX_OF_ZERO': (0 << 1, 2, 'An index of zero is usually undefined'),
@@ -227,7 +228,10 @@ class ValidationResult:
             }
 
     def is_valid(self):
-        return not any([severity[1][1] > 1 for severity in self._locations.values()])
+        for value in self._locations.values():
+            if value[1][1] > 2:  # Severity
+                return False
+        return True
 
     def _add(self, location, key):
         if key not in self._CODES.keys():
@@ -239,11 +243,21 @@ class ValidationResult:
     def display(self, severity=1):
         longest_key = max([len(key) for key in self._locations.keys()])
         longest_code = max([len(key[0]) for key in self._locations.keys()])
+        s = object.__repr__(self) + '\n'
+        printed = [0, 0, 0, 0]
         for key in self._locations.keys():
-            if self._locations[key][1][1] >= severity:
-                print(key.ljust(longest_key) + ' ' +
-                      self._SEVERITY_LEVELS[self._locations[key][1][1]] + ' ' +
-                      self._locations[key][0].ljust(longest_code))
+            sev = self._locations[key][1][1]
+            printed[sev] += 1
+            if sev >= severity:
+                s += key.ljust(longest_key) + ' ' + self._SEVERITY_LEVELS[sev] + ' ' + self._locations[key][0].ljust(longest_code) + '\n'
+        print(s)
+        for i in range(0, severity):
+            [printg, printb, printm, printr][i]('Found ' + str(printed[i]) + ' ' + self._SEVERITY_LEVELS[i] + ' (hidden)')            
+        for i in range(severity, 4):
+            [printg, printb, printm, printr][i]('Found ' + str(printed[i]) + ' ' + self._SEVERITY_LEVELS[i])
+        i = int(self.is_valid())
+        [printr, printg][i]('\nFile is ' +['INVALID', 'VALID'][i])
+        
         
     def __repr__(self):
         return object.__repr__(self) + ' is_valid ' + str(self.is_valid()) 
@@ -541,6 +555,9 @@ class IndexedGroup(MutableSequence, ABC):
     def __repr__(self):
         return str('<' + 'iterable of ' + str(len(self._list)) + ' ' + str(self._element) + '>')
 
+    def __contains__(self, key):
+        return any([key == e.location.split('/')[-1] for e in self._list])
+
     def is_empty(self):
         if len(self._list) > 0:
             for e in self._list:
@@ -676,8 +693,8 @@ class IndexedGroup(MutableSequence, ABC):
         self._order_names(h=h)  # Enforce order in the group names
 
 
-# generated by sstucker on 2021-12-02
-# version 1.0 SNIRF specification parsed from https://raw.githubusercontent.com/fNIRS/snirf/v1.0/snirf_specification.md
+# generated by sstucker on 2021-12-03
+# version v1.0.1-development SNIRF specification parsed from https://raw.githubusercontent.com/fNIRS/snirf/master/snirf_specification.md
 
 
 class MetaDataTags(Group):
@@ -735,6 +752,8 @@ class MetaDataTags(Group):
                 self._FrequencyUnit = PresentDataset
         else:  # if the dataset is not found on disk
             self._FrequencyUnit = AbsentDataset
+            # TODO loading of unspecified datasets
+                
 
     @property
     def SubjectID(self):
@@ -932,85 +951,104 @@ class MetaDataTags(Group):
         if type(self._FrequencyUnit) not in [type(AbsentDataset), type(None)]:
             _create_dataset_string(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
+        # TODO saving of public attributes
 
     def _validate(self, result: ValidationResult):
         name = self.location + '/SubjectID'
-        if type(self._SubjectID) in [type(AbsentDataset), type(None)] and 'SubjectID' not in self._h:
+        if type(self._SubjectID) in [type(AbsentDataset), type(None)]:
             result._add(name, 'REQUIRED_DATASET_MISSING')
             print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
-            if 'SubjectID' not in self._h:
-                dataset = _create_dataset_string(tmp, 'SubjectID', self._SubjectID)
-            else:
-                dataset = self._h['SubjectID']
-            result._add(name, _validate_string(dataset))
+            try:
+                if type(self._SubjectID) is type(AbsentDataset):
+                    dataset = self._h['SubjectID']
+                else:
+                    dataset = _create_dataset_string(tmp, 'SubjectID', self._SubjectID)
+                result._add(name, _validate_string(dataset))
+            except ValueError:  # If the _create_dataset function can't convert the data
+                result._add(name, 'INVALID_DATASET_TYPE')
             print(dataset)
         name = self.location + '/MeasurementDate'
-        if type(self._MeasurementDate) in [type(AbsentDataset), type(None)] and 'MeasurementDate' not in self._h:
+        if type(self._MeasurementDate) in [type(AbsentDataset), type(None)]:
             result._add(name, 'REQUIRED_DATASET_MISSING')
             print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
-            if 'MeasurementDate' not in self._h:
-                dataset = _create_dataset_string(tmp, 'MeasurementDate', self._MeasurementDate)
-            else:
-                dataset = self._h['MeasurementDate']
-            result._add(name, _validate_string(dataset))
+            try:
+                if type(self._MeasurementDate) is type(AbsentDataset):
+                    dataset = self._h['MeasurementDate']
+                else:
+                    dataset = _create_dataset_string(tmp, 'MeasurementDate', self._MeasurementDate)
+                result._add(name, _validate_string(dataset))
+            except ValueError:  # If the _create_dataset function can't convert the data
+                result._add(name, 'INVALID_DATASET_TYPE')
             print(dataset)
         name = self.location + '/MeasurementTime'
-        if type(self._MeasurementTime) in [type(AbsentDataset), type(None)] and 'MeasurementTime' not in self._h:
+        if type(self._MeasurementTime) in [type(AbsentDataset), type(None)]:
             result._add(name, 'REQUIRED_DATASET_MISSING')
             print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
-            if 'MeasurementTime' not in self._h:
-                dataset = _create_dataset_string(tmp, 'MeasurementTime', self._MeasurementTime)
-            else:
-                dataset = self._h['MeasurementTime']
-            result._add(name, _validate_string(dataset))
+            try:
+                if type(self._MeasurementTime) is type(AbsentDataset):
+                    dataset = self._h['MeasurementTime']
+                else:
+                    dataset = _create_dataset_string(tmp, 'MeasurementTime', self._MeasurementTime)
+                result._add(name, _validate_string(dataset))
+            except ValueError:  # If the _create_dataset function can't convert the data
+                result._add(name, 'INVALID_DATASET_TYPE')
             print(dataset)
         name = self.location + '/LengthUnit'
-        if type(self._LengthUnit) in [type(AbsentDataset), type(None)] and 'LengthUnit' not in self._h:
+        if type(self._LengthUnit) in [type(AbsentDataset), type(None)]:
             result._add(name, 'REQUIRED_DATASET_MISSING')
             print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
-            if 'LengthUnit' not in self._h:
-                dataset = _create_dataset_string(tmp, 'LengthUnit', self._LengthUnit)
-            else:
-                dataset = self._h['LengthUnit']
-            result._add(name, _validate_string(dataset))
+            try:
+                if type(self._LengthUnit) is type(AbsentDataset):
+                    dataset = self._h['LengthUnit']
+                else:
+                    dataset = _create_dataset_string(tmp, 'LengthUnit', self._LengthUnit)
+                result._add(name, _validate_string(dataset))
+            except ValueError:  # If the _create_dataset function can't convert the data
+                result._add(name, 'INVALID_DATASET_TYPE')
             print(dataset)
         name = self.location + '/TimeUnit'
-        if type(self._TimeUnit) in [type(AbsentDataset), type(None)] and 'TimeUnit' not in self._h:
+        if type(self._TimeUnit) in [type(AbsentDataset), type(None)]:
             result._add(name, 'REQUIRED_DATASET_MISSING')
             print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
-            if 'TimeUnit' not in self._h:
-                dataset = _create_dataset_string(tmp, 'TimeUnit', self._TimeUnit)
-            else:
-                dataset = self._h['TimeUnit']
-            result._add(name, _validate_string(dataset))
+            try:
+                if type(self._TimeUnit) is type(AbsentDataset):
+                    dataset = self._h['TimeUnit']
+                else:
+                    dataset = _create_dataset_string(tmp, 'TimeUnit', self._TimeUnit)
+                result._add(name, _validate_string(dataset))
+            except ValueError:  # If the _create_dataset function can't convert the data
+                result._add(name, 'INVALID_DATASET_TYPE')
             print(dataset)
         name = self.location + '/FrequencyUnit'
-        if type(self._FrequencyUnit) in [type(AbsentDataset), type(None)] and 'FrequencyUnit' not in self._h:
+        if type(self._FrequencyUnit) in [type(AbsentDataset), type(None)]:
             result._add(name, 'REQUIRED_DATASET_MISSING')
             print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
-            if 'FrequencyUnit' not in self._h:
-                dataset = _create_dataset_string(tmp, 'FrequencyUnit', self._FrequencyUnit)
-            else:
-                dataset = self._h['FrequencyUnit']
-            result._add(name, _validate_string(dataset))
+            try:
+                if type(self._FrequencyUnit) is type(AbsentDataset):
+                    dataset = self._h['FrequencyUnit']
+                else:
+                    dataset = _create_dataset_string(tmp, 'FrequencyUnit', self._FrequencyUnit)
+                result._add(name, _validate_string(dataset))
+            except ValueError:  # If the _create_dataset function can't convert the data
+                result._add(name, 'INVALID_DATASET_TYPE')
             print(dataset)
 
 
@@ -1098,6 +1136,7 @@ class Probe(Group):
                 self._useLocalIndex = PresentDataset
         else:  # if the dataset is not found on disk
             self._useLocalIndex = AbsentDataset
+                
 
     @property
     def wavelengths(self):
@@ -1658,239 +1697,299 @@ class Probe(Group):
 
     def _validate(self, result: ValidationResult):
         name = self.location + '/wavelengths'
-        if type(self._wavelengths) in [type(AbsentDataset), type(None)] and 'wavelengths' not in self._h:
+        if type(self._wavelengths) in [type(AbsentDataset), type(None)]:
             result._add(name, 'REQUIRED_DATASET_MISSING')
             print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
-            if 'wavelengths' not in self._h:
-                dataset = _create_dataset_float_array(tmp, 'wavelengths', self._wavelengths)
-            else:
-                dataset = self._h['wavelengths']
-            result._add(name, _validate_float_array(dataset, ndims=[1]))
+            try:
+                if type(self._wavelengths) is type(AbsentDataset):
+                    dataset = self._h['wavelengths']
+                else:
+                    dataset = _create_dataset_float_array(tmp, 'wavelengths', self._wavelengths)
+                result._add(name, _validate_float_array(dataset, ndims=[1]))
+            except ValueError:  # If the _create_dataset function can't convert the data
+                result._add(name, 'INVALID_DATASET_TYPE')
             print(dataset)
         name = self.location + '/wavelengthsEmission'
-        if type(self._wavelengthsEmission) in [type(AbsentDataset), type(None)] and 'wavelengthsEmission' not in self._h:
+        if type(self._wavelengthsEmission) in [type(AbsentDataset), type(None)]:
             result._add(name, 'OPTIONAL_DATASET_MISSING')
             print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
-            if 'wavelengthsEmission' not in self._h:
-                dataset = _create_dataset_float_array(tmp, 'wavelengthsEmission', self._wavelengthsEmission)
-            else:
-                dataset = self._h['wavelengthsEmission']
-            result._add(name, _validate_float_array(dataset, ndims=[1]))
+            try:
+                if type(self._wavelengthsEmission) is type(AbsentDataset):
+                    dataset = self._h['wavelengthsEmission']
+                else:
+                    dataset = _create_dataset_float_array(tmp, 'wavelengthsEmission', self._wavelengthsEmission)
+                result._add(name, _validate_float_array(dataset, ndims=[1]))
+            except ValueError:  # If the _create_dataset function can't convert the data
+                result._add(name, 'INVALID_DATASET_TYPE')
             print(dataset)
         name = self.location + '/sourcePos2D'
-        if type(self._sourcePos2D) in [type(AbsentDataset), type(None)] and 'sourcePos2D' not in self._h:
+        if type(self._sourcePos2D) in [type(AbsentDataset), type(None)]:
             result._add(name, 'REQUIRED_DATASET_MISSING')
             print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
-            if 'sourcePos2D' not in self._h:
-                dataset = _create_dataset_float_array(tmp, 'sourcePos2D', self._sourcePos2D)
-            else:
-                dataset = self._h['sourcePos2D']
-            result._add(name, _validate_float_array(dataset, ndims=[2]))
+            try:
+                if type(self._sourcePos2D) is type(AbsentDataset):
+                    dataset = self._h['sourcePos2D']
+                else:
+                    dataset = _create_dataset_float_array(tmp, 'sourcePos2D', self._sourcePos2D)
+                result._add(name, _validate_float_array(dataset, ndims=[2]))
+            except ValueError:  # If the _create_dataset function can't convert the data
+                result._add(name, 'INVALID_DATASET_TYPE')
             print(dataset)
         name = self.location + '/sourcePos3D'
-        if type(self._sourcePos3D) in [type(AbsentDataset), type(None)] and 'sourcePos3D' not in self._h:
+        if type(self._sourcePos3D) in [type(AbsentDataset), type(None)]:
             result._add(name, 'REQUIRED_DATASET_MISSING')
             print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
-            if 'sourcePos3D' not in self._h:
-                dataset = _create_dataset_float_array(tmp, 'sourcePos3D', self._sourcePos3D)
-            else:
-                dataset = self._h['sourcePos3D']
-            result._add(name, _validate_float_array(dataset, ndims=[2]))
+            try:
+                if type(self._sourcePos3D) is type(AbsentDataset):
+                    dataset = self._h['sourcePos3D']
+                else:
+                    dataset = _create_dataset_float_array(tmp, 'sourcePos3D', self._sourcePos3D)
+                result._add(name, _validate_float_array(dataset, ndims=[2]))
+            except ValueError:  # If the _create_dataset function can't convert the data
+                result._add(name, 'INVALID_DATASET_TYPE')
             print(dataset)
         name = self.location + '/detectorPos2D'
-        if type(self._detectorPos2D) in [type(AbsentDataset), type(None)] and 'detectorPos2D' not in self._h:
+        if type(self._detectorPos2D) in [type(AbsentDataset), type(None)]:
             result._add(name, 'REQUIRED_DATASET_MISSING')
             print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
-            if 'detectorPos2D' not in self._h:
-                dataset = _create_dataset_float_array(tmp, 'detectorPos2D', self._detectorPos2D)
-            else:
-                dataset = self._h['detectorPos2D']
-            result._add(name, _validate_float_array(dataset, ndims=[2]))
+            try:
+                if type(self._detectorPos2D) is type(AbsentDataset):
+                    dataset = self._h['detectorPos2D']
+                else:
+                    dataset = _create_dataset_float_array(tmp, 'detectorPos2D', self._detectorPos2D)
+                result._add(name, _validate_float_array(dataset, ndims=[2]))
+            except ValueError:  # If the _create_dataset function can't convert the data
+                result._add(name, 'INVALID_DATASET_TYPE')
             print(dataset)
         name = self.location + '/detectorPos3D'
-        if type(self._detectorPos3D) in [type(AbsentDataset), type(None)] and 'detectorPos3D' not in self._h:
+        if type(self._detectorPos3D) in [type(AbsentDataset), type(None)]:
             result._add(name, 'REQUIRED_DATASET_MISSING')
             print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
-            if 'detectorPos3D' not in self._h:
-                dataset = _create_dataset_float_array(tmp, 'detectorPos3D', self._detectorPos3D)
-            else:
-                dataset = self._h['detectorPos3D']
-            result._add(name, _validate_float_array(dataset, ndims=[2]))
+            try:
+                if type(self._detectorPos3D) is type(AbsentDataset):
+                    dataset = self._h['detectorPos3D']
+                else:
+                    dataset = _create_dataset_float_array(tmp, 'detectorPos3D', self._detectorPos3D)
+                result._add(name, _validate_float_array(dataset, ndims=[2]))
+            except ValueError:  # If the _create_dataset function can't convert the data
+                result._add(name, 'INVALID_DATASET_TYPE')
             print(dataset)
         name = self.location + '/frequencies'
-        if type(self._frequencies) in [type(AbsentDataset), type(None)] and 'frequencies' not in self._h:
+        if type(self._frequencies) in [type(AbsentDataset), type(None)]:
             result._add(name, 'OPTIONAL_DATASET_MISSING')
             print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
-            if 'frequencies' not in self._h:
-                dataset = _create_dataset_float_array(tmp, 'frequencies', self._frequencies)
-            else:
-                dataset = self._h['frequencies']
-            result._add(name, _validate_float_array(dataset, ndims=[1]))
+            try:
+                if type(self._frequencies) is type(AbsentDataset):
+                    dataset = self._h['frequencies']
+                else:
+                    dataset = _create_dataset_float_array(tmp, 'frequencies', self._frequencies)
+                result._add(name, _validate_float_array(dataset, ndims=[1]))
+            except ValueError:  # If the _create_dataset function can't convert the data
+                result._add(name, 'INVALID_DATASET_TYPE')
             print(dataset)
         name = self.location + '/timeDelays'
-        if type(self._timeDelays) in [type(AbsentDataset), type(None)] and 'timeDelays' not in self._h:
+        if type(self._timeDelays) in [type(AbsentDataset), type(None)]:
             result._add(name, 'OPTIONAL_DATASET_MISSING')
             print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
-            if 'timeDelays' not in self._h:
-                dataset = _create_dataset_float_array(tmp, 'timeDelays', self._timeDelays)
-            else:
-                dataset = self._h['timeDelays']
-            result._add(name, _validate_float_array(dataset, ndims=[1]))
+            try:
+                if type(self._timeDelays) is type(AbsentDataset):
+                    dataset = self._h['timeDelays']
+                else:
+                    dataset = _create_dataset_float_array(tmp, 'timeDelays', self._timeDelays)
+                result._add(name, _validate_float_array(dataset, ndims=[1]))
+            except ValueError:  # If the _create_dataset function can't convert the data
+                result._add(name, 'INVALID_DATASET_TYPE')
             print(dataset)
         name = self.location + '/timeDelayWidths'
-        if type(self._timeDelayWidths) in [type(AbsentDataset), type(None)] and 'timeDelayWidths' not in self._h:
+        if type(self._timeDelayWidths) in [type(AbsentDataset), type(None)]:
             result._add(name, 'OPTIONAL_DATASET_MISSING')
             print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
-            if 'timeDelayWidths' not in self._h:
-                dataset = _create_dataset_float_array(tmp, 'timeDelayWidths', self._timeDelayWidths)
-            else:
-                dataset = self._h['timeDelayWidths']
-            result._add(name, _validate_float_array(dataset, ndims=[1]))
+            try:
+                if type(self._timeDelayWidths) is type(AbsentDataset):
+                    dataset = self._h['timeDelayWidths']
+                else:
+                    dataset = _create_dataset_float_array(tmp, 'timeDelayWidths', self._timeDelayWidths)
+                result._add(name, _validate_float_array(dataset, ndims=[1]))
+            except ValueError:  # If the _create_dataset function can't convert the data
+                result._add(name, 'INVALID_DATASET_TYPE')
             print(dataset)
         name = self.location + '/momentOrders'
-        if type(self._momentOrders) in [type(AbsentDataset), type(None)] and 'momentOrders' not in self._h:
+        if type(self._momentOrders) in [type(AbsentDataset), type(None)]:
             result._add(name, 'OPTIONAL_DATASET_MISSING')
             print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
-            if 'momentOrders' not in self._h:
-                dataset = _create_dataset_float_array(tmp, 'momentOrders', self._momentOrders)
-            else:
-                dataset = self._h['momentOrders']
-            result._add(name, _validate_float_array(dataset, ndims=[1]))
+            try:
+                if type(self._momentOrders) is type(AbsentDataset):
+                    dataset = self._h['momentOrders']
+                else:
+                    dataset = _create_dataset_float_array(tmp, 'momentOrders', self._momentOrders)
+                result._add(name, _validate_float_array(dataset, ndims=[1]))
+            except ValueError:  # If the _create_dataset function can't convert the data
+                result._add(name, 'INVALID_DATASET_TYPE')
             print(dataset)
         name = self.location + '/correlationTimeDelays'
-        if type(self._correlationTimeDelays) in [type(AbsentDataset), type(None)] and 'correlationTimeDelays' not in self._h:
+        if type(self._correlationTimeDelays) in [type(AbsentDataset), type(None)]:
             result._add(name, 'OPTIONAL_DATASET_MISSING')
             print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
-            if 'correlationTimeDelays' not in self._h:
-                dataset = _create_dataset_float_array(tmp, 'correlationTimeDelays', self._correlationTimeDelays)
-            else:
-                dataset = self._h['correlationTimeDelays']
-            result._add(name, _validate_float_array(dataset, ndims=[1]))
+            try:
+                if type(self._correlationTimeDelays) is type(AbsentDataset):
+                    dataset = self._h['correlationTimeDelays']
+                else:
+                    dataset = _create_dataset_float_array(tmp, 'correlationTimeDelays', self._correlationTimeDelays)
+                result._add(name, _validate_float_array(dataset, ndims=[1]))
+            except ValueError:  # If the _create_dataset function can't convert the data
+                result._add(name, 'INVALID_DATASET_TYPE')
             print(dataset)
         name = self.location + '/correlationTimeDelayWidths'
-        if type(self._correlationTimeDelayWidths) in [type(AbsentDataset), type(None)] and 'correlationTimeDelayWidths' not in self._h:
+        if type(self._correlationTimeDelayWidths) in [type(AbsentDataset), type(None)]:
             result._add(name, 'OPTIONAL_DATASET_MISSING')
             print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
-            if 'correlationTimeDelayWidths' not in self._h:
-                dataset = _create_dataset_float_array(tmp, 'correlationTimeDelayWidths', self._correlationTimeDelayWidths)
-            else:
-                dataset = self._h['correlationTimeDelayWidths']
-            result._add(name, _validate_float_array(dataset, ndims=[1]))
+            try:
+                if type(self._correlationTimeDelayWidths) is type(AbsentDataset):
+                    dataset = self._h['correlationTimeDelayWidths']
+                else:
+                    dataset = _create_dataset_float_array(tmp, 'correlationTimeDelayWidths', self._correlationTimeDelayWidths)
+                result._add(name, _validate_float_array(dataset, ndims=[1]))
+            except ValueError:  # If the _create_dataset function can't convert the data
+                result._add(name, 'INVALID_DATASET_TYPE')
             print(dataset)
         name = self.location + '/sourceLabels'
-        if type(self._sourceLabels) in [type(AbsentDataset), type(None)] and 'sourceLabels' not in self._h:
+        if type(self._sourceLabels) in [type(AbsentDataset), type(None)]:
             result._add(name, 'OPTIONAL_DATASET_MISSING')
             print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
-            if 'sourceLabels' not in self._h:
-                dataset = _create_dataset_string_array(tmp, 'sourceLabels', self._sourceLabels)
-            else:
-                dataset = self._h['sourceLabels']
-            result._add(name, _validate_string_array(dataset, ndims=[1]))
+            try:
+                if type(self._sourceLabels) is type(AbsentDataset):
+                    dataset = self._h['sourceLabels']
+                else:
+                    dataset = _create_dataset_string_array(tmp, 'sourceLabels', self._sourceLabels)
+                result._add(name, _validate_string_array(dataset, ndims=[1]))
+            except ValueError:  # If the _create_dataset function can't convert the data
+                result._add(name, 'INVALID_DATASET_TYPE')
             print(dataset)
         name = self.location + '/detectorLabels'
-        if type(self._detectorLabels) in [type(AbsentDataset), type(None)] and 'detectorLabels' not in self._h:
+        if type(self._detectorLabels) in [type(AbsentDataset), type(None)]:
             result._add(name, 'OPTIONAL_DATASET_MISSING')
             print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
-            if 'detectorLabels' not in self._h:
-                dataset = _create_dataset_string_array(tmp, 'detectorLabels', self._detectorLabels)
-            else:
-                dataset = self._h['detectorLabels']
-            result._add(name, _validate_string_array(dataset, ndims=[1]))
+            try:
+                if type(self._detectorLabels) is type(AbsentDataset):
+                    dataset = self._h['detectorLabels']
+                else:
+                    dataset = _create_dataset_string_array(tmp, 'detectorLabels', self._detectorLabels)
+                result._add(name, _validate_string_array(dataset, ndims=[1]))
+            except ValueError:  # If the _create_dataset function can't convert the data
+                result._add(name, 'INVALID_DATASET_TYPE')
             print(dataset)
         name = self.location + '/landmarkPos2D'
-        if type(self._landmarkPos2D) in [type(AbsentDataset), type(None)] and 'landmarkPos2D' not in self._h:
+        if type(self._landmarkPos2D) in [type(AbsentDataset), type(None)]:
             result._add(name, 'OPTIONAL_DATASET_MISSING')
             print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
-            if 'landmarkPos2D' not in self._h:
-                dataset = _create_dataset_float_array(tmp, 'landmarkPos2D', self._landmarkPos2D)
-            else:
-                dataset = self._h['landmarkPos2D']
-            result._add(name, _validate_float_array(dataset, ndims=[2]))
+            try:
+                if type(self._landmarkPos2D) is type(AbsentDataset):
+                    dataset = self._h['landmarkPos2D']
+                else:
+                    dataset = _create_dataset_float_array(tmp, 'landmarkPos2D', self._landmarkPos2D)
+                result._add(name, _validate_float_array(dataset, ndims=[2]))
+            except ValueError:  # If the _create_dataset function can't convert the data
+                result._add(name, 'INVALID_DATASET_TYPE')
             print(dataset)
         name = self.location + '/landmarkPos3D'
-        if type(self._landmarkPos3D) in [type(AbsentDataset), type(None)] and 'landmarkPos3D' not in self._h:
+        if type(self._landmarkPos3D) in [type(AbsentDataset), type(None)]:
             result._add(name, 'OPTIONAL_DATASET_MISSING')
             print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
-            if 'landmarkPos3D' not in self._h:
-                dataset = _create_dataset_float_array(tmp, 'landmarkPos3D', self._landmarkPos3D)
-            else:
-                dataset = self._h['landmarkPos3D']
-            result._add(name, _validate_float_array(dataset, ndims=[2]))
+            try:
+                if type(self._landmarkPos3D) is type(AbsentDataset):
+                    dataset = self._h['landmarkPos3D']
+                else:
+                    dataset = _create_dataset_float_array(tmp, 'landmarkPos3D', self._landmarkPos3D)
+                result._add(name, _validate_float_array(dataset, ndims=[2]))
+            except ValueError:  # If the _create_dataset function can't convert the data
+                result._add(name, 'INVALID_DATASET_TYPE')
             print(dataset)
         name = self.location + '/landmarkLabels'
-        if type(self._landmarkLabels) in [type(AbsentDataset), type(None)] and 'landmarkLabels' not in self._h:
+        if type(self._landmarkLabels) in [type(AbsentDataset), type(None)]:
             result._add(name, 'OPTIONAL_DATASET_MISSING')
             print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
-            if 'landmarkLabels' not in self._h:
-                dataset = _create_dataset_string_array(tmp, 'landmarkLabels', self._landmarkLabels)
-            else:
-                dataset = self._h['landmarkLabels']
-            result._add(name, _validate_string_array(dataset, ndims=[1]))
+            try:
+                if type(self._landmarkLabels) is type(AbsentDataset):
+                    dataset = self._h['landmarkLabels']
+                else:
+                    dataset = _create_dataset_string_array(tmp, 'landmarkLabels', self._landmarkLabels)
+                result._add(name, _validate_string_array(dataset, ndims=[1]))
+            except ValueError:  # If the _create_dataset function can't convert the data
+                result._add(name, 'INVALID_DATASET_TYPE')
             print(dataset)
         name = self.location + '/useLocalIndex'
-        if type(self._useLocalIndex) in [type(AbsentDataset), type(None)] and 'useLocalIndex' not in self._h:
+        if type(self._useLocalIndex) in [type(AbsentDataset), type(None)]:
             result._add(name, 'OPTIONAL_DATASET_MISSING')
             print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
-            if 'useLocalIndex' not in self._h:
-                dataset = _create_dataset_int(tmp, 'useLocalIndex', self._useLocalIndex)
-            else:
-                dataset = self._h['useLocalIndex']
-            result._add(name, _validate_int(dataset))
+            try:
+                if type(self._useLocalIndex) is type(AbsentDataset):
+                    dataset = self._h['useLocalIndex']
+                else:
+                    dataset = _create_dataset_int(tmp, 'useLocalIndex', self._useLocalIndex)
+                result._add(name, _validate_int(dataset))
+            except ValueError:  # If the _create_dataset function can't convert the data
+                result._add(name, 'INVALID_DATASET_TYPE')
             print(dataset)
+        for key in self._h.keys():  # TODO attributes too
+            if not any([key.startswith(name) for name in self._snirfnames]):
+                if type(self._h[key]) is h5py.Group:
+                    result._add(self.location + '/' + key, 'UNRECOGNIZED_GROUP')
+                elif type(self._h[key]) is h5py.Dataset:
+                    result._add(self.location + '/' + key, 'UNRECOGNIZED_DATASET')
 
 
 
@@ -1917,6 +2016,7 @@ class NirsElement(Group):
         else:
             self._probe = Probe(self.location + '/' + 'probe', self._cfg)  # Anonymous group (wrapper only)
         self.aux = Aux(self, self._cfg)  # Indexed group
+                
 
     @property
     def metaDataTags(self):
@@ -2026,7 +2126,7 @@ class NirsElement(Group):
 
     def _validate(self, result: ValidationResult):
         name = self.location + '/metaDataTags'
-        if type(self._metaDataTags) is type(AbsentGroup) and 'metaDataTags' not in self._h:
+        if type(self._metaDataTags) in [type(AbsentDataset), type(None)]:
             result._add(name, 'REQUIRED_GROUP_MISSING')
             print(name, 'not found')
         else:
@@ -2036,13 +2136,19 @@ class NirsElement(Group):
         name = self.location + '/stim'
         self.stim._validate(result)
         name = self.location + '/probe'
-        if type(self._probe) is type(AbsentGroup) and 'probe' not in self._h:
+        if type(self._probe) in [type(AbsentDataset), type(None)]:
             result._add(name, 'REQUIRED_GROUP_MISSING')
             print(name, 'not found')
         else:
             self.probe._validate(result)
         name = self.location + '/aux'
         self.aux._validate(result)
+        for key in self._h.keys():  # TODO attributes too
+            if not any([key.startswith(name) for name in self._snirfnames]):
+                if type(self._h[key]) is h5py.Group:
+                    result._add(self.location + '/' + key, 'UNRECOGNIZED_GROUP')
+                elif type(self._h[key]) is h5py.Dataset:
+                    result._add(self.location + '/' + key, 'UNRECOGNIZED_DATASET')
 
 
 class Nirs(IndexedGroup):
@@ -2071,6 +2177,7 @@ class DataElement(Group):
             if not self._cfg.dynamic_loading:
                 self._time = _read_float_array(self._h['time'])
         self.measurementList = MeasurementList(self, self._cfg)  # Indexed group
+                
 
     @property
     def dataTimeSeries(self):
@@ -2166,33 +2273,45 @@ class DataElement(Group):
 
     def _validate(self, result: ValidationResult):
         name = self.location + '/dataTimeSeries'
-        if type(self._dataTimeSeries) in [type(AbsentDataset), type(None)] and 'dataTimeSeries' not in self._h:
+        if type(self._dataTimeSeries) in [type(AbsentDataset), type(None)]:
             result._add(name, 'REQUIRED_DATASET_MISSING')
             print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
-            if 'dataTimeSeries' not in self._h:
-                dataset = _create_dataset_float_array(tmp, 'dataTimeSeries', self._dataTimeSeries)
-            else:
-                dataset = self._h['dataTimeSeries']
-            result._add(name, _validate_float_array(dataset, ndims=[2]))
+            try:
+                if type(self._dataTimeSeries) is type(AbsentDataset):
+                    dataset = self._h['dataTimeSeries']
+                else:
+                    dataset = _create_dataset_float_array(tmp, 'dataTimeSeries', self._dataTimeSeries)
+                result._add(name, _validate_float_array(dataset, ndims=[2]))
+            except ValueError:  # If the _create_dataset function can't convert the data
+                result._add(name, 'INVALID_DATASET_TYPE')
             print(dataset)
         name = self.location + '/time'
-        if type(self._time) in [type(AbsentDataset), type(None)] and 'time' not in self._h:
+        if type(self._time) in [type(AbsentDataset), type(None)]:
             result._add(name, 'REQUIRED_DATASET_MISSING')
             print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
-            if 'time' not in self._h:
-                dataset = _create_dataset_float_array(tmp, 'time', self._time)
-            else:
-                dataset = self._h['time']
-            result._add(name, _validate_float_array(dataset, ndims=[1]))
+            try:
+                if type(self._time) is type(AbsentDataset):
+                    dataset = self._h['time']
+                else:
+                    dataset = _create_dataset_float_array(tmp, 'time', self._time)
+                result._add(name, _validate_float_array(dataset, ndims=[1]))
+            except ValueError:  # If the _create_dataset function can't convert the data
+                result._add(name, 'INVALID_DATASET_TYPE')
             print(dataset)
         name = self.location + '/measurementList'
         self.measurementList._validate(result)
+        for key in self._h.keys():  # TODO attributes too
+            if not any([key.startswith(name) for name in self._snirfnames]):
+                if type(self._h[key]) is h5py.Group:
+                    result._add(self.location + '/' + key, 'UNRECOGNIZED_GROUP')
+                elif type(self._h[key]) is h5py.Dataset:
+                    result._add(self.location + '/' + key, 'UNRECOGNIZED_DATASET')
 
 
 class Data(IndexedGroup):
@@ -2212,6 +2331,7 @@ class MeasurementListElement(Group):
     _wavelengthActual = AbsentDataset  # <f>
     _wavelengthEmissionActual = AbsentDataset  # <f>
     _dataType = AbsentDataset  # <i>*
+    _dataUnit = AbsentDataset  # "s"
     _dataTypeLabel = AbsentDataset  # "s"
     _dataTypeIndex = AbsentDataset  # <i>*
     _sourcePower = AbsentDataset  # <f>
@@ -2219,7 +2339,7 @@ class MeasurementListElement(Group):
     _moduleIndex = AbsentDataset  # <i>
     _sourceModuleIndex = AbsentDataset  # <i>
     _detectorModuleIndex = AbsentDataset  # <i>
-    _snirfnames = ['sourceIndex', 'detectorIndex', 'wavelengthIndex', 'wavelengthActual', 'wavelengthEmissionActual', 'dataType', 'dataTypeLabel', 'dataTypeIndex', 'sourcePower', 'detectorGain', 'moduleIndex', 'sourceModuleIndex', 'detectorModuleIndex', ]
+    _snirfnames = ['sourceIndex', 'detectorIndex', 'wavelengthIndex', 'wavelengthActual', 'wavelengthEmissionActual', 'dataType', 'dataUnit', 'dataTypeLabel', 'dataTypeIndex', 'sourcePower', 'detectorGain', 'moduleIndex', 'sourceModuleIndex', 'detectorModuleIndex', ]
 
 
     def __init__(self, gid: h5py.h5g.GroupID, cfg: SnirfConfig):
@@ -2266,6 +2386,13 @@ class MeasurementListElement(Group):
                 self._dataType = PresentDataset
         else:  # if the dataset is not found on disk
             self._dataType = AbsentDataset
+        if 'dataUnit' in self._h:
+            if not self._cfg.dynamic_loading:
+                self._dataUnit = _read_string(self._h['dataUnit'])
+            else:  # if the dataset is found on disk but dynamic_loading=True
+                self._dataUnit = PresentDataset
+        else:  # if the dataset is not found on disk
+            self._dataUnit = AbsentDataset
         if 'dataTypeLabel' in self._h:
             if not self._cfg.dynamic_loading:
                 self._dataTypeLabel = _read_string(self._h['dataTypeLabel'])
@@ -2315,6 +2442,7 @@ class MeasurementListElement(Group):
                 self._detectorModuleIndex = PresentDataset
         else:  # if the dataset is not found on disk
             self._detectorModuleIndex = AbsentDataset
+                
 
     @property
     def sourceIndex(self):
@@ -2447,6 +2575,28 @@ class MeasurementListElement(Group):
     def dataType(self):
         self._dataType = AbsentDataset
         self._cfg.logger.info('Deleted %s/dataType from %s', self.location, self.filename)
+
+    @property
+    def dataUnit(self):
+        if type(self._dataUnit) is type(AbsentDataset):
+            return None
+        if self._cfg.dynamic_loading and type(self._dataUnit) is type(PresentDataset) and 'dataUnit' in self._h:
+            return _read_string(self._h['dataUnit'])
+            self._cfg.logger.info('Dynamically loaded %s/dataUnit from %s', self.location, self.filename)
+        elif self._dataUnit is not AbsentDataset:
+            return self._dataUnit
+        else:
+            return None
+
+    @dataUnit.setter
+    def dataUnit(self, value):
+        self._dataUnit = value
+        # self._cfg.logger.info('Assignment to %s/dataUnit in %s', self.location, self.filename)
+
+    @dataUnit.deleter
+    def dataUnit(self):
+        self._dataUnit = AbsentDataset
+        self._cfg.logger.info('Deleted %s/dataUnit from %s', self.location, self.filename)
 
     @property
     def dataTypeLabel(self):
@@ -2666,6 +2816,14 @@ class MeasurementListElement(Group):
         if type(self._dataType) not in [type(AbsentDataset), type(None)]:
             _create_dataset_int(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
+        name = self.location + '/dataUnit'
+        if name in file:
+            del file[name]
+            self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
+        data = self.dataUnit
+        if type(self._dataUnit) not in [type(AbsentDataset), type(None)]:
+            _create_dataset_string(file, name, data)
+            # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/dataTypeLabel'
         if name in file:
             del file[name]
@@ -2725,174 +2883,235 @@ class MeasurementListElement(Group):
 
     def _validate(self, result: ValidationResult):
         name = self.location + '/sourceIndex'
-        if type(self._sourceIndex) in [type(AbsentDataset), type(None)] and 'sourceIndex' not in self._h:
+        if type(self._sourceIndex) in [type(AbsentDataset), type(None)]:
             result._add(name, 'REQUIRED_DATASET_MISSING')
             print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
-            if 'sourceIndex' not in self._h:
-                dataset = _create_dataset_int(tmp, 'sourceIndex', self._sourceIndex)
-            else:
-                dataset = self._h['sourceIndex']
-            result._add(name, _validate_int(dataset))
+            try:
+                if type(self._sourceIndex) is type(AbsentDataset):
+                    dataset = self._h['sourceIndex']
+                else:
+                    dataset = _create_dataset_int(tmp, 'sourceIndex', self._sourceIndex)
+                result._add(name, _validate_int(dataset))
+            except ValueError:  # If the _create_dataset function can't convert the data
+                result._add(name, 'INVALID_DATASET_TYPE')
             print(dataset)
         name = self.location + '/detectorIndex'
-        if type(self._detectorIndex) in [type(AbsentDataset), type(None)] and 'detectorIndex' not in self._h:
+        if type(self._detectorIndex) in [type(AbsentDataset), type(None)]:
             result._add(name, 'REQUIRED_DATASET_MISSING')
             print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
-            if 'detectorIndex' not in self._h:
-                dataset = _create_dataset_int(tmp, 'detectorIndex', self._detectorIndex)
-            else:
-                dataset = self._h['detectorIndex']
-            result._add(name, _validate_int(dataset))
+            try:
+                if type(self._detectorIndex) is type(AbsentDataset):
+                    dataset = self._h['detectorIndex']
+                else:
+                    dataset = _create_dataset_int(tmp, 'detectorIndex', self._detectorIndex)
+                result._add(name, _validate_int(dataset))
+            except ValueError:  # If the _create_dataset function can't convert the data
+                result._add(name, 'INVALID_DATASET_TYPE')
             print(dataset)
         name = self.location + '/wavelengthIndex'
-        if type(self._wavelengthIndex) in [type(AbsentDataset), type(None)] and 'wavelengthIndex' not in self._h:
+        if type(self._wavelengthIndex) in [type(AbsentDataset), type(None)]:
             result._add(name, 'REQUIRED_DATASET_MISSING')
             print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
-            if 'wavelengthIndex' not in self._h:
-                dataset = _create_dataset_int(tmp, 'wavelengthIndex', self._wavelengthIndex)
-            else:
-                dataset = self._h['wavelengthIndex']
-            result._add(name, _validate_int(dataset))
+            try:
+                if type(self._wavelengthIndex) is type(AbsentDataset):
+                    dataset = self._h['wavelengthIndex']
+                else:
+                    dataset = _create_dataset_int(tmp, 'wavelengthIndex', self._wavelengthIndex)
+                result._add(name, _validate_int(dataset))
+            except ValueError:  # If the _create_dataset function can't convert the data
+                result._add(name, 'INVALID_DATASET_TYPE')
             print(dataset)
         name = self.location + '/wavelengthActual'
-        if type(self._wavelengthActual) in [type(AbsentDataset), type(None)] and 'wavelengthActual' not in self._h:
+        if type(self._wavelengthActual) in [type(AbsentDataset), type(None)]:
             result._add(name, 'OPTIONAL_DATASET_MISSING')
             print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
-            if 'wavelengthActual' not in self._h:
-                dataset = _create_dataset_float(tmp, 'wavelengthActual', self._wavelengthActual)
-            else:
-                dataset = self._h['wavelengthActual']
-            result._add(name, _validate_float(dataset))
+            try:
+                if type(self._wavelengthActual) is type(AbsentDataset):
+                    dataset = self._h['wavelengthActual']
+                else:
+                    dataset = _create_dataset_float(tmp, 'wavelengthActual', self._wavelengthActual)
+                result._add(name, _validate_float(dataset))
+            except ValueError:  # If the _create_dataset function can't convert the data
+                result._add(name, 'INVALID_DATASET_TYPE')
             print(dataset)
         name = self.location + '/wavelengthEmissionActual'
-        if type(self._wavelengthEmissionActual) in [type(AbsentDataset), type(None)] and 'wavelengthEmissionActual' not in self._h:
+        if type(self._wavelengthEmissionActual) in [type(AbsentDataset), type(None)]:
             result._add(name, 'OPTIONAL_DATASET_MISSING')
             print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
-            if 'wavelengthEmissionActual' not in self._h:
-                dataset = _create_dataset_float(tmp, 'wavelengthEmissionActual', self._wavelengthEmissionActual)
-            else:
-                dataset = self._h['wavelengthEmissionActual']
-            result._add(name, _validate_float(dataset))
+            try:
+                if type(self._wavelengthEmissionActual) is type(AbsentDataset):
+                    dataset = self._h['wavelengthEmissionActual']
+                else:
+                    dataset = _create_dataset_float(tmp, 'wavelengthEmissionActual', self._wavelengthEmissionActual)
+                result._add(name, _validate_float(dataset))
+            except ValueError:  # If the _create_dataset function can't convert the data
+                result._add(name, 'INVALID_DATASET_TYPE')
             print(dataset)
         name = self.location + '/dataType'
-        if type(self._dataType) in [type(AbsentDataset), type(None)] and 'dataType' not in self._h:
+        if type(self._dataType) in [type(AbsentDataset), type(None)]:
             result._add(name, 'REQUIRED_DATASET_MISSING')
             print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
-            if 'dataType' not in self._h:
-                dataset = _create_dataset_int(tmp, 'dataType', self._dataType)
-            else:
-                dataset = self._h['dataType']
-            result._add(name, _validate_int(dataset))
+            try:
+                if type(self._dataType) is type(AbsentDataset):
+                    dataset = self._h['dataType']
+                else:
+                    dataset = _create_dataset_int(tmp, 'dataType', self._dataType)
+                result._add(name, _validate_int(dataset))
+            except ValueError:  # If the _create_dataset function can't convert the data
+                result._add(name, 'INVALID_DATASET_TYPE')
+            print(dataset)
+        name = self.location + '/dataUnit'
+        if type(self._dataUnit) in [type(AbsentDataset), type(None)]:
+            result._add(name, 'OPTIONAL_DATASET_MISSING')
+            print(name, 'not found')
+        else:
+            # Validate unwritten datasets after writing them to this tempfile
+            tmp = h5py.File(TemporaryFile(), 'w')
+            try:
+                if type(self._dataUnit) is type(AbsentDataset):
+                    dataset = self._h['dataUnit']
+                else:
+                    dataset = _create_dataset_string(tmp, 'dataUnit', self._dataUnit)
+                result._add(name, _validate_string(dataset))
+            except ValueError:  # If the _create_dataset function can't convert the data
+                result._add(name, 'INVALID_DATASET_TYPE')
             print(dataset)
         name = self.location + '/dataTypeLabel'
-        if type(self._dataTypeLabel) in [type(AbsentDataset), type(None)] and 'dataTypeLabel' not in self._h:
+        if type(self._dataTypeLabel) in [type(AbsentDataset), type(None)]:
             result._add(name, 'OPTIONAL_DATASET_MISSING')
             print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
-            if 'dataTypeLabel' not in self._h:
-                dataset = _create_dataset_string(tmp, 'dataTypeLabel', self._dataTypeLabel)
-            else:
-                dataset = self._h['dataTypeLabel']
-            result._add(name, _validate_string(dataset))
+            try:
+                if type(self._dataTypeLabel) is type(AbsentDataset):
+                    dataset = self._h['dataTypeLabel']
+                else:
+                    dataset = _create_dataset_string(tmp, 'dataTypeLabel', self._dataTypeLabel)
+                result._add(name, _validate_string(dataset))
+            except ValueError:  # If the _create_dataset function can't convert the data
+                result._add(name, 'INVALID_DATASET_TYPE')
             print(dataset)
         name = self.location + '/dataTypeIndex'
-        if type(self._dataTypeIndex) in [type(AbsentDataset), type(None)] and 'dataTypeIndex' not in self._h:
+        if type(self._dataTypeIndex) in [type(AbsentDataset), type(None)]:
             result._add(name, 'REQUIRED_DATASET_MISSING')
             print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
-            if 'dataTypeIndex' not in self._h:
-                dataset = _create_dataset_int(tmp, 'dataTypeIndex', self._dataTypeIndex)
-            else:
-                dataset = self._h['dataTypeIndex']
-            result._add(name, _validate_int(dataset))
+            try:
+                if type(self._dataTypeIndex) is type(AbsentDataset):
+                    dataset = self._h['dataTypeIndex']
+                else:
+                    dataset = _create_dataset_int(tmp, 'dataTypeIndex', self._dataTypeIndex)
+                result._add(name, _validate_int(dataset))
+            except ValueError:  # If the _create_dataset function can't convert the data
+                result._add(name, 'INVALID_DATASET_TYPE')
             print(dataset)
         name = self.location + '/sourcePower'
-        if type(self._sourcePower) in [type(AbsentDataset), type(None)] and 'sourcePower' not in self._h:
+        if type(self._sourcePower) in [type(AbsentDataset), type(None)]:
             result._add(name, 'OPTIONAL_DATASET_MISSING')
             print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
-            if 'sourcePower' not in self._h:
-                dataset = _create_dataset_float(tmp, 'sourcePower', self._sourcePower)
-            else:
-                dataset = self._h['sourcePower']
-            result._add(name, _validate_float(dataset))
+            try:
+                if type(self._sourcePower) is type(AbsentDataset):
+                    dataset = self._h['sourcePower']
+                else:
+                    dataset = _create_dataset_float(tmp, 'sourcePower', self._sourcePower)
+                result._add(name, _validate_float(dataset))
+            except ValueError:  # If the _create_dataset function can't convert the data
+                result._add(name, 'INVALID_DATASET_TYPE')
             print(dataset)
         name = self.location + '/detectorGain'
-        if type(self._detectorGain) in [type(AbsentDataset), type(None)] and 'detectorGain' not in self._h:
+        if type(self._detectorGain) in [type(AbsentDataset), type(None)]:
             result._add(name, 'OPTIONAL_DATASET_MISSING')
             print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
-            if 'detectorGain' not in self._h:
-                dataset = _create_dataset_float(tmp, 'detectorGain', self._detectorGain)
-            else:
-                dataset = self._h['detectorGain']
-            result._add(name, _validate_float(dataset))
+            try:
+                if type(self._detectorGain) is type(AbsentDataset):
+                    dataset = self._h['detectorGain']
+                else:
+                    dataset = _create_dataset_float(tmp, 'detectorGain', self._detectorGain)
+                result._add(name, _validate_float(dataset))
+            except ValueError:  # If the _create_dataset function can't convert the data
+                result._add(name, 'INVALID_DATASET_TYPE')
             print(dataset)
         name = self.location + '/moduleIndex'
-        if type(self._moduleIndex) in [type(AbsentDataset), type(None)] and 'moduleIndex' not in self._h:
+        if type(self._moduleIndex) in [type(AbsentDataset), type(None)]:
             result._add(name, 'OPTIONAL_DATASET_MISSING')
             print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
-            if 'moduleIndex' not in self._h:
-                dataset = _create_dataset_int(tmp, 'moduleIndex', self._moduleIndex)
-            else:
-                dataset = self._h['moduleIndex']
-            result._add(name, _validate_int(dataset))
+            try:
+                if type(self._moduleIndex) is type(AbsentDataset):
+                    dataset = self._h['moduleIndex']
+                else:
+                    dataset = _create_dataset_int(tmp, 'moduleIndex', self._moduleIndex)
+                result._add(name, _validate_int(dataset))
+            except ValueError:  # If the _create_dataset function can't convert the data
+                result._add(name, 'INVALID_DATASET_TYPE')
             print(dataset)
         name = self.location + '/sourceModuleIndex'
-        if type(self._sourceModuleIndex) in [type(AbsentDataset), type(None)] and 'sourceModuleIndex' not in self._h:
+        if type(self._sourceModuleIndex) in [type(AbsentDataset), type(None)]:
             result._add(name, 'OPTIONAL_DATASET_MISSING')
             print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
-            if 'sourceModuleIndex' not in self._h:
-                dataset = _create_dataset_int(tmp, 'sourceModuleIndex', self._sourceModuleIndex)
-            else:
-                dataset = self._h['sourceModuleIndex']
-            result._add(name, _validate_int(dataset))
+            try:
+                if type(self._sourceModuleIndex) is type(AbsentDataset):
+                    dataset = self._h['sourceModuleIndex']
+                else:
+                    dataset = _create_dataset_int(tmp, 'sourceModuleIndex', self._sourceModuleIndex)
+                result._add(name, _validate_int(dataset))
+            except ValueError:  # If the _create_dataset function can't convert the data
+                result._add(name, 'INVALID_DATASET_TYPE')
             print(dataset)
         name = self.location + '/detectorModuleIndex'
-        if type(self._detectorModuleIndex) in [type(AbsentDataset), type(None)] and 'detectorModuleIndex' not in self._h:
+        if type(self._detectorModuleIndex) in [type(AbsentDataset), type(None)]:
             result._add(name, 'OPTIONAL_DATASET_MISSING')
             print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
-            if 'detectorModuleIndex' not in self._h:
-                dataset = _create_dataset_int(tmp, 'detectorModuleIndex', self._detectorModuleIndex)
-            else:
-                dataset = self._h['detectorModuleIndex']
-            result._add(name, _validate_int(dataset))
+            try:
+                if type(self._detectorModuleIndex) is type(AbsentDataset):
+                    dataset = self._h['detectorModuleIndex']
+                else:
+                    dataset = _create_dataset_int(tmp, 'detectorModuleIndex', self._detectorModuleIndex)
+                result._add(name, _validate_int(dataset))
+            except ValueError:  # If the _create_dataset function can't convert the data
+                result._add(name, 'INVALID_DATASET_TYPE')
             print(dataset)
+        for key in self._h.keys():  # TODO attributes too
+            if not any([key.startswith(name) for name in self._snirfnames]):
+                if type(self._h[key]) is h5py.Group:
+                    result._add(self.location + '/' + key, 'UNRECOGNIZED_GROUP')
+                elif type(self._h[key]) is h5py.Dataset:
+                    result._add(self.location + '/' + key, 'UNRECOGNIZED_DATASET')
 
 
 class MeasurementList(IndexedGroup):
@@ -2907,7 +3126,7 @@ class MeasurementList(IndexedGroup):
 class StimElement(Group):
 
     _name = AbsentDataset  # "s"+
-    _data = AbsentDataset  # [<f>,...]+
+    _data = AbsentDataset  # [[<f>,...]]+
     _dataLabels = AbsentDataset  # ["s",...]
     _snirfnames = ['name', 'data', 'dataLabels', ]
 
@@ -2927,6 +3146,7 @@ class StimElement(Group):
         if 'dataLabels' in self._h:
             if not self._cfg.dynamic_loading:
                 self._dataLabels = _read_string_array(self._h['dataLabels'])
+                
 
     @property
     def name(self):
@@ -3037,44 +3257,59 @@ class StimElement(Group):
 
     def _validate(self, result: ValidationResult):
         name = self.location + '/name'
-        if type(self._name) in [type(AbsentDataset), type(None)] and 'name' not in self._h:
+        if type(self._name) in [type(AbsentDataset), type(None)]:
             result._add(name, 'OPTIONAL_DATASET_MISSING')
             print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
-            if 'name' not in self._h:
-                dataset = _create_dataset_string(tmp, 'name', self._name)
-            else:
-                dataset = self._h['name']
-            result._add(name, _validate_string(dataset))
+            try:
+                if type(self._name) is type(AbsentDataset):
+                    dataset = self._h['name']
+                else:
+                    dataset = _create_dataset_string(tmp, 'name', self._name)
+                result._add(name, _validate_string(dataset))
+            except ValueError:  # If the _create_dataset function can't convert the data
+                result._add(name, 'INVALID_DATASET_TYPE')
             print(dataset)
         name = self.location + '/data'
-        if type(self._data) in [type(AbsentDataset), type(None)] and 'data' not in self._h:
+        if type(self._data) in [type(AbsentDataset), type(None)]:
             result._add(name, 'OPTIONAL_DATASET_MISSING')
             print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
-            if 'data' not in self._h:
-                dataset = _create_dataset_float_array(tmp, 'data', self._data)
-            else:
-                dataset = self._h['data']
-            result._add(name, _validate_float_array(dataset, ndims=[1]))
+            try:
+                if type(self._data) is type(AbsentDataset):
+                    dataset = self._h['data']
+                else:
+                    dataset = _create_dataset_float_array(tmp, 'data', self._data)
+                result._add(name, _validate_float_array(dataset, ndims=[2]))
+            except ValueError:  # If the _create_dataset function can't convert the data
+                result._add(name, 'INVALID_DATASET_TYPE')
             print(dataset)
         name = self.location + '/dataLabels'
-        if type(self._dataLabels) in [type(AbsentDataset), type(None)] and 'dataLabels' not in self._h:
+        if type(self._dataLabels) in [type(AbsentDataset), type(None)]:
             result._add(name, 'OPTIONAL_DATASET_MISSING')
             print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
-            if 'dataLabels' not in self._h:
-                dataset = _create_dataset_string_array(tmp, 'dataLabels', self._dataLabels)
-            else:
-                dataset = self._h['dataLabels']
-            result._add(name, _validate_string_array(dataset, ndims=[1]))
+            try:
+                if type(self._dataLabels) is type(AbsentDataset):
+                    dataset = self._h['dataLabels']
+                else:
+                    dataset = _create_dataset_string_array(tmp, 'dataLabels', self._dataLabels)
+                result._add(name, _validate_string_array(dataset, ndims=[1]))
+            except ValueError:  # If the _create_dataset function can't convert the data
+                result._add(name, 'INVALID_DATASET_TYPE')
             print(dataset)
+        for key in self._h.keys():  # TODO attributes too
+            if not any([key.startswith(name) for name in self._snirfnames]):
+                if type(self._h[key]) is h5py.Group:
+                    result._add(self.location + '/' + key, 'UNRECOGNIZED_GROUP')
+                elif type(self._h[key]) is h5py.Dataset:
+                    result._add(self.location + '/' + key, 'UNRECOGNIZED_DATASET')
 
 
 class Stim(IndexedGroup):
@@ -3089,10 +3324,11 @@ class Stim(IndexedGroup):
 class AuxElement(Group):
 
     _name = AbsentDataset  # "s"+
-    _dataTimeSeries = AbsentDataset  # [[<f>,...]]+
+    _dataTimeSeries = AbsentDataset  # [<f>,...]+
+    _dataUnit = AbsentDataset  # "s"
     _time = AbsentDataset  # [<f>,...]+
     _timeOffset = AbsentDataset  # [<f>,...]
-    _snirfnames = ['name', 'dataTimeSeries', 'time', 'timeOffset', ]
+    _snirfnames = ['name', 'dataTimeSeries', 'dataUnit', 'time', 'timeOffset', ]
 
 
     def __init__(self, gid: h5py.h5g.GroupID, cfg: SnirfConfig):
@@ -3107,12 +3343,20 @@ class AuxElement(Group):
         if 'dataTimeSeries' in self._h:
             if not self._cfg.dynamic_loading:
                 self._dataTimeSeries = _read_float_array(self._h['dataTimeSeries'])
+        if 'dataUnit' in self._h:
+            if not self._cfg.dynamic_loading:
+                self._dataUnit = _read_string(self._h['dataUnit'])
+            else:  # if the dataset is found on disk but dynamic_loading=True
+                self._dataUnit = PresentDataset
+        else:  # if the dataset is not found on disk
+            self._dataUnit = AbsentDataset
         if 'time' in self._h:
             if not self._cfg.dynamic_loading:
                 self._time = _read_float_array(self._h['time'])
         if 'timeOffset' in self._h:
             if not self._cfg.dynamic_loading:
                 self._timeOffset = _read_float_array(self._h['timeOffset'])
+                
 
     @property
     def name(self):
@@ -3157,6 +3401,28 @@ class AuxElement(Group):
     def dataTimeSeries(self):
         self._dataTimeSeries = AbsentDataset
         self._cfg.logger.info('Deleted %s/dataTimeSeries from %s', self.location, self.filename)
+
+    @property
+    def dataUnit(self):
+        if type(self._dataUnit) is type(AbsentDataset):
+            return None
+        if self._cfg.dynamic_loading and type(self._dataUnit) is type(PresentDataset) and 'dataUnit' in self._h:
+            return _read_string(self._h['dataUnit'])
+            self._cfg.logger.info('Dynamically loaded %s/dataUnit from %s', self.location, self.filename)
+        elif self._dataUnit is not AbsentDataset:
+            return self._dataUnit
+        else:
+            return None
+
+    @dataUnit.setter
+    def dataUnit(self, value):
+        self._dataUnit = value
+        # self._cfg.logger.info('Assignment to %s/dataUnit in %s', self.location, self.filename)
+
+    @dataUnit.deleter
+    def dataUnit(self):
+        self._dataUnit = AbsentDataset
+        self._cfg.logger.info('Deleted %s/dataUnit from %s', self.location, self.filename)
 
     @property
     def time(self):
@@ -3234,6 +3500,14 @@ class AuxElement(Group):
         if type(self._dataTimeSeries) not in [type(AbsentDataset), type(None)]:
             _create_dataset_float_array(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
+        name = self.location + '/dataUnit'
+        if name in file:
+            del file[name]
+            self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
+        data = self.dataUnit
+        if type(self._dataUnit) not in [type(AbsentDataset), type(None)]:
+            _create_dataset_string(file, name, data)
+            # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         name = self.location + '/time'
         if name in file:
             del file[name]
@@ -3253,57 +3527,91 @@ class AuxElement(Group):
 
     def _validate(self, result: ValidationResult):
         name = self.location + '/name'
-        if type(self._name) in [type(AbsentDataset), type(None)] and 'name' not in self._h:
+        if type(self._name) in [type(AbsentDataset), type(None)]:
             result._add(name, 'OPTIONAL_DATASET_MISSING')
             print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
-            if 'name' not in self._h:
-                dataset = _create_dataset_string(tmp, 'name', self._name)
-            else:
-                dataset = self._h['name']
-            result._add(name, _validate_string(dataset))
+            try:
+                if type(self._name) is type(AbsentDataset):
+                    dataset = self._h['name']
+                else:
+                    dataset = _create_dataset_string(tmp, 'name', self._name)
+                result._add(name, _validate_string(dataset))
+            except ValueError:  # If the _create_dataset function can't convert the data
+                result._add(name, 'INVALID_DATASET_TYPE')
             print(dataset)
         name = self.location + '/dataTimeSeries'
-        if type(self._dataTimeSeries) in [type(AbsentDataset), type(None)] and 'dataTimeSeries' not in self._h:
+        if type(self._dataTimeSeries) in [type(AbsentDataset), type(None)]:
             result._add(name, 'OPTIONAL_DATASET_MISSING')
             print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
-            if 'dataTimeSeries' not in self._h:
-                dataset = _create_dataset_float_array(tmp, 'dataTimeSeries', self._dataTimeSeries)
-            else:
-                dataset = self._h['dataTimeSeries']
-            result._add(name, _validate_float_array(dataset, ndims=[2]))
+            try:
+                if type(self._dataTimeSeries) is type(AbsentDataset):
+                    dataset = self._h['dataTimeSeries']
+                else:
+                    dataset = _create_dataset_float_array(tmp, 'dataTimeSeries', self._dataTimeSeries)
+                result._add(name, _validate_float_array(dataset, ndims=[1]))
+            except ValueError:  # If the _create_dataset function can't convert the data
+                result._add(name, 'INVALID_DATASET_TYPE')
+            print(dataset)
+        name = self.location + '/dataUnit'
+        if type(self._dataUnit) in [type(AbsentDataset), type(None)]:
+            result._add(name, 'OPTIONAL_DATASET_MISSING')
+            print(name, 'not found')
+        else:
+            # Validate unwritten datasets after writing them to this tempfile
+            tmp = h5py.File(TemporaryFile(), 'w')
+            try:
+                if type(self._dataUnit) is type(AbsentDataset):
+                    dataset = self._h['dataUnit']
+                else:
+                    dataset = _create_dataset_string(tmp, 'dataUnit', self._dataUnit)
+                result._add(name, _validate_string(dataset))
+            except ValueError:  # If the _create_dataset function can't convert the data
+                result._add(name, 'INVALID_DATASET_TYPE')
             print(dataset)
         name = self.location + '/time'
-        if type(self._time) in [type(AbsentDataset), type(None)] and 'time' not in self._h:
+        if type(self._time) in [type(AbsentDataset), type(None)]:
             result._add(name, 'OPTIONAL_DATASET_MISSING')
             print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
-            if 'time' not in self._h:
-                dataset = _create_dataset_float_array(tmp, 'time', self._time)
-            else:
-                dataset = self._h['time']
-            result._add(name, _validate_float_array(dataset, ndims=[1]))
+            try:
+                if type(self._time) is type(AbsentDataset):
+                    dataset = self._h['time']
+                else:
+                    dataset = _create_dataset_float_array(tmp, 'time', self._time)
+                result._add(name, _validate_float_array(dataset, ndims=[1]))
+            except ValueError:  # If the _create_dataset function can't convert the data
+                result._add(name, 'INVALID_DATASET_TYPE')
             print(dataset)
         name = self.location + '/timeOffset'
-        if type(self._timeOffset) in [type(AbsentDataset), type(None)] and 'timeOffset' not in self._h:
+        if type(self._timeOffset) in [type(AbsentDataset), type(None)]:
             result._add(name, 'OPTIONAL_DATASET_MISSING')
             print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
-            if 'timeOffset' not in self._h:
-                dataset = _create_dataset_float_array(tmp, 'timeOffset', self._timeOffset)
-            else:
-                dataset = self._h['timeOffset']
-            result._add(name, _validate_float_array(dataset, ndims=[1]))
+            try:
+                if type(self._timeOffset) is type(AbsentDataset):
+                    dataset = self._h['timeOffset']
+                else:
+                    dataset = _create_dataset_float_array(tmp, 'timeOffset', self._timeOffset)
+                result._add(name, _validate_float_array(dataset, ndims=[1]))
+            except ValueError:  # If the _create_dataset function can't convert the data
+                result._add(name, 'INVALID_DATASET_TYPE')
             print(dataset)
+        for key in self._h.keys():  # TODO attributes too
+            if not any([key.startswith(name) for name in self._snirfnames]):
+                if type(self._h[key]) is h5py.Group:
+                    result._add(self.location + '/' + key, 'UNRECOGNIZED_GROUP')
+                elif type(self._h[key]) is h5py.Dataset:
+                    result._add(self.location + '/' + key, 'UNRECOGNIZED_DATASET')
 
 
 class Aux(IndexedGroup):
@@ -3357,6 +3665,7 @@ class Snirf(Group):
         else:  # if the dataset is not found on disk
             self._formatVersion = AbsentDataset
         self.nirs = Nirs(self, self._cfg)  # Indexed group
+                
 
     @property
     def formatVersion(self):
@@ -3422,20 +3731,29 @@ class Snirf(Group):
 
     def _validate(self, result: ValidationResult):
         name = self.location + '/formatVersion'
-        if type(self._formatVersion) in [type(AbsentDataset), type(None)] and 'formatVersion' not in self._h:
+        if type(self._formatVersion) in [type(AbsentDataset), type(None)]:
             result._add(name, 'REQUIRED_DATASET_MISSING')
             print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
-            if 'formatVersion' not in self._h:
-                dataset = _create_dataset_string(tmp, 'formatVersion', self._formatVersion)
-            else:
-                dataset = self._h['formatVersion']
-            result._add(name, _validate_string(dataset))
+            try:
+                if type(self._formatVersion) is type(AbsentDataset):
+                    dataset = self._h['formatVersion']
+                else:
+                    dataset = _create_dataset_string(tmp, 'formatVersion', self._formatVersion)
+                result._add(name, _validate_string(dataset))
+            except ValueError:  # If the _create_dataset function can't convert the data
+                result._add(name, 'INVALID_DATASET_TYPE')
             print(dataset)
         name = self.location + '/nirs'
         self.nirs._validate(result)
+        for key in self._h.keys():  # TODO attributes too
+            if not any([key.startswith(name) for name in self._snirfnames]):
+                if type(self._h[key]) is h5py.Group:
+                    result._add(self.location + '/' + key, 'UNRECOGNIZED_GROUP')
+                elif type(self._h[key]) is h5py.Dataset:
+                    result._add(self.location + '/' + key, 'UNRECOGNIZED_DATASET')
 
 
     # overload

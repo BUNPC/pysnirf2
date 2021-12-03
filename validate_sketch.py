@@ -14,12 +14,11 @@ testfile = 'tests/data/subjA_run01.snirf'
 
 s = Snirf(testfile)
 print(s)
+
+# %%
+
 valid, result = s.validate()
 
-# %%
 
-print(result)
-
-# %%
 
 result.display(severity=2)
