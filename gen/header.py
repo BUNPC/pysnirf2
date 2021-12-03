@@ -182,15 +182,18 @@ def _read_float_array(dataset: h5py.Dataset):
 
 # -- Validation types ---------------------------------------
 
-SEVERITY_OK = 0
-SEVERITY_INFO = 1
-SEVERITY_WARNING = 2
-SEVERITY_ERROR = 3
 
 class ValidationResult:
-
+    
     _locations = {}  # HDF locations associated with errors or an additional validation result
-    _codes = {
+
+    _SEVERITY_LEVELS = {
+                        0: 'OK:     ',
+                        1: 'INFO:   ',
+                        2: 'WARNING:',
+                        3: 'FATAL:  ',
+                        }
+    _CODES = {
             # Errors (Severity 1)
             'INVALID_FILE_NAME': (0 << 1, 3, 'Valid SNIRF files must end with .snirf'),
             'INVALID_FILE': (0 << 1, 3, 'The file could not be opened'),
@@ -226,18 +229,21 @@ class ValidationResult:
     def is_valid(self):
         return not any([severity[1][1] > 1 for severity in self._locations.values()])
 
-    def add(self, location, key):
-        if key not in self._codes.keys():
+    def _add(self, location, key):
+        if key not in self._CODES.keys():
             raise KeyError("Invalid code '" + key + "'")
         # Locations is nested tuple (code, (id, level, msg))
-        self._locations[location] = (key, self._codes[key])
-        print('\n', location, key, self._codes[key][0])
+        self._locations[location] = (key, self._CODES[key])
+        print('\n', location, key, self._CODES[key][0])
         
     def display(self, severity=1):
         longest_key = max([len(key) for key in self._locations.keys()])
-        for key in self._locations:
+        longest_code = max([len(key[0]) for key in self._locations.keys()])
+        for key in self._locations.keys():
             if self._locations[key][1][1] >= severity:
-                print(key.ljust(longest_key) + '   ' + self._locations[key][0])
+                print(key.ljust(longest_key) + ' ' +
+                      self._SEVERITY_LEVELS[self._locations[key][1][1]] + ' ' +
+                      self._locations[key][0].ljust(longest_code))
         
     def __repr__(self):
         return object.__repr__(self) + ' is_valid ' + str(self.is_valid()) 

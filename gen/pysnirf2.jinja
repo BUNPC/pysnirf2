@@ -178,9 +178,9 @@
     {% elif TYPES.GROUP in CHILD.type %}
         if type(self._{{ CHILD.name }}) is type(AbsentGroup) and '{{ CHILD.name }}' not in self._h:
         {% if TYPES.REQUIRED in CHILD.type %}
-            result.add(name, 'REQUIRED_GROUP_MISSING')
+            result._add(name, 'REQUIRED_GROUP_MISSING')
         {% else %}
-            result.add(name, 'OPTIONAL_GROUP_MISSING')
+            result._add(name, 'OPTIONAL_GROUP_MISSING')
         {% endif %}
             print(name, 'not found')
         else:
@@ -188,9 +188,9 @@
     {% else %}
         if type(self._{{ CHILD.name }}) in [type(AbsentDataset), type(None)] and '{{ CHILD.name }}' not in self._h:
         {% if TYPES.REQUIRED in CHILD.type %}
-            result.add(name, 'REQUIRED_DATASET_MISSING')
+            result._add(name, 'REQUIRED_DATASET_MISSING')
         {% else %}
-            result.add(name, 'OPTIONAL_DATASET_MISSING')
+            result._add(name, 'OPTIONAL_DATASET_MISSING')
         {% endif %}
             print(name, 'not found')
         else:
@@ -202,17 +202,17 @@
                 dataset = _create_dataset_string_array(tmp, '{{ CHILD.name }}', self._{{ CHILD.name }})
             else:
                 dataset = self._h['{{ CHILD.name }}']
-            result.add(name, _validate_string_array(dataset, ndims=[2]))
+            result._add(name, _validate_string_array(dataset, ndims=[2]))
             {% elif TYPES.INT_VALUE in CHILD.type %}
                 dataset = _create_dataset_int_array(tmp, '{{ CHILD.name }}', self._{{ CHILD.name }})
             else:
                 dataset = self._h['{{ CHILD.name }}']
-            result.add(name, _validate_int_array(dataset, ndims=[2]))
+            result._add(name, _validate_int_array(dataset, ndims=[2]))
             {% elif TYPES.FLOAT_VALUE in CHILD.type %}
                 dataset = _create_dataset_float_array(tmp, '{{ CHILD.name }}', self._{{ CHILD.name }})
             else:
                 dataset = self._h['{{ CHILD.name }}']
-            result.add(name, _validate_float_array(dataset, ndims=[2]))
+            result._add(name, _validate_float_array(dataset, ndims=[2]))
             {% else %}
             ### TEMPLATE ERROR: NO VALIDATOR FUNCTION MATCHING {{ CHILD.name }}
             {% endif %}
@@ -221,17 +221,17 @@
                 dataset = _create_dataset_string_array(tmp, '{{ CHILD.name }}', self._{{ CHILD.name }})
             else:
                 dataset = self._h['{{ CHILD.name }}']
-            result.add(name, _validate_string_array(dataset, ndims=[1]))
+            result._add(name, _validate_string_array(dataset, ndims=[1]))
             {% elif TYPES.INT_VALUE in CHILD.type %}
                 dataset = _create_dataset_int_array(tmp, '{{ CHILD.name }}', self._{{ CHILD.name }})
             else:
                 dataset = self._h['{{ CHILD.name }}']
-            result.add(name, _validate_int_array(dataset, ndims=[1]))
+            result._add(name, _validate_int_array(dataset, ndims=[1]))
             {% elif TYPES.FLOAT_VALUE in CHILD.type %}
                 dataset = _create_dataset_float_array(tmp, '{{ CHILD.name }}', self._{{ CHILD.name }})
             else:
                 dataset = self._h['{{ CHILD.name }}']
-            result.add(name, _validate_float_array(dataset, ndims=[1]))
+            result._add(name, _validate_float_array(dataset, ndims=[1]))
             {% else %}
             ### TEMPLATE ERROR: NO VALIDATOR FUNCTION MATCHING {{ CHILD.name }}
             {% endif %}
@@ -240,17 +240,17 @@
                 dataset = _create_dataset_string(tmp, '{{ CHILD.name }}', self._{{ CHILD.name }})
             else:
                 dataset = self._h['{{ CHILD.name }}']
-            result.add(name, _validate_string(dataset))
+            result._add(name, _validate_string(dataset))
             {% elif TYPES.INT_VALUE in CHILD.type %}
                 dataset = _create_dataset_int(tmp, '{{ CHILD.name }}', self._{{ CHILD.name }})
             else:
                 dataset = self._h['{{ CHILD.name }}']
-            result.add(name, _validate_int(dataset))
+            result._add(name, _validate_int(dataset))
             {% elif TYPES.FLOAT_VALUE in CHILD.type %}
                 dataset = _create_dataset_float(tmp, '{{ CHILD.name }}', self._{{ CHILD.name }})
             else:
                 dataset = self._h['{{ CHILD.name }}']
-            result.add(name, _validate_float(dataset))
+            result._add(name, _validate_float(dataset))
             {% else %}
             ### TEMPLATE ERROR: NO VALIDATOR FUNCTION MATCHING {{ CHILD.name }}
             {% endif %}
