@@ -17,8 +17,18 @@ print(s)
 
 # %%
 
-valid, result = s.validate()
 
+s.nirs[0].metaDataTags.add('place', 'krum hole')
 
+# %%
 
+del s.nirs[0].metaDataTags.LengthUnit
+del s.nirs[0].probe
+
+s.save('krumhole')
+
+# %%
+
+s2 = Snirf('krumhole')
+valid, result = s2.validate()
 result.display(severity=2)

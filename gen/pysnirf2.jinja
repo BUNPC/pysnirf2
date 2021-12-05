@@ -9,12 +9,14 @@
     _{{ CHILD.name }} = AbsentDataset  # {{ CHILD.type }}
     {% endif -%}    
     {% endfor %}
-    _snirfnames = [{% for CHILD in NODE.children %}'{{ CHILD.name }}', {% endfor -%}]
+    _snirf_names = [{% for CHILD in NODE.children %}'{{ CHILD.name }}', {% endfor -%}]
 {% endmacro %}
 {% macro init_members(NODE) %}
+    self._indexed_groups = []
     {% for CHILD in NODE.children %}
     {% if TYPES.INDEXED_GROUP in CHILD.type %}
     self.{{ CHILD.name }} = {{ sentencecase(CHILD.name) }}(self, self._cfg)  # Indexed group
+    self._indexed_groups.append(self.{{ CHILD.name }})
     {% elif TYPES.GROUP in CHILD.type %}
     if '{{ CHILD.name }}' in self._h:
         self._{{ CHILD.name }} = {{ sentencecase(CHILD.name) }}(self._h['{{ CHILD.name }}'].id, self._cfg)  # Group
@@ -51,7 +53,13 @@
     {% endif %}
     {% endfor %}
     {% if NODE.name in UNSPECIFIED_DATASETS_OK %}
-        # TODO loading of unspecified datasets
+    self._unspecified_names = []
+    # Unspecified datasets are not properties and unaffected by dynamic_loading
+    for key in self._h.keys():
+        # If the name isn't specified 
+        if key not in self._snirf_names and not any([key in indexed_group for indexed_group in self._indexed_groups]):
+            setattr(self, key, _read_dataset(self._h[key]))
+            self._unspecified_names.append(key)
     {% endif %}            
 {% endmacro %}
 {% macro gen_properties(NODE) %}
@@ -134,7 +142,7 @@
     {% if TYPES.INDEXED_GROUP in CHILD.type %}
         self.{{ CHILD.name }}._save(*args)
     {% elif TYPES.GROUP in CHILD.type %}
-        if self._{{ CHILD.name }}.is_empty():
+        if type(self._{{ CHILD.name }}) is type(AbsentGroup) or self._{{ CHILD.name }}.is_empty():
             if '{{ CHILD.name }}' in file:
                 del file['{{ CHILD.name }}']
                 self._cfg.logger.info('Deleted Group %s/{{ CHILD.name }} from %s', self.location, file)
@@ -172,7 +180,18 @@
     {% endif %}
     {% endfor %}
     {% if NODE.name in UNSPECIFIED_DATASETS_OK %}
-        # TODO saving of public attributes
+        for unspecified_name in self._unspecified_names:
+            name = self.location + '/' + unspecified_name
+            if name in file:
+                del file[name]
+                self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
+            try:
+                data = getattr(self, unspecified_name)
+            except AttributeError:  # Dataset was deleted
+                print('Attribute was deleted or could not be found... not saving')
+                continue
+            _create_dataset(file, name, data)
+            
     {% endif %}
 {% endmacro %}
 {% macro gen_validator(NODE) %}
@@ -269,7 +288,7 @@
     {% endfor %}
     {% if not NODE.name in UNSPECIFIED_DATASETS_OK %}
         for key in self._h.keys():  # TODO attributes too
-            if not any([key.startswith(name) for name in self._snirfnames]):
+            if not any([key.startswith(name) for name in self._snirf_names]):
                 if type(self._h[key]) is h5py.Group:
                     result._add(self.location + '/' + key, 'UNRECOGNIZED_GROUP')
                 elif type(self._h[key]) is h5py.Dataset:

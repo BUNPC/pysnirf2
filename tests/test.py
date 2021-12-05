@@ -20,7 +20,7 @@ if not os.path.isdir(working_directory):
     os.mkdir(working_directory)
 
 if len(os.listdir(snirf_directory)) == 0:
-    sys.exit('Failed to find test data in '+ working_directory)
+    sys.exit('Failed to find test data in '+ snirf_directory)
 
 ZERO_DEPTH_BASES = (str, bytes, Number, range, bytearray)
 def getsize(obj_0):

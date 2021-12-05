@@ -31,7 +31,6 @@ def _create_logger(name, log_file, level=logging.INFO):
 
 # Package-wide logger
 _logger = _create_logger('pysnirf2', 'pysnirf2.log')
-_logger.info('Opened pysnirf2.log')
 
 if sys.version_info[0] < 3:
     raise ImportError('pysnirf2 requires Python > 3')
@@ -57,30 +56,30 @@ def _create_dataset(file, name, data):
 
     Returns None if input is invalid and an h5py.Dataset instance if successful.
     """
+    data = np.array(data)  # Cast to numpy type to identify
     try:
         if len(data) > 1:
-            data = np.array(data)  # Cast to array
             dtype = data[0].dtype
             if any([dtype is t for t in [int, np.int32, np.int64]]):  # int
                 return _create_dataset_int_array(file, name, data)
             elif any([dtype is t for t in [float, np.float, np.float64]]):  # float
                 return _create_dataset_float_array(file, name, data)
-            elif any([dtype is t for t in [str, np.string_]]):  # string
+            elif any([dtype is t for t in [str, np.string_]]) or any([t in dtype.str for t in ['U', 'S']]):  # string
                 return _create_dataset_string_array(file, name, data)
-    except TypeError:  # data has no len()
-        dtype = type(data)
-    if any([dtype is t for t in [int, np.int32, np.int64]]):  # int
-        return _create_dataset_int(file, name, data)
-    elif any([dtype is t for t in [float, np.float, np.float64]]):  # float
-        return _create_dataset_float(file, name, data)
-    elif any([dtype is t for t in [str, np.string_]]):  # string
-        return _create_dataset_string(file, name, data)
+    except (TypeError, IndexError):  # data has no len() or a string was passed
+        dtype = data.dtype
+        if any([dtype is t for t in [int, np.int32, np.int64]]):  # int
+            return _create_dataset_int(file, name, data)
+        elif any([dtype is t for t in [float, np.float, np.float64]]):  # float
+            return _create_dataset_float(file, name, data)
+        elif any([dtype is t for t in [str, np.string_]]) or any([t in dtype.str for t in ['U', 'S']]):  # string
+            return _create_dataset_string(file, name, data)
     raise TypeError('Unrecognized data type' + str(dtype)
                     + '. Please provide an int, float, or str, or an iterable of these.')
 
 
 def _create_dataset_string(file: h5py.File, name: str, data: str):
-    return file.create_dataset(name, dtype=_varlen_str_type, data=np.string_(data))
+    return file.create_dataset(name, dtype=_varlen_str_type, data=str(data))
 
 
 def _create_dataset_int(file: h5py.File, name: str, data: int):
@@ -448,7 +447,7 @@ class Group(ABC):
             return self._location
 
     def is_empty(self):
-        for name in self._snirfnames:
+        for name in self._snirf_names:
             attr = getattr(self, '_' + name)
             if isinstance(attr, Group) or isinstance(attr, IndexedGroup):
                 if not attr.is_empty():
