@@ -8,6 +8,7 @@ from collections.abc import MutableSequence
 from tempfile import TemporaryFile
 import logging
 import termcolor
+from pysnirf2.__version__ import __version__ as __version__
 
 # Colored prints for validator
 
@@ -16,15 +17,18 @@ printg = lambda x: termcolor.cprint(x, 'green')
 printb = lambda x: termcolor.cprint(x, 'blue')
 printm = lambda x: termcolor.cprint(x, 'magenta')
 
+
+
 _loggers = {}
 def _create_logger(name, log_file, level=logging.INFO):
     if name in _loggers.keys():
         return _loggers[name]
     handler = logging.FileHandler(log_file)
-    handler.setFormatter(logging.Formatter('%(asctime)s | %(name)s | %(message)s'))
+    handler.setFormatter(logging.Formatter('%(asctime)s | %(name)s v%(version)s | %(message)s'))
     logger = logging.getLogger(name)
     logger.setLevel(level)
     logger.addHandler(handler)
+    logger = logging.LoggerAdapter(logger, {'version': __version__})
     _loggers[name] = logger
     return logger
 

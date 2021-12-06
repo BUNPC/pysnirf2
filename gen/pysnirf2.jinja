@@ -75,7 +75,7 @@
     {% else %}
         if type(self._{{ CHILD.name }}) is type(AbsentDataset):
             return None
-        if type(self._{{ CHILD.name }}) is type(PresentDataset) and '{{ CHILD.name }}' in self._h:
+        if type(self._{{ CHILD.name }}) is type(PresentDataset):
         {% if (TYPES.ARRAY_1D in CHILD.type) or (TYPES.ARRAY_2D in CHILD.type) %}
             {% if TYPES.VARLEN_STRING in CHILD.type %}
             return _read_string_array(self._h['{{ CHILD.name }}'])
@@ -98,8 +98,7 @@
             {% endif %}
         {% endif %}
             self._cfg.logger.info('Dynamically loaded %s/{{ CHILD.name }} from %s', self.location, self.filename)
-        else:
-            return self._{{ CHILD.name }}
+        return self._{{ CHILD.name }}
     {% endif %}
 
     @{{ CHILD.name }}.setter
@@ -148,11 +147,14 @@
             self.{{ CHILD.name }}._save(*args)
     {% else %}
         name = self.location + '/{{ CHILD.name }}'
+        if type(self._{{ CHILD.name }}) not in [type(AbsentDataset), type(None)]:
+            if type(self._{{ CHILD.name }}) is type(PresentDataset):
+                data = self.{{ CHILD.name }}  # Use loader function via getter
+            else:
+                data = self._{{ CHILD.name }}
         if name in file:
             del file[name]
             self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
-        data = self.{{ CHILD.name }}
-        if type(self._{{ CHILD.name }}) not in [type(AbsentDataset), type(None)]:
         {% if (TYPES.ARRAY_1D in CHILD.type) or (TYPES.ARRAY_2D in CHILD.type) %}
             {% if TYPES.VARLEN_STRING in CHILD.type %}
             _create_dataset_string_array(file, name, data)
