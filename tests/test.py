@@ -23,6 +23,23 @@ if not os.path.isdir(working_directory):
 if len(os.listdir(snirf_directory)) == 0:
     sys.exit('Failed to find test data in '+ snirf_directory)
 
+def set_up_test_wd():
+    print('Deleting all files in', working_directory)
+    for file in os.listdir(working_directory):
+        os.remove(os.path.join(working_directory, file))
+        print('Deleted', working_directory + '/' + file)
+    
+    print('Copying all test files to', working_directory)
+    for file in os.listdir(snirf_directory):
+        shutil.copy(os.path.join(snirf_directory, file),  os.path.join(working_directory, file))
+        time.sleep(0.5)  # Sleep while executing copy operation
+    
+    test_files = [working_directory + '/' + file for file in os.listdir(working_directory)]
+    if len(test_files) == 0:
+        sys.exit('Failed to set up test data working directory at '+ working_directory)
+    return test_files
+
+
 ZERO_DEPTH_BASES = (str, bytes, Number, range, bytearray)
 def getsize(obj_0):
     """
@@ -142,8 +159,103 @@ def _print_keys(group):
 
 # -- Tests --------------------------------------------------------------------
 
-class TestSnirf(unittest.TestCase):
+class PySnirf2_Test(unittest.TestCase):
     
+    
+    def test_edit_probe_group(self):
+        """
+        Edit some probe Group. Confirm they can be saved using save functions on
+        the Snirf object and just the Group
+        """
+        for i, mode in enumerate([False, True]):
+            for file in test_files:
+                if VERBOSE:
+                    print('Loading', file + '.snirf', 'with dynamic_loading=' + str(mode))
+                s = Snirf(file, dynamic_loading=mode)
+                
+                group_save_file = file.split('.')[0] + '_edited_group_save.snirf'
+                if VERBOSE:
+                    print('Creating working copy for Group-level save', group_save_file)
+                s.save(group_save_file)
+                
+                desired_probe_sourcelabels = ['S1_A', 'S2_A', 'S3_A', 'S4_A',
+                                              'S5_A', 'S6_A', 'S7_A', 'S8_A',
+                                              'S9_A', 'S10_A', 'S11_A', 'S12_A',
+                                              'S13_A', 'S14_A', 'S15_A']
+                desired_probe_uselocalindex = 1
+                desired_probe_sourcepos3d = np.random.random([31, 3])
+            
+                s.nirs[0].probe.sourceLabels = desired_probe_sourcelabels
+                s.nirs[0].probe.useLocalIndex = desired_probe_uselocalindex
+                s.nirs[0].probe.sourcePos3D = desired_probe_sourcepos3d
+                
+                snirf_save_file = file.split('.')[0] + '_edited_snirf_save.snirf'
+                print('Saving edited file to', snirf_save_file)
+                s.save(snirf_save_file)
+                
+                print('Saving edited Probe group to', group_save_file)
+                s.nirs[0].probe.save(group_save_file)
+                
+                s.close()
+                
+                for edited_filename in [snirf_save_file, group_save_file]:
+                    
+                    print('Loading', edited_filename, 'for comparison with dynamic_loading=' + str(mode))
+                    s2 = Snirf(edited_filename, dynamic_loading=mode)
+                    
+                    self.assertTrue((s2.nirs[0].probe.sourceLabels == desired_probe_sourcelabels).all(), msg='Failed to edit sourceLabels properly in ' + edited_filename) 
+                    self.assertTrue(s2.nirs[0].probe.useLocalIndex == desired_probe_uselocalindex, msg='Failed to edit sourceLabels properly in ' + edited_filename) 
+                    self.assertTrue((s2.nirs[0].probe.sourcePos3D == desired_probe_sourcepos3d).all(), msg='Failed to edit sourceLabels properly in ' + edited_filename) 
+                    
+                    s2.close()
+                
+    def test_add_remove_stim(self):
+        """
+        Use the interface to add a stim group. Verify it is added to a reloaded file.
+        """
+        for i, mode in enumerate([False, True]):
+            for file in test_files:
+                file = test_files[0].split('.')[0]
+                if VERBOSE:
+                    print('Loading', file + '.snirf', 'with dynamic_loading=' + str(mode))
+                s = Snirf(file, dynamic_loading=mode)
+                nstim = len(s.nirs[0].stim)
+                s.nirs[0].stim.appendGroup()
+                if VERBOSE:
+                    print('Adding stim to', file + '.stim')
+                self.assertTrue(len(s.nirs[0].stim) == nstim + 1, msg='IndexedGroup.appendGroup() failed')
+                s.nirs[0].stim[-1].data = [[0, 10, 1], [5, 10, 1]]
+                s.nirs[0].stim[-1].dataLabels = ['Onset', 'Duration', 'Amplitude']
+                s.nirs[0].stim[-1].name = 'newCondition'
+                newfile = file + '_added_stim_' + str(i)
+                if VERBOSE:
+                    print('Save As edited file to', newfile + '.stim')
+                s.save(newfile)
+                s.close()
+                s2 = Snirf(newfile, dynamic_loading=mode)
+                self.assertTrue(len(s2.nirs[0].stim) == nstim + 1, msg='The new stim Group was not Saved As to ' + newfile + '.snirf')
+                if VERBOSE:
+                    print('Adding another stim group to', newfile + '.snirf and reloading it')
+                s2.nirs[0].stim.appendGroup()
+                s2.nirs[0].stim[-1].data = [[0, 10, 1], [5, 10, 1]]
+                s2.nirs[0].stim[-1].dataLabels = ['Onset', 'Duration', 'Amplitude']
+                s2.nirs[0].stim[-1].name = 'newCondition2'
+                s2.save()
+                s2.close()
+                s3 = Snirf(newfile, dynamic_loading=mode)
+                self.assertTrue(len(s3.nirs[0].stim) == nstim + 2, msg='The new stim Group was not Saved to ' + newfile + '.snirf')
+                if VERBOSE:
+                    print('Removing all but one stim Group from', newfile + '.snirf and reloading it')
+                name_to_keep = s3.nirs[0].stim[0].name
+                while s3.nirs[0].stim[-1].name != name_to_keep:
+                    if VERBOSE:
+                        print('Deleting stim Group with name:', s3.nirs[0].stim[-1].name)
+                    del s3.nirs[0].stim[-1]
+                s3.close()
+                s4 = Snirf(newfile, dynamic_loading=mode)
+                self.assertTrue(s4.nirs[0].stim[0].name == name_to_keep, msg='Failed to remove desired stim Groups from ' + newfile + '.snirf') 
+                s4.close()
+        
     
     def test_loading_saving(self):
         """
@@ -151,11 +263,11 @@ class TestSnirf(unittest.TestCase):
         saves them to a new file, compares the results using h5py and a naive cast.
         If returns True, all specified datasets are equivalent in the resaved files.
         """
-        for i, mode in enumerate([True, False]):
+        for i, mode in enumerate([False, True]):
             s1_paths = []
             s2_paths = []
             start = time.time()
-            for file in TEST_FILES:
+            for file in test_files:
                 snirf = Snirf(file, dynamic_loading=mode)
                 s1_paths.append(file)
                 new_path = file.split('.')[0] + '_unedited.snirf'
@@ -163,7 +275,7 @@ class TestSnirf(unittest.TestCase):
                 s2_paths.append(new_path)
                 snirf.close()
             if VERBOSE:
-                print('Read and rewrote', len(TEST_FILES), 'SNIRF files in',
+                print('Read and rewrote', len(test_files), 'SNIRF files in',
                 str(time.time() - start)[0:6], 'seconds with dynamic_loading =', mode)
             
             for (fname1, fname2) in zip(s1_paths, s2_paths):
@@ -177,107 +289,25 @@ class TestSnirf(unittest.TestCase):
         """
         times = [-1, -1]
         sizes = [-1, -1]
-        for i, mode in enumerate([True, False]):
+        for i, mode in enumerate([False, True]):
             s = []
             start = time.time()
-            for file in TEST_FILES:
+            for file in test_files:
                 s.append(Snirf(file, dynamic_loading=mode))
             times[i] = time.time() - start
             sizes[i] = getsize(s)
             for snirf in s:
                 snirf.close()
             if VERBOSE:
-                print('Loaded', len(TEST_FILES), 'SNIRF files of total size', sizes[i],
+                print('Loaded', len(test_files), 'SNIRF files of total size', sizes[i],
                       'in', str(times[i])[0:6], 'seconds with dynamic_loading =', mode)
-        self.assertTrue(times[0] < times[1], msg='Dynamically-loaded files not loaded faster')
-        self.assertTrue(sizes[0] < sizes[1], msg='Dynamically-loaded files not smaller in memory')
-    
-
-    # def test_create_a_file(self):
-    #     """
-    #     Create a file from scratch using the data in the first test file. Compare
-    #     the resulting file to a file created using the HDF library. 
-    #     """
-    #     for imode, mode in enumerate([True, False]):
-    #         filename_in = TEST_FILES[0]
-    #         filename_out = filename_in.split('.')[0] + '_' + str(imode)
-    #         src_data = Snirf(filename_in, 'r+', dynamic_loading=mode)
-    #         dst_data = Snirf(filename_out, 'w', dynamic_loading=mode)
+        self.assertTrue(times[1] < times[0], msg='Dynamically-loaded files not loaded faster')
+        self.assertTrue(sizes[1] < sizes[0], msg='Dynamically-loaded files not smaller in memory')
             
-    #         h5snirf = h5py.File(filename_out + '.hdf', 'w')
-    #         h5snirf['nirs1/metaDataTags/SubjectID'] = src_data.nirs[0].metaDataTags.SubjectID 
-    #         h5snirf['nirs1/metaDataTags/MeasurementDate'] = src_data.nirs[0].metaDataTags.MeasurementDate
-    #         h5snirf['nirs1/metaDataTags/MeasurementTime'] = src_data.nirs[0].metaDataTags.MeasurementTime
-    #         h5snirf['nirs1/metaDataTags/LengthUnit'] = src_data.nirs[0].metaDataTags.LengthUnit
-    #         h5snirf['nirs1/metaDataTags/TimeUnit'] = src_data.nirs[0].metaDataTags.TimeUnit
-            
-    #         dst_data.nirs.appendGroup()
-            
-    #         # metaDataTags   
-    #         dst_data.nirs[0].metaDataTags.SubjectID = src_data.nirs[0].metaDataTags.SubjectID
-    #         dst_data.nirs[0].metaDataTags.MeasurementDate = src_data.nirs[0].metaDataTags.MeasurementDate
-    #         dst_data.nirs[0].metaDataTags.MeasurementTime = src_data.nirs[0].metaDataTags.MeasurementTime
-    #         dst_data.nirs[0].metaDataTags.LengthUnit = src_data.nirs[0].metaDataTags.LengthUnit
-    #         dst_data.nirs[0].metaDataTags.TimeUnit = src_data.nirs[0].metaDataTags.TimeUnit
-            
-    #         # data
-    #         h5snirf['nirs1/data1/time'] = src_data.nirs[0].data[0].time 
-    #         h5snirf['nirs1/data1/dataTimeSeries'] = src_data.nirs[0].data[0].dataTimeSeries[:, 0]
-            
-    #         dst_data.nirs[0].data.appendGroup()
-    #         dst_data.nirs[0].data[0].time = src_data.nirs[0].data[0].time 
-    #         dst_data.nirs[0].data[0].dataTimeSeries = src_data.nirs[0].data[0].dataTimeSeries[:, 0]
-            
-    #         # measurementList
-    #         h5snirf['nirs1/data1/measurementList1/sourceIndex'] = src_data.nirs[0].data[0].measurementList[0].sourceIndex
-    #         h5snirf['nirs1/data1/measurementList1/detectorIndex'] = src_data.nirs[0].data[0].measurementList[0].detectorIndex
-    #         h5snirf['nirs1/data1/measurementList1/wavelengthIndex'] = src_data.nirs[0].data[0].measurementList[0].wavelengthIndex
-    #         h5snirf['nirs1/data1/measurementList1/dataType'] = src_data.nirs[0].data[0].measurementList[0].dataType
-    #         h5snirf['nirs1/data1/measurementList1/dataTypeIndex'] = src_data.nirs[0].data[0].measurementList[0].dataTypeIndex
-            
-    #         dst_data.nirs[0].data[0].measurementList.appendGroup()
-    #         dst_data.nirs[0].data[0].measurementList[0].sourceIndex = src_data.nirs[0].data[0].measurementList[0].sourceIndex
-    #         dst_data.nirs[0].data[0].measurementList[0].detectorIndex = src_data.nirs[0].data[0].measurementList[0].detectorIndex
-    #         dst_data.nirs[0].data[0].measurementList[0].wavelengthIndex = src_data.nirs[0].data[0].measurementList[0].wavelengthIndex
-    #         dst_data.nirs[0].data[0].measurementList[0].dataType = src_data.nirs[0].data[0].measurementList[0].dataType
-    #         dst_data.nirs[0].data[0].measurementList[0].dataTypeIndex = src_data.nirs[0].data[0].measurementList[0].dataTypeIndex
-            
-    #         # probe
-    #         h5snirf['nirs1/probe/wavelengths'] = src_data.nirs[0].probe.wavelengths
-    #         h5snirf['nirs1/probe/sourcePos2D'] = src_data.nirs[0].probe.sourcePos2D
-    #         h5snirf['nirs1/probe/detectorPos2D'] = src_data.nirs[0].probe.detectorPos2D
-            
-    #         dst_data.nirs[0].probe.wavelengths = src_data.nirs[0].probe.wavelengths
-    #         dst_data.nirs[0].probe.sourcePos2D = src_data.nirs[0].probe.sourcePos2D
-    #         dst_data.nirs[0].probe.detectorPos2D = src_data.nirs[0].probe.detectorPos2D
-            
-    #         src_data.close()
-    #         fname_dst = dst_data.filename
-    #         fname_src = filename_in
-    #         dst_data.save()
-    #         dst_data.close()
-    #         if VERBOSE:
-    #             print(fname_dst, fname_src)
-    #         h5snirf.close()
-            
-    #         dataset_equal_test(self, fname_dst, fname_src)
-        
 
 # -- Set up test working-directory --------------------------------------------
 
-print('Deleting all files in', working_directory)
-for file in os.listdir(working_directory):
-    os.remove(os.path.join(working_directory, file))
-    print('Deleted', working_directory + '/' + file)
-
-print('Copying all test files to', working_directory)
-for file in os.listdir(snirf_directory):
-    shutil.copy(os.path.join(snirf_directory, file),  os.path.join(working_directory, file))
-    time.sleep(0.5)  # Sleep while executing copy operation
-
-TEST_FILES = [working_directory + '/' + file for file in os.listdir(working_directory)]
-if len(TEST_FILES) == 0:
-    sys.exit('Failed to set up test data working directory at '+ working_directory)
+test_files = set_up_test_wd()
 
 if __name__ == '__main__':
     result = unittest.main()
