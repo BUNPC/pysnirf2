@@ -10,25 +10,9 @@ import numpy as np
 from pysnirf2 import *
 import h5py
 
-testfile = 'tests/data/subjA_run01.snirf'
+testfile = 'tests/wd/subjA_run01.snirf'
 
-s = Snirf(testfile)
-print(s)
+#s = Snirf(testfile)
+s = Snirf(testfile, dynamic_loading=True)
 
-# %%
-
-
-s.nirs[0].metaDataTags.add('place', 'krum hole')
-
-# %%
-
-del s.nirs[0].metaDataTags.LengthUnit
-del s.nirs[0].probe
-
-s.save('krumhole')
-
-# %%
-
-s2 = Snirf('krumhole')
-valid, result = s2.validate()
-result.display(severity=2)
+z = s.nirs[0].probe.wavelengths

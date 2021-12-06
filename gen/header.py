@@ -346,37 +346,27 @@ class SnirfConfig:
     dynamic_loading: bool = False  # If False, data is loaded in the constructor, if True, data is loaded on access
 
 
+#class Singleton(object):
+#    __instance = None
+#    def __new__(cls, val):
+#        if Singleton.__instance is None:
+#            Singleton.__instance = object.__new__(cls)
+#        Singleton.__instance.val = val
+#        return Singleton.__instance
+
 # Placeholder for a Dataset that is not on disk or in memory
-class AbsentDatasetType:
-    _instance = None
-    def __new__(self):
-        if self._instance is None:
-            self._instance = self
-        return self._instance
-    def __repr__(self):
-        return 'AbsentDataset'
+class AbsentDatasetType():
+    pass
 
 
 # Placeholder for a Group that is not on disk or in memory
-class AbsentGroupType:
-    _instance = None
-    def __new__(self):
-        if self._instance is None:
-            self._instance = self
-        return self._instance
-    def __repr__(self):
-        return 'AbsentGroup'
+class AbsentGroupType():
+    pass
 
 
 # Placeholder for a Dataset that is available only on disk in a dynamic_loading=True wrapper
-class PresentDatasetType:
-    _instance = None
-    def __new__(self):
-        if self._instance is None:
-            self._instance = self
-        return self._instance
-    def __repr__(self):
-        return 'PresentDataset'
+class PresentDatasetType():
+    pass
 
 
 # Instantiate singletons

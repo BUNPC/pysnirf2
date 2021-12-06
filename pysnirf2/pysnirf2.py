@@ -31,7 +31,6 @@ def _create_logger(name, log_file, level=logging.INFO):
 
 # Package-wide logger
 _logger = _create_logger('pysnirf2', 'pysnirf2.log')
-_logger.info('Opened pysnirf2.log')
 
 if sys.version_info[0] < 3:
     raise ImportError('pysnirf2 requires Python > 3')
@@ -347,37 +346,27 @@ class SnirfConfig:
     dynamic_loading: bool = False  # If False, data is loaded in the constructor, if True, data is loaded on access
 
 
+#class Singleton(object):
+#    __instance = None
+#    def __new__(cls, val):
+#        if Singleton.__instance is None:
+#            Singleton.__instance = object.__new__(cls)
+#        Singleton.__instance.val = val
+#        return Singleton.__instance
+
 # Placeholder for a Dataset that is not on disk or in memory
-class AbsentDatasetType:
-    _instance = None
-    def __new__(self):
-        if self._instance is None:
-            self._instance = self
-        return self._instance
-    def __repr__(self):
-        return 'AbsentDataset'
+class AbsentDatasetType():
+    pass
 
 
 # Placeholder for a Group that is not on disk or in memory
-class AbsentGroupType:
-    _instance = None
-    def __new__(self):
-        if self._instance is None:
-            self._instance = self
-        return self._instance
-    def __repr__(self):
-        return 'AbsentGroup'
+class AbsentGroupType():
+    pass
 
 
 # Placeholder for a Dataset that is available only on disk in a dynamic_loading=True wrapper
-class PresentDatasetType:
-    _instance = None
-    def __new__(self):
-        if self._instance is None:
-            self._instance = self
-        return self._instance
-    def __repr__(self):
-        return 'PresentDataset'
+class PresentDatasetType():
+    pass
 
 
 # Instantiate singletons
@@ -766,13 +755,11 @@ class MetaDataTags(Group):
     def SubjectID(self):
         if type(self._SubjectID) is type(AbsentDataset):
             return None
-        if self._cfg.dynamic_loading and type(self._SubjectID) is type(PresentDataset) and 'SubjectID' in self._h:
+        if type(self._SubjectID) is type(PresentDataset) and 'SubjectID' in self._h:
             return _read_string(self._h['SubjectID'])
             self._cfg.logger.info('Dynamically loaded %s/SubjectID from %s', self.location, self.filename)
-        elif self._SubjectID is not AbsentDataset:
-            return self._SubjectID
         else:
-            return None
+            return self._SubjectID
 
     @SubjectID.setter
     def SubjectID(self, value):
@@ -788,13 +775,11 @@ class MetaDataTags(Group):
     def MeasurementDate(self):
         if type(self._MeasurementDate) is type(AbsentDataset):
             return None
-        if self._cfg.dynamic_loading and type(self._MeasurementDate) is type(PresentDataset) and 'MeasurementDate' in self._h:
+        if type(self._MeasurementDate) is type(PresentDataset) and 'MeasurementDate' in self._h:
             return _read_string(self._h['MeasurementDate'])
             self._cfg.logger.info('Dynamically loaded %s/MeasurementDate from %s', self.location, self.filename)
-        elif self._MeasurementDate is not AbsentDataset:
-            return self._MeasurementDate
         else:
-            return None
+            return self._MeasurementDate
 
     @MeasurementDate.setter
     def MeasurementDate(self, value):
@@ -810,13 +795,11 @@ class MetaDataTags(Group):
     def MeasurementTime(self):
         if type(self._MeasurementTime) is type(AbsentDataset):
             return None
-        if self._cfg.dynamic_loading and type(self._MeasurementTime) is type(PresentDataset) and 'MeasurementTime' in self._h:
+        if type(self._MeasurementTime) is type(PresentDataset) and 'MeasurementTime' in self._h:
             return _read_string(self._h['MeasurementTime'])
             self._cfg.logger.info('Dynamically loaded %s/MeasurementTime from %s', self.location, self.filename)
-        elif self._MeasurementTime is not AbsentDataset:
-            return self._MeasurementTime
         else:
-            return None
+            return self._MeasurementTime
 
     @MeasurementTime.setter
     def MeasurementTime(self, value):
@@ -832,13 +815,11 @@ class MetaDataTags(Group):
     def LengthUnit(self):
         if type(self._LengthUnit) is type(AbsentDataset):
             return None
-        if self._cfg.dynamic_loading and type(self._LengthUnit) is type(PresentDataset) and 'LengthUnit' in self._h:
+        if type(self._LengthUnit) is type(PresentDataset) and 'LengthUnit' in self._h:
             return _read_string(self._h['LengthUnit'])
             self._cfg.logger.info('Dynamically loaded %s/LengthUnit from %s', self.location, self.filename)
-        elif self._LengthUnit is not AbsentDataset:
-            return self._LengthUnit
         else:
-            return None
+            return self._LengthUnit
 
     @LengthUnit.setter
     def LengthUnit(self, value):
@@ -854,13 +835,11 @@ class MetaDataTags(Group):
     def TimeUnit(self):
         if type(self._TimeUnit) is type(AbsentDataset):
             return None
-        if self._cfg.dynamic_loading and type(self._TimeUnit) is type(PresentDataset) and 'TimeUnit' in self._h:
+        if type(self._TimeUnit) is type(PresentDataset) and 'TimeUnit' in self._h:
             return _read_string(self._h['TimeUnit'])
             self._cfg.logger.info('Dynamically loaded %s/TimeUnit from %s', self.location, self.filename)
-        elif self._TimeUnit is not AbsentDataset:
-            return self._TimeUnit
         else:
-            return None
+            return self._TimeUnit
 
     @TimeUnit.setter
     def TimeUnit(self, value):
@@ -876,13 +855,11 @@ class MetaDataTags(Group):
     def FrequencyUnit(self):
         if type(self._FrequencyUnit) is type(AbsentDataset):
             return None
-        if self._cfg.dynamic_loading and type(self._FrequencyUnit) is type(PresentDataset) and 'FrequencyUnit' in self._h:
+        if type(self._FrequencyUnit) is type(PresentDataset) and 'FrequencyUnit' in self._h:
             return _read_string(self._h['FrequencyUnit'])
             self._cfg.logger.info('Dynamically loaded %s/FrequencyUnit from %s', self.location, self.filename)
-        elif self._FrequencyUnit is not AbsentDataset:
-            return self._FrequencyUnit
         else:
-            return None
+            return self._FrequencyUnit
 
     @FrequencyUnit.setter
     def FrequencyUnit(self, value):
@@ -1100,54 +1077,122 @@ class Probe(Group):
         if 'wavelengths' in self._h:
             if not self._cfg.dynamic_loading:
                 self._wavelengths = _read_float_array(self._h['wavelengths'])
+            else:  # if the dataset is found on disk but dynamic_loading=True
+                self._wavelengths = PresentDataset
+        else:  # if the dataset is not found on disk
+            self._wavelengths = AbsentDataset
         if 'wavelengthsEmission' in self._h:
             if not self._cfg.dynamic_loading:
                 self._wavelengthsEmission = _read_float_array(self._h['wavelengthsEmission'])
+            else:  # if the dataset is found on disk but dynamic_loading=True
+                self._wavelengthsEmission = PresentDataset
+        else:  # if the dataset is not found on disk
+            self._wavelengthsEmission = AbsentDataset
         if 'sourcePos2D' in self._h:
             if not self._cfg.dynamic_loading:
                 self._sourcePos2D = _read_float_array(self._h['sourcePos2D'])
+            else:  # if the dataset is found on disk but dynamic_loading=True
+                self._sourcePos2D = PresentDataset
+        else:  # if the dataset is not found on disk
+            self._sourcePos2D = AbsentDataset
         if 'sourcePos3D' in self._h:
             if not self._cfg.dynamic_loading:
                 self._sourcePos3D = _read_float_array(self._h['sourcePos3D'])
+            else:  # if the dataset is found on disk but dynamic_loading=True
+                self._sourcePos3D = PresentDataset
+        else:  # if the dataset is not found on disk
+            self._sourcePos3D = AbsentDataset
         if 'detectorPos2D' in self._h:
             if not self._cfg.dynamic_loading:
                 self._detectorPos2D = _read_float_array(self._h['detectorPos2D'])
+            else:  # if the dataset is found on disk but dynamic_loading=True
+                self._detectorPos2D = PresentDataset
+        else:  # if the dataset is not found on disk
+            self._detectorPos2D = AbsentDataset
         if 'detectorPos3D' in self._h:
             if not self._cfg.dynamic_loading:
                 self._detectorPos3D = _read_float_array(self._h['detectorPos3D'])
+            else:  # if the dataset is found on disk but dynamic_loading=True
+                self._detectorPos3D = PresentDataset
+        else:  # if the dataset is not found on disk
+            self._detectorPos3D = AbsentDataset
         if 'frequencies' in self._h:
             if not self._cfg.dynamic_loading:
                 self._frequencies = _read_float_array(self._h['frequencies'])
+            else:  # if the dataset is found on disk but dynamic_loading=True
+                self._frequencies = PresentDataset
+        else:  # if the dataset is not found on disk
+            self._frequencies = AbsentDataset
         if 'timeDelays' in self._h:
             if not self._cfg.dynamic_loading:
                 self._timeDelays = _read_float_array(self._h['timeDelays'])
+            else:  # if the dataset is found on disk but dynamic_loading=True
+                self._timeDelays = PresentDataset
+        else:  # if the dataset is not found on disk
+            self._timeDelays = AbsentDataset
         if 'timeDelayWidths' in self._h:
             if not self._cfg.dynamic_loading:
                 self._timeDelayWidths = _read_float_array(self._h['timeDelayWidths'])
+            else:  # if the dataset is found on disk but dynamic_loading=True
+                self._timeDelayWidths = PresentDataset
+        else:  # if the dataset is not found on disk
+            self._timeDelayWidths = AbsentDataset
         if 'momentOrders' in self._h:
             if not self._cfg.dynamic_loading:
                 self._momentOrders = _read_float_array(self._h['momentOrders'])
+            else:  # if the dataset is found on disk but dynamic_loading=True
+                self._momentOrders = PresentDataset
+        else:  # if the dataset is not found on disk
+            self._momentOrders = AbsentDataset
         if 'correlationTimeDelays' in self._h:
             if not self._cfg.dynamic_loading:
                 self._correlationTimeDelays = _read_float_array(self._h['correlationTimeDelays'])
+            else:  # if the dataset is found on disk but dynamic_loading=True
+                self._correlationTimeDelays = PresentDataset
+        else:  # if the dataset is not found on disk
+            self._correlationTimeDelays = AbsentDataset
         if 'correlationTimeDelayWidths' in self._h:
             if not self._cfg.dynamic_loading:
                 self._correlationTimeDelayWidths = _read_float_array(self._h['correlationTimeDelayWidths'])
+            else:  # if the dataset is found on disk but dynamic_loading=True
+                self._correlationTimeDelayWidths = PresentDataset
+        else:  # if the dataset is not found on disk
+            self._correlationTimeDelayWidths = AbsentDataset
         if 'sourceLabels' in self._h:
             if not self._cfg.dynamic_loading:
                 self._sourceLabels = _read_string_array(self._h['sourceLabels'])
+            else:  # if the dataset is found on disk but dynamic_loading=True
+                self._sourceLabels = PresentDataset
+        else:  # if the dataset is not found on disk
+            self._sourceLabels = AbsentDataset
         if 'detectorLabels' in self._h:
             if not self._cfg.dynamic_loading:
                 self._detectorLabels = _read_string_array(self._h['detectorLabels'])
+            else:  # if the dataset is found on disk but dynamic_loading=True
+                self._detectorLabels = PresentDataset
+        else:  # if the dataset is not found on disk
+            self._detectorLabels = AbsentDataset
         if 'landmarkPos2D' in self._h:
             if not self._cfg.dynamic_loading:
                 self._landmarkPos2D = _read_float_array(self._h['landmarkPos2D'])
+            else:  # if the dataset is found on disk but dynamic_loading=True
+                self._landmarkPos2D = PresentDataset
+        else:  # if the dataset is not found on disk
+            self._landmarkPos2D = AbsentDataset
         if 'landmarkPos3D' in self._h:
             if not self._cfg.dynamic_loading:
                 self._landmarkPos3D = _read_float_array(self._h['landmarkPos3D'])
+            else:  # if the dataset is found on disk but dynamic_loading=True
+                self._landmarkPos3D = PresentDataset
+        else:  # if the dataset is not found on disk
+            self._landmarkPos3D = AbsentDataset
         if 'landmarkLabels' in self._h:
             if not self._cfg.dynamic_loading:
                 self._landmarkLabels = _read_string_array(self._h['landmarkLabels'])
+            else:  # if the dataset is found on disk but dynamic_loading=True
+                self._landmarkLabels = PresentDataset
+        else:  # if the dataset is not found on disk
+            self._landmarkLabels = AbsentDataset
         if 'useLocalIndex' in self._h:
             if not self._cfg.dynamic_loading:
                 self._useLocalIndex = _read_int(self._h['useLocalIndex'])
@@ -1161,13 +1206,11 @@ class Probe(Group):
     def wavelengths(self):
         if type(self._wavelengths) is type(AbsentDataset):
             return None
-        if self._cfg.dynamic_loading and type(self._wavelengths) is type(PresentDataset) and 'wavelengths' in self._h:
+        if type(self._wavelengths) is type(PresentDataset) and 'wavelengths' in self._h:
             return _read_float_array(self._h['wavelengths'])
             self._cfg.logger.info('Dynamically loaded %s/wavelengths from %s', self.location, self.filename)
-        elif self._wavelengths is not AbsentDataset:
-            return self._wavelengths
         else:
-            return None
+            return self._wavelengths
 
     @wavelengths.setter
     def wavelengths(self, value):
@@ -1183,13 +1226,11 @@ class Probe(Group):
     def wavelengthsEmission(self):
         if type(self._wavelengthsEmission) is type(AbsentDataset):
             return None
-        if self._cfg.dynamic_loading and type(self._wavelengthsEmission) is type(PresentDataset) and 'wavelengthsEmission' in self._h:
+        if type(self._wavelengthsEmission) is type(PresentDataset) and 'wavelengthsEmission' in self._h:
             return _read_float_array(self._h['wavelengthsEmission'])
             self._cfg.logger.info('Dynamically loaded %s/wavelengthsEmission from %s', self.location, self.filename)
-        elif self._wavelengthsEmission is not AbsentDataset:
-            return self._wavelengthsEmission
         else:
-            return None
+            return self._wavelengthsEmission
 
     @wavelengthsEmission.setter
     def wavelengthsEmission(self, value):
@@ -1205,13 +1246,11 @@ class Probe(Group):
     def sourcePos2D(self):
         if type(self._sourcePos2D) is type(AbsentDataset):
             return None
-        if self._cfg.dynamic_loading and type(self._sourcePos2D) is type(PresentDataset) and 'sourcePos2D' in self._h:
+        if type(self._sourcePos2D) is type(PresentDataset) and 'sourcePos2D' in self._h:
             return _read_float_array(self._h['sourcePos2D'])
             self._cfg.logger.info('Dynamically loaded %s/sourcePos2D from %s', self.location, self.filename)
-        elif self._sourcePos2D is not AbsentDataset:
-            return self._sourcePos2D
         else:
-            return None
+            return self._sourcePos2D
 
     @sourcePos2D.setter
     def sourcePos2D(self, value):
@@ -1227,13 +1266,11 @@ class Probe(Group):
     def sourcePos3D(self):
         if type(self._sourcePos3D) is type(AbsentDataset):
             return None
-        if self._cfg.dynamic_loading and type(self._sourcePos3D) is type(PresentDataset) and 'sourcePos3D' in self._h:
+        if type(self._sourcePos3D) is type(PresentDataset) and 'sourcePos3D' in self._h:
             return _read_float_array(self._h['sourcePos3D'])
             self._cfg.logger.info('Dynamically loaded %s/sourcePos3D from %s', self.location, self.filename)
-        elif self._sourcePos3D is not AbsentDataset:
-            return self._sourcePos3D
         else:
-            return None
+            return self._sourcePos3D
 
     @sourcePos3D.setter
     def sourcePos3D(self, value):
@@ -1249,13 +1286,11 @@ class Probe(Group):
     def detectorPos2D(self):
         if type(self._detectorPos2D) is type(AbsentDataset):
             return None
-        if self._cfg.dynamic_loading and type(self._detectorPos2D) is type(PresentDataset) and 'detectorPos2D' in self._h:
+        if type(self._detectorPos2D) is type(PresentDataset) and 'detectorPos2D' in self._h:
             return _read_float_array(self._h['detectorPos2D'])
             self._cfg.logger.info('Dynamically loaded %s/detectorPos2D from %s', self.location, self.filename)
-        elif self._detectorPos2D is not AbsentDataset:
-            return self._detectorPos2D
         else:
-            return None
+            return self._detectorPos2D
 
     @detectorPos2D.setter
     def detectorPos2D(self, value):
@@ -1271,13 +1306,11 @@ class Probe(Group):
     def detectorPos3D(self):
         if type(self._detectorPos3D) is type(AbsentDataset):
             return None
-        if self._cfg.dynamic_loading and type(self._detectorPos3D) is type(PresentDataset) and 'detectorPos3D' in self._h:
+        if type(self._detectorPos3D) is type(PresentDataset) and 'detectorPos3D' in self._h:
             return _read_float_array(self._h['detectorPos3D'])
             self._cfg.logger.info('Dynamically loaded %s/detectorPos3D from %s', self.location, self.filename)
-        elif self._detectorPos3D is not AbsentDataset:
-            return self._detectorPos3D
         else:
-            return None
+            return self._detectorPos3D
 
     @detectorPos3D.setter
     def detectorPos3D(self, value):
@@ -1293,13 +1326,11 @@ class Probe(Group):
     def frequencies(self):
         if type(self._frequencies) is type(AbsentDataset):
             return None
-        if self._cfg.dynamic_loading and type(self._frequencies) is type(PresentDataset) and 'frequencies' in self._h:
+        if type(self._frequencies) is type(PresentDataset) and 'frequencies' in self._h:
             return _read_float_array(self._h['frequencies'])
             self._cfg.logger.info('Dynamically loaded %s/frequencies from %s', self.location, self.filename)
-        elif self._frequencies is not AbsentDataset:
-            return self._frequencies
         else:
-            return None
+            return self._frequencies
 
     @frequencies.setter
     def frequencies(self, value):
@@ -1315,13 +1346,11 @@ class Probe(Group):
     def timeDelays(self):
         if type(self._timeDelays) is type(AbsentDataset):
             return None
-        if self._cfg.dynamic_loading and type(self._timeDelays) is type(PresentDataset) and 'timeDelays' in self._h:
+        if type(self._timeDelays) is type(PresentDataset) and 'timeDelays' in self._h:
             return _read_float_array(self._h['timeDelays'])
             self._cfg.logger.info('Dynamically loaded %s/timeDelays from %s', self.location, self.filename)
-        elif self._timeDelays is not AbsentDataset:
-            return self._timeDelays
         else:
-            return None
+            return self._timeDelays
 
     @timeDelays.setter
     def timeDelays(self, value):
@@ -1337,13 +1366,11 @@ class Probe(Group):
     def timeDelayWidths(self):
         if type(self._timeDelayWidths) is type(AbsentDataset):
             return None
-        if self._cfg.dynamic_loading and type(self._timeDelayWidths) is type(PresentDataset) and 'timeDelayWidths' in self._h:
+        if type(self._timeDelayWidths) is type(PresentDataset) and 'timeDelayWidths' in self._h:
             return _read_float_array(self._h['timeDelayWidths'])
             self._cfg.logger.info('Dynamically loaded %s/timeDelayWidths from %s', self.location, self.filename)
-        elif self._timeDelayWidths is not AbsentDataset:
-            return self._timeDelayWidths
         else:
-            return None
+            return self._timeDelayWidths
 
     @timeDelayWidths.setter
     def timeDelayWidths(self, value):
@@ -1359,13 +1386,11 @@ class Probe(Group):
     def momentOrders(self):
         if type(self._momentOrders) is type(AbsentDataset):
             return None
-        if self._cfg.dynamic_loading and type(self._momentOrders) is type(PresentDataset) and 'momentOrders' in self._h:
+        if type(self._momentOrders) is type(PresentDataset) and 'momentOrders' in self._h:
             return _read_float_array(self._h['momentOrders'])
             self._cfg.logger.info('Dynamically loaded %s/momentOrders from %s', self.location, self.filename)
-        elif self._momentOrders is not AbsentDataset:
-            return self._momentOrders
         else:
-            return None
+            return self._momentOrders
 
     @momentOrders.setter
     def momentOrders(self, value):
@@ -1381,13 +1406,11 @@ class Probe(Group):
     def correlationTimeDelays(self):
         if type(self._correlationTimeDelays) is type(AbsentDataset):
             return None
-        if self._cfg.dynamic_loading and type(self._correlationTimeDelays) is type(PresentDataset) and 'correlationTimeDelays' in self._h:
+        if type(self._correlationTimeDelays) is type(PresentDataset) and 'correlationTimeDelays' in self._h:
             return _read_float_array(self._h['correlationTimeDelays'])
             self._cfg.logger.info('Dynamically loaded %s/correlationTimeDelays from %s', self.location, self.filename)
-        elif self._correlationTimeDelays is not AbsentDataset:
-            return self._correlationTimeDelays
         else:
-            return None
+            return self._correlationTimeDelays
 
     @correlationTimeDelays.setter
     def correlationTimeDelays(self, value):
@@ -1403,13 +1426,11 @@ class Probe(Group):
     def correlationTimeDelayWidths(self):
         if type(self._correlationTimeDelayWidths) is type(AbsentDataset):
             return None
-        if self._cfg.dynamic_loading and type(self._correlationTimeDelayWidths) is type(PresentDataset) and 'correlationTimeDelayWidths' in self._h:
+        if type(self._correlationTimeDelayWidths) is type(PresentDataset) and 'correlationTimeDelayWidths' in self._h:
             return _read_float_array(self._h['correlationTimeDelayWidths'])
             self._cfg.logger.info('Dynamically loaded %s/correlationTimeDelayWidths from %s', self.location, self.filename)
-        elif self._correlationTimeDelayWidths is not AbsentDataset:
-            return self._correlationTimeDelayWidths
         else:
-            return None
+            return self._correlationTimeDelayWidths
 
     @correlationTimeDelayWidths.setter
     def correlationTimeDelayWidths(self, value):
@@ -1425,13 +1446,11 @@ class Probe(Group):
     def sourceLabels(self):
         if type(self._sourceLabels) is type(AbsentDataset):
             return None
-        if self._cfg.dynamic_loading and type(self._sourceLabels) is type(PresentDataset) and 'sourceLabels' in self._h:
+        if type(self._sourceLabels) is type(PresentDataset) and 'sourceLabels' in self._h:
             return _read_string_array(self._h['sourceLabels'])
             self._cfg.logger.info('Dynamically loaded %s/sourceLabels from %s', self.location, self.filename)
-        elif self._sourceLabels is not AbsentDataset:
-            return self._sourceLabels
         else:
-            return None
+            return self._sourceLabels
 
     @sourceLabels.setter
     def sourceLabels(self, value):
@@ -1447,13 +1466,11 @@ class Probe(Group):
     def detectorLabels(self):
         if type(self._detectorLabels) is type(AbsentDataset):
             return None
-        if self._cfg.dynamic_loading and type(self._detectorLabels) is type(PresentDataset) and 'detectorLabels' in self._h:
+        if type(self._detectorLabels) is type(PresentDataset) and 'detectorLabels' in self._h:
             return _read_string_array(self._h['detectorLabels'])
             self._cfg.logger.info('Dynamically loaded %s/detectorLabels from %s', self.location, self.filename)
-        elif self._detectorLabels is not AbsentDataset:
-            return self._detectorLabels
         else:
-            return None
+            return self._detectorLabels
 
     @detectorLabels.setter
     def detectorLabels(self, value):
@@ -1469,13 +1486,11 @@ class Probe(Group):
     def landmarkPos2D(self):
         if type(self._landmarkPos2D) is type(AbsentDataset):
             return None
-        if self._cfg.dynamic_loading and type(self._landmarkPos2D) is type(PresentDataset) and 'landmarkPos2D' in self._h:
+        if type(self._landmarkPos2D) is type(PresentDataset) and 'landmarkPos2D' in self._h:
             return _read_float_array(self._h['landmarkPos2D'])
             self._cfg.logger.info('Dynamically loaded %s/landmarkPos2D from %s', self.location, self.filename)
-        elif self._landmarkPos2D is not AbsentDataset:
-            return self._landmarkPos2D
         else:
-            return None
+            return self._landmarkPos2D
 
     @landmarkPos2D.setter
     def landmarkPos2D(self, value):
@@ -1491,13 +1506,11 @@ class Probe(Group):
     def landmarkPos3D(self):
         if type(self._landmarkPos3D) is type(AbsentDataset):
             return None
-        if self._cfg.dynamic_loading and type(self._landmarkPos3D) is type(PresentDataset) and 'landmarkPos3D' in self._h:
+        if type(self._landmarkPos3D) is type(PresentDataset) and 'landmarkPos3D' in self._h:
             return _read_float_array(self._h['landmarkPos3D'])
             self._cfg.logger.info('Dynamically loaded %s/landmarkPos3D from %s', self.location, self.filename)
-        elif self._landmarkPos3D is not AbsentDataset:
-            return self._landmarkPos3D
         else:
-            return None
+            return self._landmarkPos3D
 
     @landmarkPos3D.setter
     def landmarkPos3D(self, value):
@@ -1513,13 +1526,11 @@ class Probe(Group):
     def landmarkLabels(self):
         if type(self._landmarkLabels) is type(AbsentDataset):
             return None
-        if self._cfg.dynamic_loading and type(self._landmarkLabels) is type(PresentDataset) and 'landmarkLabels' in self._h:
+        if type(self._landmarkLabels) is type(PresentDataset) and 'landmarkLabels' in self._h:
             return _read_string_array(self._h['landmarkLabels'])
             self._cfg.logger.info('Dynamically loaded %s/landmarkLabels from %s', self.location, self.filename)
-        elif self._landmarkLabels is not AbsentDataset:
-            return self._landmarkLabels
         else:
-            return None
+            return self._landmarkLabels
 
     @landmarkLabels.setter
     def landmarkLabels(self, value):
@@ -1535,13 +1546,11 @@ class Probe(Group):
     def useLocalIndex(self):
         if type(self._useLocalIndex) is type(AbsentDataset):
             return None
-        if self._cfg.dynamic_loading and type(self._useLocalIndex) is type(PresentDataset) and 'useLocalIndex' in self._h:
+        if type(self._useLocalIndex) is type(PresentDataset) and 'useLocalIndex' in self._h:
             return _read_int(self._h['useLocalIndex'])
             self._cfg.logger.info('Dynamically loaded %s/useLocalIndex from %s', self.location, self.filename)
-        elif self._useLocalIndex is not AbsentDataset:
-            return self._useLocalIndex
         else:
-            return None
+            return self._useLocalIndex
 
     @useLocalIndex.setter
     def useLocalIndex(self, value):
@@ -2197,9 +2206,17 @@ class DataElement(Group):
         if 'dataTimeSeries' in self._h:
             if not self._cfg.dynamic_loading:
                 self._dataTimeSeries = _read_float_array(self._h['dataTimeSeries'])
+            else:  # if the dataset is found on disk but dynamic_loading=True
+                self._dataTimeSeries = PresentDataset
+        else:  # if the dataset is not found on disk
+            self._dataTimeSeries = AbsentDataset
         if 'time' in self._h:
             if not self._cfg.dynamic_loading:
                 self._time = _read_float_array(self._h['time'])
+            else:  # if the dataset is found on disk but dynamic_loading=True
+                self._time = PresentDataset
+        else:  # if the dataset is not found on disk
+            self._time = AbsentDataset
         self.measurementList = MeasurementList(self, self._cfg)  # Indexed group
         self._indexed_groups.append(self.measurementList)
                 
@@ -2208,13 +2225,11 @@ class DataElement(Group):
     def dataTimeSeries(self):
         if type(self._dataTimeSeries) is type(AbsentDataset):
             return None
-        if self._cfg.dynamic_loading and type(self._dataTimeSeries) is type(PresentDataset) and 'dataTimeSeries' in self._h:
+        if type(self._dataTimeSeries) is type(PresentDataset) and 'dataTimeSeries' in self._h:
             return _read_float_array(self._h['dataTimeSeries'])
             self._cfg.logger.info('Dynamically loaded %s/dataTimeSeries from %s', self.location, self.filename)
-        elif self._dataTimeSeries is not AbsentDataset:
-            return self._dataTimeSeries
         else:
-            return None
+            return self._dataTimeSeries
 
     @dataTimeSeries.setter
     def dataTimeSeries(self, value):
@@ -2230,13 +2245,11 @@ class DataElement(Group):
     def time(self):
         if type(self._time) is type(AbsentDataset):
             return None
-        if self._cfg.dynamic_loading and type(self._time) is type(PresentDataset) and 'time' in self._h:
+        if type(self._time) is type(PresentDataset) and 'time' in self._h:
             return _read_float_array(self._h['time'])
             self._cfg.logger.info('Dynamically loaded %s/time from %s', self.location, self.filename)
-        elif self._time is not AbsentDataset:
-            return self._time
         else:
-            return None
+            return self._time
 
     @time.setter
     def time(self, value):
@@ -2474,13 +2487,11 @@ class MeasurementListElement(Group):
     def sourceIndex(self):
         if type(self._sourceIndex) is type(AbsentDataset):
             return None
-        if self._cfg.dynamic_loading and type(self._sourceIndex) is type(PresentDataset) and 'sourceIndex' in self._h:
+        if type(self._sourceIndex) is type(PresentDataset) and 'sourceIndex' in self._h:
             return _read_int(self._h['sourceIndex'])
             self._cfg.logger.info('Dynamically loaded %s/sourceIndex from %s', self.location, self.filename)
-        elif self._sourceIndex is not AbsentDataset:
-            return self._sourceIndex
         else:
-            return None
+            return self._sourceIndex
 
     @sourceIndex.setter
     def sourceIndex(self, value):
@@ -2496,13 +2507,11 @@ class MeasurementListElement(Group):
     def detectorIndex(self):
         if type(self._detectorIndex) is type(AbsentDataset):
             return None
-        if self._cfg.dynamic_loading and type(self._detectorIndex) is type(PresentDataset) and 'detectorIndex' in self._h:
+        if type(self._detectorIndex) is type(PresentDataset) and 'detectorIndex' in self._h:
             return _read_int(self._h['detectorIndex'])
             self._cfg.logger.info('Dynamically loaded %s/detectorIndex from %s', self.location, self.filename)
-        elif self._detectorIndex is not AbsentDataset:
-            return self._detectorIndex
         else:
-            return None
+            return self._detectorIndex
 
     @detectorIndex.setter
     def detectorIndex(self, value):
@@ -2518,13 +2527,11 @@ class MeasurementListElement(Group):
     def wavelengthIndex(self):
         if type(self._wavelengthIndex) is type(AbsentDataset):
             return None
-        if self._cfg.dynamic_loading and type(self._wavelengthIndex) is type(PresentDataset) and 'wavelengthIndex' in self._h:
+        if type(self._wavelengthIndex) is type(PresentDataset) and 'wavelengthIndex' in self._h:
             return _read_int(self._h['wavelengthIndex'])
             self._cfg.logger.info('Dynamically loaded %s/wavelengthIndex from %s', self.location, self.filename)
-        elif self._wavelengthIndex is not AbsentDataset:
-            return self._wavelengthIndex
         else:
-            return None
+            return self._wavelengthIndex
 
     @wavelengthIndex.setter
     def wavelengthIndex(self, value):
@@ -2540,13 +2547,11 @@ class MeasurementListElement(Group):
     def wavelengthActual(self):
         if type(self._wavelengthActual) is type(AbsentDataset):
             return None
-        if self._cfg.dynamic_loading and type(self._wavelengthActual) is type(PresentDataset) and 'wavelengthActual' in self._h:
+        if type(self._wavelengthActual) is type(PresentDataset) and 'wavelengthActual' in self._h:
             return _read_float(self._h['wavelengthActual'])
             self._cfg.logger.info('Dynamically loaded %s/wavelengthActual from %s', self.location, self.filename)
-        elif self._wavelengthActual is not AbsentDataset:
-            return self._wavelengthActual
         else:
-            return None
+            return self._wavelengthActual
 
     @wavelengthActual.setter
     def wavelengthActual(self, value):
@@ -2562,13 +2567,11 @@ class MeasurementListElement(Group):
     def wavelengthEmissionActual(self):
         if type(self._wavelengthEmissionActual) is type(AbsentDataset):
             return None
-        if self._cfg.dynamic_loading and type(self._wavelengthEmissionActual) is type(PresentDataset) and 'wavelengthEmissionActual' in self._h:
+        if type(self._wavelengthEmissionActual) is type(PresentDataset) and 'wavelengthEmissionActual' in self._h:
             return _read_float(self._h['wavelengthEmissionActual'])
             self._cfg.logger.info('Dynamically loaded %s/wavelengthEmissionActual from %s', self.location, self.filename)
-        elif self._wavelengthEmissionActual is not AbsentDataset:
-            return self._wavelengthEmissionActual
         else:
-            return None
+            return self._wavelengthEmissionActual
 
     @wavelengthEmissionActual.setter
     def wavelengthEmissionActual(self, value):
@@ -2584,13 +2587,11 @@ class MeasurementListElement(Group):
     def dataType(self):
         if type(self._dataType) is type(AbsentDataset):
             return None
-        if self._cfg.dynamic_loading and type(self._dataType) is type(PresentDataset) and 'dataType' in self._h:
+        if type(self._dataType) is type(PresentDataset) and 'dataType' in self._h:
             return _read_int(self._h['dataType'])
             self._cfg.logger.info('Dynamically loaded %s/dataType from %s', self.location, self.filename)
-        elif self._dataType is not AbsentDataset:
-            return self._dataType
         else:
-            return None
+            return self._dataType
 
     @dataType.setter
     def dataType(self, value):
@@ -2606,13 +2607,11 @@ class MeasurementListElement(Group):
     def dataUnit(self):
         if type(self._dataUnit) is type(AbsentDataset):
             return None
-        if self._cfg.dynamic_loading and type(self._dataUnit) is type(PresentDataset) and 'dataUnit' in self._h:
+        if type(self._dataUnit) is type(PresentDataset) and 'dataUnit' in self._h:
             return _read_string(self._h['dataUnit'])
             self._cfg.logger.info('Dynamically loaded %s/dataUnit from %s', self.location, self.filename)
-        elif self._dataUnit is not AbsentDataset:
-            return self._dataUnit
         else:
-            return None
+            return self._dataUnit
 
     @dataUnit.setter
     def dataUnit(self, value):
@@ -2628,13 +2627,11 @@ class MeasurementListElement(Group):
     def dataTypeLabel(self):
         if type(self._dataTypeLabel) is type(AbsentDataset):
             return None
-        if self._cfg.dynamic_loading and type(self._dataTypeLabel) is type(PresentDataset) and 'dataTypeLabel' in self._h:
+        if type(self._dataTypeLabel) is type(PresentDataset) and 'dataTypeLabel' in self._h:
             return _read_string(self._h['dataTypeLabel'])
             self._cfg.logger.info('Dynamically loaded %s/dataTypeLabel from %s', self.location, self.filename)
-        elif self._dataTypeLabel is not AbsentDataset:
-            return self._dataTypeLabel
         else:
-            return None
+            return self._dataTypeLabel
 
     @dataTypeLabel.setter
     def dataTypeLabel(self, value):
@@ -2650,13 +2647,11 @@ class MeasurementListElement(Group):
     def dataTypeIndex(self):
         if type(self._dataTypeIndex) is type(AbsentDataset):
             return None
-        if self._cfg.dynamic_loading and type(self._dataTypeIndex) is type(PresentDataset) and 'dataTypeIndex' in self._h:
+        if type(self._dataTypeIndex) is type(PresentDataset) and 'dataTypeIndex' in self._h:
             return _read_int(self._h['dataTypeIndex'])
             self._cfg.logger.info('Dynamically loaded %s/dataTypeIndex from %s', self.location, self.filename)
-        elif self._dataTypeIndex is not AbsentDataset:
-            return self._dataTypeIndex
         else:
-            return None
+            return self._dataTypeIndex
 
     @dataTypeIndex.setter
     def dataTypeIndex(self, value):
@@ -2672,13 +2667,11 @@ class MeasurementListElement(Group):
     def sourcePower(self):
         if type(self._sourcePower) is type(AbsentDataset):
             return None
-        if self._cfg.dynamic_loading and type(self._sourcePower) is type(PresentDataset) and 'sourcePower' in self._h:
+        if type(self._sourcePower) is type(PresentDataset) and 'sourcePower' in self._h:
             return _read_float(self._h['sourcePower'])
             self._cfg.logger.info('Dynamically loaded %s/sourcePower from %s', self.location, self.filename)
-        elif self._sourcePower is not AbsentDataset:
-            return self._sourcePower
         else:
-            return None
+            return self._sourcePower
 
     @sourcePower.setter
     def sourcePower(self, value):
@@ -2694,13 +2687,11 @@ class MeasurementListElement(Group):
     def detectorGain(self):
         if type(self._detectorGain) is type(AbsentDataset):
             return None
-        if self._cfg.dynamic_loading and type(self._detectorGain) is type(PresentDataset) and 'detectorGain' in self._h:
+        if type(self._detectorGain) is type(PresentDataset) and 'detectorGain' in self._h:
             return _read_float(self._h['detectorGain'])
             self._cfg.logger.info('Dynamically loaded %s/detectorGain from %s', self.location, self.filename)
-        elif self._detectorGain is not AbsentDataset:
-            return self._detectorGain
         else:
-            return None
+            return self._detectorGain
 
     @detectorGain.setter
     def detectorGain(self, value):
@@ -2716,13 +2707,11 @@ class MeasurementListElement(Group):
     def moduleIndex(self):
         if type(self._moduleIndex) is type(AbsentDataset):
             return None
-        if self._cfg.dynamic_loading and type(self._moduleIndex) is type(PresentDataset) and 'moduleIndex' in self._h:
+        if type(self._moduleIndex) is type(PresentDataset) and 'moduleIndex' in self._h:
             return _read_int(self._h['moduleIndex'])
             self._cfg.logger.info('Dynamically loaded %s/moduleIndex from %s', self.location, self.filename)
-        elif self._moduleIndex is not AbsentDataset:
-            return self._moduleIndex
         else:
-            return None
+            return self._moduleIndex
 
     @moduleIndex.setter
     def moduleIndex(self, value):
@@ -2738,13 +2727,11 @@ class MeasurementListElement(Group):
     def sourceModuleIndex(self):
         if type(self._sourceModuleIndex) is type(AbsentDataset):
             return None
-        if self._cfg.dynamic_loading and type(self._sourceModuleIndex) is type(PresentDataset) and 'sourceModuleIndex' in self._h:
+        if type(self._sourceModuleIndex) is type(PresentDataset) and 'sourceModuleIndex' in self._h:
             return _read_int(self._h['sourceModuleIndex'])
             self._cfg.logger.info('Dynamically loaded %s/sourceModuleIndex from %s', self.location, self.filename)
-        elif self._sourceModuleIndex is not AbsentDataset:
-            return self._sourceModuleIndex
         else:
-            return None
+            return self._sourceModuleIndex
 
     @sourceModuleIndex.setter
     def sourceModuleIndex(self, value):
@@ -2760,13 +2747,11 @@ class MeasurementListElement(Group):
     def detectorModuleIndex(self):
         if type(self._detectorModuleIndex) is type(AbsentDataset):
             return None
-        if self._cfg.dynamic_loading and type(self._detectorModuleIndex) is type(PresentDataset) and 'detectorModuleIndex' in self._h:
+        if type(self._detectorModuleIndex) is type(PresentDataset) and 'detectorModuleIndex' in self._h:
             return _read_int(self._h['detectorModuleIndex'])
             self._cfg.logger.info('Dynamically loaded %s/detectorModuleIndex from %s', self.location, self.filename)
-        elif self._detectorModuleIndex is not AbsentDataset:
-            return self._detectorModuleIndex
         else:
-            return None
+            return self._detectorModuleIndex
 
     @detectorModuleIndex.setter
     def detectorModuleIndex(self, value):
@@ -3170,22 +3155,28 @@ class StimElement(Group):
         if 'data' in self._h:
             if not self._cfg.dynamic_loading:
                 self._data = _read_float_array(self._h['data'])
+            else:  # if the dataset is found on disk but dynamic_loading=True
+                self._data = PresentDataset
+        else:  # if the dataset is not found on disk
+            self._data = AbsentDataset
         if 'dataLabels' in self._h:
             if not self._cfg.dynamic_loading:
                 self._dataLabels = _read_string_array(self._h['dataLabels'])
+            else:  # if the dataset is found on disk but dynamic_loading=True
+                self._dataLabels = PresentDataset
+        else:  # if the dataset is not found on disk
+            self._dataLabels = AbsentDataset
                 
 
     @property
     def name(self):
         if type(self._name) is type(AbsentDataset):
             return None
-        if self._cfg.dynamic_loading and type(self._name) is type(PresentDataset) and 'name' in self._h:
+        if type(self._name) is type(PresentDataset) and 'name' in self._h:
             return _read_string(self._h['name'])
             self._cfg.logger.info('Dynamically loaded %s/name from %s', self.location, self.filename)
-        elif self._name is not AbsentDataset:
-            return self._name
         else:
-            return None
+            return self._name
 
     @name.setter
     def name(self, value):
@@ -3201,13 +3192,11 @@ class StimElement(Group):
     def data(self):
         if type(self._data) is type(AbsentDataset):
             return None
-        if self._cfg.dynamic_loading and type(self._data) is type(PresentDataset) and 'data' in self._h:
+        if type(self._data) is type(PresentDataset) and 'data' in self._h:
             return _read_float_array(self._h['data'])
             self._cfg.logger.info('Dynamically loaded %s/data from %s', self.location, self.filename)
-        elif self._data is not AbsentDataset:
-            return self._data
         else:
-            return None
+            return self._data
 
     @data.setter
     def data(self, value):
@@ -3223,13 +3212,11 @@ class StimElement(Group):
     def dataLabels(self):
         if type(self._dataLabels) is type(AbsentDataset):
             return None
-        if self._cfg.dynamic_loading and type(self._dataLabels) is type(PresentDataset) and 'dataLabels' in self._h:
+        if type(self._dataLabels) is type(PresentDataset) and 'dataLabels' in self._h:
             return _read_string_array(self._h['dataLabels'])
             self._cfg.logger.info('Dynamically loaded %s/dataLabels from %s', self.location, self.filename)
-        elif self._dataLabels is not AbsentDataset:
-            return self._dataLabels
         else:
-            return None
+            return self._dataLabels
 
     @dataLabels.setter
     def dataLabels(self, value):
@@ -3371,6 +3358,10 @@ class AuxElement(Group):
         if 'dataTimeSeries' in self._h:
             if not self._cfg.dynamic_loading:
                 self._dataTimeSeries = _read_float_array(self._h['dataTimeSeries'])
+            else:  # if the dataset is found on disk but dynamic_loading=True
+                self._dataTimeSeries = PresentDataset
+        else:  # if the dataset is not found on disk
+            self._dataTimeSeries = AbsentDataset
         if 'dataUnit' in self._h:
             if not self._cfg.dynamic_loading:
                 self._dataUnit = _read_string(self._h['dataUnit'])
@@ -3381,22 +3372,28 @@ class AuxElement(Group):
         if 'time' in self._h:
             if not self._cfg.dynamic_loading:
                 self._time = _read_float_array(self._h['time'])
+            else:  # if the dataset is found on disk but dynamic_loading=True
+                self._time = PresentDataset
+        else:  # if the dataset is not found on disk
+            self._time = AbsentDataset
         if 'timeOffset' in self._h:
             if not self._cfg.dynamic_loading:
                 self._timeOffset = _read_float_array(self._h['timeOffset'])
+            else:  # if the dataset is found on disk but dynamic_loading=True
+                self._timeOffset = PresentDataset
+        else:  # if the dataset is not found on disk
+            self._timeOffset = AbsentDataset
                 
 
     @property
     def name(self):
         if type(self._name) is type(AbsentDataset):
             return None
-        if self._cfg.dynamic_loading and type(self._name) is type(PresentDataset) and 'name' in self._h:
+        if type(self._name) is type(PresentDataset) and 'name' in self._h:
             return _read_string(self._h['name'])
             self._cfg.logger.info('Dynamically loaded %s/name from %s', self.location, self.filename)
-        elif self._name is not AbsentDataset:
-            return self._name
         else:
-            return None
+            return self._name
 
     @name.setter
     def name(self, value):
@@ -3412,13 +3409,11 @@ class AuxElement(Group):
     def dataTimeSeries(self):
         if type(self._dataTimeSeries) is type(AbsentDataset):
             return None
-        if self._cfg.dynamic_loading and type(self._dataTimeSeries) is type(PresentDataset) and 'dataTimeSeries' in self._h:
+        if type(self._dataTimeSeries) is type(PresentDataset) and 'dataTimeSeries' in self._h:
             return _read_float_array(self._h['dataTimeSeries'])
             self._cfg.logger.info('Dynamically loaded %s/dataTimeSeries from %s', self.location, self.filename)
-        elif self._dataTimeSeries is not AbsentDataset:
-            return self._dataTimeSeries
         else:
-            return None
+            return self._dataTimeSeries
 
     @dataTimeSeries.setter
     def dataTimeSeries(self, value):
@@ -3434,13 +3429,11 @@ class AuxElement(Group):
     def dataUnit(self):
         if type(self._dataUnit) is type(AbsentDataset):
             return None
-        if self._cfg.dynamic_loading and type(self._dataUnit) is type(PresentDataset) and 'dataUnit' in self._h:
+        if type(self._dataUnit) is type(PresentDataset) and 'dataUnit' in self._h:
             return _read_string(self._h['dataUnit'])
             self._cfg.logger.info('Dynamically loaded %s/dataUnit from %s', self.location, self.filename)
-        elif self._dataUnit is not AbsentDataset:
-            return self._dataUnit
         else:
-            return None
+            return self._dataUnit
 
     @dataUnit.setter
     def dataUnit(self, value):
@@ -3456,13 +3449,11 @@ class AuxElement(Group):
     def time(self):
         if type(self._time) is type(AbsentDataset):
             return None
-        if self._cfg.dynamic_loading and type(self._time) is type(PresentDataset) and 'time' in self._h:
+        if type(self._time) is type(PresentDataset) and 'time' in self._h:
             return _read_float_array(self._h['time'])
             self._cfg.logger.info('Dynamically loaded %s/time from %s', self.location, self.filename)
-        elif self._time is not AbsentDataset:
-            return self._time
         else:
-            return None
+            return self._time
 
     @time.setter
     def time(self, value):
@@ -3478,13 +3469,11 @@ class AuxElement(Group):
     def timeOffset(self):
         if type(self._timeOffset) is type(AbsentDataset):
             return None
-        if self._cfg.dynamic_loading and type(self._timeOffset) is type(PresentDataset) and 'timeOffset' in self._h:
+        if type(self._timeOffset) is type(PresentDataset) and 'timeOffset' in self._h:
             return _read_float_array(self._h['timeOffset'])
             self._cfg.logger.info('Dynamically loaded %s/timeOffset from %s', self.location, self.filename)
-        elif self._timeOffset is not AbsentDataset:
-            return self._timeOffset
         else:
-            return None
+            return self._timeOffset
 
     @timeOffset.setter
     def timeOffset(self, value):
@@ -3701,13 +3690,11 @@ class Snirf(Group):
     def formatVersion(self):
         if type(self._formatVersion) is type(AbsentDataset):
             return None
-        if self._cfg.dynamic_loading and type(self._formatVersion) is type(PresentDataset) and 'formatVersion' in self._h:
+        if type(self._formatVersion) is type(PresentDataset) and 'formatVersion' in self._h:
             return _read_string(self._h['formatVersion'])
             self._cfg.logger.info('Dynamically loaded %s/formatVersion from %s', self.location, self.filename)
-        elif self._formatVersion is not AbsentDataset:
-            return self._formatVersion
         else:
-            return None
+            return self._formatVersion
 
     @formatVersion.setter
     def formatVersion(self, value):

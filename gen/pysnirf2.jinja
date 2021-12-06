@@ -45,11 +45,11 @@
             {% else %}
             self._{{ CHILD.name }} = _read_dataset(self._h['{{ CHILD.name }}'])
             {% endif %}
+        {% endif %}
         else:  # if the dataset is found on disk but dynamic_loading=True
             self._{{ CHILD.name }} = PresentDataset
     else:  # if the dataset is not found on disk
         self._{{ CHILD.name }} = AbsentDataset
-        {% endif %}
     {% endif %}
     {% endfor %}
     {% if NODE.name in UNSPECIFIED_DATASETS_OK %}
@@ -75,7 +75,7 @@
     {% else %}
         if type(self._{{ CHILD.name }}) is type(AbsentDataset):
             return None
-        if self._cfg.dynamic_loading and type(self._{{ CHILD.name }}) is type(PresentDataset) and '{{ CHILD.name }}' in self._h:
+        if type(self._{{ CHILD.name }}) is type(PresentDataset) and '{{ CHILD.name }}' in self._h:
         {% if (TYPES.ARRAY_1D in CHILD.type) or (TYPES.ARRAY_2D in CHILD.type) %}
             {% if TYPES.VARLEN_STRING in CHILD.type %}
             return _read_string_array(self._h['{{ CHILD.name }}'])
@@ -98,10 +98,8 @@
             {% endif %}
         {% endif %}
             self._cfg.logger.info('Dynamically loaded %s/{{ CHILD.name }} from %s', self.location, self.filename)
-        elif self._{{ CHILD.name }} is not AbsentDataset:
-            return self._{{ CHILD.name }}
         else:
-            return None
+            return self._{{ CHILD.name }}
     {% endif %}
 
     @{{ CHILD.name }}.setter
