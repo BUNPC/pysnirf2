@@ -186,7 +186,6 @@
             try:
                 data = getattr(self, unspecified_name)
             except AttributeError:  # Dataset was deleted
-                print('Attribute was deleted or could not be found... not saving')
                 continue
             _create_dataset(file, name, data)
             
@@ -205,7 +204,7 @@
         {% else %}
             result._add(name, 'OPTIONAL_GROUP_MISSING')
         {% endif %}
-            print(name, 'not found')
+            # print(name, 'not found')
         else:
             self.{{ CHILD.name }}._validate(result)
     {% else %}
@@ -215,12 +214,12 @@
         {% else %}
             result._add(name, 'OPTIONAL_DATASET_MISSING')
         {% endif %}
-            print(name, 'not found')
+            # print(name, 'not found')
         else:
             # Validate unwritten datasets after writing them to this tempfile
             tmp = h5py.File(TemporaryFile(), 'w')
             try:
-                if type(self._{{ CHILD.name }}) is type(AbsentDataset):
+                if type(self._{{ CHILD.name }}) is type(PresentDataset):
         {% if TYPES.ARRAY_2D in CHILD.type %}
             {% if TYPES.VARLEN_STRING in CHILD.type %}
                     dataset = self._h['{{ CHILD.name }}']
@@ -281,7 +280,7 @@
         {% endif %}
             except ValueError:  # If the _create_dataset function can't convert the data
                 result._add(name, 'INVALID_DATASET_TYPE')
-            print(dataset)
+            # print(dataset)
     {% endif %}
     {% endfor %}
     {% if not NODE.name in UNSPECIFIED_DATASETS_OK %}
