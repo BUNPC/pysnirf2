@@ -658,7 +658,7 @@ class IndexedGroup(MutableSequence, ABC):
                 if len(numsplit[1]) == len(str(int(numsplit[1]))):
                     unordered.append(key)
                     indices.append(int(numsplit[1]))
-            elif key.endswith(self._name):
+            elif key.endswith(self._name):  # Case of single Group with no index
                 unordered.append(key)
                 indices.append(0)
         order = np.argsort(indices)

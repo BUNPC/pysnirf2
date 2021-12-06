@@ -148,13 +148,9 @@
     {% else %}
         name = self.location + '/{{ CHILD.name }}'
         if type(self._{{ CHILD.name }}) not in [type(AbsentDataset), type(None)]:
-            if type(self._{{ CHILD.name }}) is type(PresentDataset):
-                data = self.{{ CHILD.name }}  # Use loader function via getter
-            else:
-                data = self._{{ CHILD.name }}
-        if name in file:
-            del file[name]
-            self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
+            data = self.{{ CHILD.name }}  # Use loader function via getter
+            if name in file:
+                del file[name]
         {% if (TYPES.ARRAY_1D in CHILD.type) or (TYPES.ARRAY_2D in CHILD.type) %}
             {% if TYPES.VARLEN_STRING in CHILD.type %}
             _create_dataset_string_array(file, name, data)
@@ -177,6 +173,10 @@
             {% endif %}
         {% endif %}
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
+        else:   
+            if name in file:
+                del file[name]
+                self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
     {% endif %}
     {% endfor %}
     {% if NODE.name in UNSPECIFIED_DATASETS_OK %}
