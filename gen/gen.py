@@ -140,6 +140,7 @@ if __name__ == '__main__':
             'DATE': str(date.today()),
             'INDEXED_GROUPS': [], 
             'GROUPS': [], 
+            'UNSPECIFIED_DATASETS_OK': UNSPECIFIED_DATASETS_OK
             }
     
     #  Build list of groups and indexed groups
@@ -179,3 +180,16 @@ if __name__ == '__main__':
                 f_out.write(template.render(SNIRF))
             
     print('\nWrote script to ' + output_path + '.')
+    
+    with open(output_path) as generated:
+        lines = generated.read().split('\n')
+        print('pysnirf2.py is', len(lines), 'lines long')
+        errors = 0
+        for i, line in enumerate(lines):
+            if 'TEMPLATE_ERROR' in line:
+                errors += 1
+                print('ERROR on line', i, '\n', line)
+        if errors == 0:
+            print('pysnirf2.py generated with', errors, 'errors.')
+    
+    

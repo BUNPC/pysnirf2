@@ -11,8 +11,12 @@ from shutil import rmtree
 
 from setuptools import find_packages, setup, Command
 
+from pysnirf2.__version__ import __version__ as VERSION
+
 NAME = 'pysnirf2'
-VERSION = '0.1.0'
+
+about = {}
+about['__version__'] = VERSION
 
 here = os.path.abspath(os.path.dirname(__file__))
 
@@ -20,16 +24,7 @@ try:
     with io.open(os.path.join(here, 'README.md'), encoding='utf-8') as f:
         long_description = '\n' + f.read()
 except FileNotFoundError:
-    long_description = DESCRIPTION
-
-# Load the package's __version__.py module
-about = {}
-if not VERSION:
-    project_slug = NAME.lower().replace("-", "_").replace(" ", "_")
-    with open(os.path.join(here, project_slug, '__version__.py')) as f:
-        exec(f.read(), about)
-else:
-    about['__version__'] = VERSION
+    long_description = ''
 
 
 class UploadCommand(Command):
@@ -77,8 +72,14 @@ setup(
     long_description_content_type='text/markdown',
     author_email='sstucker@bu.edu',
     python_requires='>=3.6.0',
+    install_requires=[
+        'h5py>=3.1.0',
+        'numpy',
+        'setuptools',
+        'pip',
+    ],
     url='https://github.com/BUNPC/pysnirf2',
-    py_modules=['pysnirf2'],
+    packages=find_packages(exclude=('tests', 'gen')),
     include_package_data=True,
     license='GPLv3',
     classifiers=[

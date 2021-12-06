@@ -1,24 +1,16 @@
-# Extend metaDataTags to support loading and saving of unspecified datasets
+# Extend metaDataTags to support addition of new unspecified datasets
 
 class MetaDataTags(MetaDataTags):
     
-    def __init__(self, varg, cfg):
-        super().__init__(varg, cfg)
-        self.__other = []
-        for key in self._h:
-            if key not in self.__snirfnames:
-                data = np.array(self._h[key])
-                self.__other.append(key)
-                setattr(self, key, data)
-                
-    def _save(self, *args):
-        super()._save(*args)
-        if len(args) > 0 and type(args[0]) is h5py.File:
-            file = args[0]
-        else:
-            file = self._h.file
-        for key in self.__other:
-            if key in file:
-                del file[key]
-            file.create_dataset(self.location + '/' + key, data=getattr(self, key))
-                
+    def add(self, name, value):
+        """
+        Add a new tag to the list.
+        """
+        if type(name) is not str:
+            raise ValueError('name must be str, not ' + str(type(name)))
+        try:
+            setattr(self, name, value)
+        except AttributeError as e:
+            raise AttributeError("can't set attribute. You cannot set the required metaDataTags fields using add() or use protected attributes of MetaDataTags such as 'location' or 'filename'")
+        if name not in self._unspecified_names:
+            self._unspecified_names.append(name)

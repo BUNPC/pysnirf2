@@ -7,6 +7,14 @@ from warnings import warn
 from collections.abc import MutableSequence
 from tempfile import TemporaryFile
 import logging
+import termcolor
+
+# Colored prints for validator
+
+printr = lambda x: termcolor.cprint(x, 'red')
+printg = lambda x: termcolor.cprint(x, 'green')
+printb = lambda x: termcolor.cprint(x, 'blue')
+printm = lambda x: termcolor.cprint(x, 'magenta')
 
 _loggers = {}
 def _create_logger(name, log_file, level=logging.INFO):
@@ -20,9 +28,9 @@ def _create_logger(name, log_file, level=logging.INFO):
     _loggers[name] = logger
     return logger
 
+
 # Package-wide logger
 _logger = _create_logger('pysnirf2', 'pysnirf2.log')
-_logger.info('Opened pysnirf2.log')
 
 if sys.version_info[0] < 3:
     raise ImportError('pysnirf2 requires Python > 3')
@@ -30,9 +38,14 @@ if sys.version_info[0] < 3:
 # -- methods to cast data prior to writing to and after reading from h5py interfaces------
 
 _varlen_str_type = h5py.string_dtype(encoding='ascii', length=None)  # Length=None creates HDF5 variable length string
-_DTYPE_FLOAT = 'f8'
+_DTYPE_FLOAT32 = 'f4'
+_DTYPE_FLOAT64 = 'f8'
 _DTYPE_INT = 'i4'
-_DTYPE_STR = 'S'  # Not sure how robust this is, but fixed length strings will always at least contain S
+_DTYPE_FIXED_LEN_STR = 'S'  # Not sure how robust this is, but fixed length strings will always at least contain S
+_DTYPE_VAR_LEN_STR = 'O'  # Variable length string
+
+
+# -- Dataset creators  ---------------------------------------
 
 
 def _create_dataset(file, name, data):
@@ -42,33 +55,31 @@ def _create_dataset(file, name, data):
     saved to an HDF5 file.
 
     Returns None if input is invalid and an h5py.Dataset instance if successful.
-
-    Supported dtype str values: 'O', _DTYPE_FLOAT, _DTYPE_INT
     """
+    data = np.array(data)  # Cast to numpy type to identify
     try:
         if len(data) > 1:
-            data = np.array(data)  # Cast to array
             dtype = data[0].dtype
             if any([dtype is t for t in [int, np.int32, np.int64]]):  # int
                 return _create_dataset_int_array(file, name, data)
             elif any([dtype is t for t in [float, np.float, np.float64]]):  # float
                 return _create_dataset_float_array(file, name, data)
-            elif any([dtype is t for t in [str, np.string_]]):  # string
+            elif any([dtype is t for t in [str, np.string_]]) or any([t in dtype.str for t in ['U', 'S']]):  # string
                 return _create_dataset_string_array(file, name, data)
-    except TypeError:  # data has no len()
-        dtype = type(data)
-    if any([dtype is t for t in [int, np.int32, np.int64]]):  # int
-        return _create_dataset_int(file, name, data)
-    elif any([dtype is t for t in [float, np.float, np.float64]]):  # float
-        return _create_dataset_float(file, name, data)
-    elif any([dtype is t for t in [str, np.string_]]):  # string
-        return _create_dataset_string(file, name, data)
+    except (TypeError, IndexError):  # data has no len() or a string was passed
+        dtype = data.dtype
+        if any([dtype is t for t in [int, np.int32, np.int64]]):  # int
+            return _create_dataset_int(file, name, data)
+        elif any([dtype is t for t in [float, np.float, np.float64]]):  # float
+            return _create_dataset_float(file, name, data)
+        elif any([dtype is t for t in [str, np.string_]]) or any([t in dtype.str for t in ['U', 'S']]):  # string
+            return _create_dataset_string(file, name, data)
     raise TypeError('Unrecognized data type' + str(dtype)
                     + '. Please provide an int, float, or str, or an iterable of these.')
 
 
 def _create_dataset_string(file: h5py.File, name: str, data: str):
-    return file.create_dataset(name, dtype=_varlen_str_type, data=np.string_(data))
+    return file.create_dataset(name, dtype=_varlen_str_type, data=str(data))
 
 
 def _create_dataset_int(file: h5py.File, name: str, data: int):
@@ -76,31 +87,25 @@ def _create_dataset_int(file: h5py.File, name: str, data: int):
 
 
 def _create_dataset_float(file: h5py.File, name: str, data: float):
-    return file.create_dataset(name, dtype=_DTYPE_FLOAT, data=float(data))
+    return file.create_dataset(name, dtype=_DTYPE_FLOAT64, data=float(data))
 
 
 def _create_dataset_string_array(file: h5py.File, name: str, data: np.ndarray):
     array = np.array(data).astype('O')
-    if data.size is 0:
-        array = AbsentDataset()  # Do not save empty or "None" NumPy arrays
     return file.create_dataset(name, dtype=_varlen_str_type, data=array)
 
 
 def _create_dataset_int_array(file: h5py.File, name: str, data: np.ndarray):
     array = np.array(data).astype(int)
-    if data.size is 0:
-        array = AbsentDataset()
     return file.create_dataset(name, dtype=_DTYPE_INT, data=array)
 
 
 def _create_dataset_float_array(file: h5py.File, name: str, data: np.ndarray):
     array = np.array(data).astype(float)
-    if data.size is 0:
-        array = AbsentDataset()
-    return file.create_dataset(name, dtype=_DTYPE_FLOAT, data=array)
+    return file.create_dataset(name, dtype=_DTYPE_FLOAT64, data=array)
 
 
-# -----------------------------------------
+# -- Dataset readers  ---------------------------------------
 
 
 def _read_dataset(h_dataset: h5py.Dataset):
@@ -111,27 +116,28 @@ def _read_dataset(h_dataset: h5py.Dataset):
     if type(h_dataset) is not h5py.Dataset:
         raise TypeError("'dataset' must be type h5py.Dataset")
     if h_dataset.size > 1:
-        if _DTYPE_STR in h_dataset.dtype:
+        if _DTYPE_FIXED_LEN_STR in h_dataset.dtype or _DTYPE_VAR_LEN_STR in h_dataset.dtype.str:
             return _read_string_array(h_dataset)
-        elif _DTYPE_INT in h_dataset.dtype:
+        elif _DTYPE_INT in h_dataset.dtype.str:
             return _read_int_array(h_dataset)
-        elif _DTYPE_FLOAT in h_dataset.dtype:
+        elif _DTYPE_FLOAT32 in h_dataset.dtype.str or _DTYPE_FLOAT64 in h_dataset.dtype.str:
             return _read_float_array(h_dataset)
     else:
-        if _DTYPE_STR in h_dataset.dtype:
+        if _DTYPE_FIXED_LEN_STR in h_dataset.dtype.str or _DTYPE_VAR_LEN_STR in h_dataset.dtype.str:
             return _read_string(h_dataset)
-        elif _DTYPE_INT in h_dataset.dtype:
+        elif _DTYPE_INT in h_dataset.dtype.str:
             return _read_int(h_dataset)
-        elif _DTYPE_FLOAT in h_dataset.dtype:
+        elif _DTYPE_FLOAT32 in h_dataset.dtype.str or _DTYPE_FLOAT64 in h_dataset.dtype.str:
             return _read_float(h_dataset)
     raise TypeError("Dataset dtype='" + str(h_dataset.dtype)
-    + "' not recognized. Expecting dtype to contain one of these: " + str([_DTYPE_STR, _DTYPE_INT, _DTYPE_FLOAT]))
+                    + "' not recognized. Expecting dtype to contain one of these: "
+                    + str([_DTYPE_FIXED_LEN_STR, _DTYPE_VAR_LEN_STR, _DTYPE_INT, _DTYPE_FLOAT32, _DTYPE_FLOAT64]))
 
 
 def _read_string(dataset: h5py.Dataset):
-    # Because many SNIRF files are saved with string values in length 1 arrays
     if type(dataset) is not h5py.Dataset:
         raise TypeError("'dataset' must be type h5py.Dataset")
+    # Because many SNIRF files are saved with string values in length 1 arrays
     if dataset.ndim > 0:
         return str(dataset[0].decode('ascii'))
     else:
@@ -139,7 +145,6 @@ def _read_string(dataset: h5py.Dataset):
 
 
 def _read_int(dataset: h5py.Dataset):
-    # Because many SNIRF files are saved with string values in length 1 arrays
     if type(dataset) is not h5py.Dataset:
         raise TypeError("'dataset' must be type h5py.Dataset")
     if dataset.ndim > 0:
@@ -149,7 +154,6 @@ def _read_int(dataset: h5py.Dataset):
 
 
 def _read_float(dataset: h5py.Dataset):
-    # Because many SNIRF files are saved with string values in length 1 arrays
     if type(dataset) is not h5py.Dataset:
         raise TypeError("'dataset' must be type h5py.Dataset")
     if dataset.ndim > 0:
@@ -176,6 +180,160 @@ def _read_float_array(dataset: h5py.Dataset):
     return np.array(dataset).astype(float)
 
 
+# -- Validation types ---------------------------------------
+
+
+class ValidationResult:
+    
+    _locations = {}  # HDF locations associated with errors or an additional validation result
+
+    _SEVERITY_LEVELS = {
+                        0: 'OK     ',
+                        1: 'INFO   ',
+                        2: 'WARNING',
+                        3: 'FATAL  ',
+                        }
+    _CODES = {
+            # Errors (Severity 1)
+            'INVALID_FILE_NAME': (0 << 1, 3, 'Valid SNIRF files must end with .snirf'),
+            'INVALID_FILE': (0 << 1, 3, 'The file could not be opened'),
+            'REQUIRED_DATASET_MISSING': (0 << 1, 3, 'A required dataset is missing from the file'),
+            'REQUIRED_GROUP_MISSING': (0 << 1, 3, 'A required Group is missing from the file'),
+            'INVALID_DATASET_TYPE': (0 << 1, 3, 'An HDF5 Dataset is not stored in the specified format'),
+            'INVALID_DATASET_SHAPE': (0 << 1, 3, 'An HDF5 Dataset is not stored in the specified shape. Strings and scalars should never be stored as arrays of length 1.'),
+            'INVALID_MEASUREMENTLIST': (0 << 1, 3, 'The number of measurementList elements does not match the second dimension of dataTimeSeries'),
+            'INVALID_TIME': (0 << 1, 3, 'The length of the data/time vector does not match the first dimension of data/dataTimeSeries'),
+            'INVALID_INDEX': (0 << 1, 3, 'An index is negative'),
+            'INVALID_SOURCE_INDEX': (0 << 1, 3, 'measurementList/sourceIndex exceeds probe/sourceLabels'),
+            'INVALID_DETECTOR_INDEX': (0 << 1, 3, 'measurementList/detectorIndex exceeds probe/detectorLabels'),
+            'INVALID_PROBE_LABEL': (0 << 1, 3, 'a duplicate sourceLabel or detectorLabel appears'),
+            'INVALID_WAVELENGTH_INDEX': (0 << 1, 3, 'measurementList/waveLengthIndex exceeds probe/wavelengths, probe/wavelengthsEmission, or probe/sourceLabels'),
+            'INVALID_DATATYPE_INDEX': (0 << 1, 3, 'measurementList/dataTypeIndex exceeds probe/frequencies, probe/timeDelays, probe/timeDelayWidths, probe/momentOrders, probe/correlationTimeDelayWidths or probe/correlationTimeDelays'),
+            'INVALID_PROBE_MODULE_INDEX': (0 << 1, 3, 'sourceModuleIndex and detectorModuleIndex are used along with moduleIndex'),
+    #            'INVALID_LANDMARKPOS': (0 << 1, 3, 'A value in the last column of landmarkPos2D or landmarkPos3D exceeds the length of'),
+            'INVALID_STIM_DATALABELS': (0 << 1, 3, 'The length of stim/dataLabels exceeds the columns of stim/data'),
+            # Warnings (Severity 2)
+            'UNRECOGNIZED_GROUP': (0 << 1, 2, 'An unspecified Group is a part of the file'),
+            'UNRECOGNIZED_DATASET': (0 << 1, 2, 'An unspecified Dataset is a part of the file in an unexpected place'),
+            'UNRECOGNIZED_DATATYPELABEL': (0 << 1, 2, 'measurementList/dataTypeLabel is not one of the recognized values listed in the Appendix'),
+            'UNRECOGNIZED_DATATYPE': (0 << 1, 2, 'measurementList/dataType is not one of the recognized values listed in the Appendix'),
+            'INDEX_OF_ZERO': (0 << 1, 2, 'An index of zero is usually undefined'),
+            'FIXED_LENGTH_STRING': (0 << 1, 2, 'The use of fixed-length strings is discouraged and may be banned by a future spec version. Rewrite this file with pysnirf2 to use variable length strings'),
+            # Info (Severity 1)
+            'OPTIONAL_GROUP_MISSING': (0 << 1, 1, 'OK (missing optional Group)'),
+            'OPTIONAL_DATASET_MISSING': (0 << 1, 1, 'OK (missing optional Dataset)'),
+            # OK (Severity 0)
+            'OK': (0 << 1, 0, 'OK'),
+            }
+
+    def is_valid(self):
+        for value in self._locations.values():
+            if value[1][1] > 2:  # Severity
+                return False
+        return True
+
+    def _add(self, location, key):
+        if key not in self._CODES.keys():
+            raise KeyError("Invalid code '" + key + "'")
+        # Locations is nested tuple (code, (id, level, msg))
+        self._locations[location] = (key, self._CODES[key])
+        print('\n', location, key, self._CODES[key][0])
+        
+    def display(self, severity=1):
+        longest_key = max([len(key) for key in self._locations.keys()])
+        longest_code = max([len(key[0]) for key in self._locations.keys()])
+        s = object.__repr__(self) + '\n'
+        printed = [0, 0, 0, 0]
+        for key in self._locations.keys():
+            sev = self._locations[key][1][1]
+            printed[sev] += 1
+            if sev >= severity:
+                s += key.ljust(longest_key) + ' ' + self._SEVERITY_LEVELS[sev] + ' ' + self._locations[key][0].ljust(longest_code) + '\n'
+        print(s)
+        for i in range(0, severity):
+            [printg, printb, printm, printr][i]('Found ' + str(printed[i]) + ' ' + self._SEVERITY_LEVELS[i] + ' (hidden)')            
+        for i in range(severity, 4):
+            [printg, printb, printm, printr][i]('Found ' + str(printed[i]) + ' ' + self._SEVERITY_LEVELS[i])
+        i = int(self.is_valid())
+        [printr, printg][i]('\nFile is ' +['INVALID', 'VALID'][i])
+        
+        
+    def __repr__(self):
+        return object.__repr__(self) + ' is_valid ' + str(self.is_valid()) 
+        
+    
+# -- Validation functions ---------------------------------------
+
+
+def _validate_string(dataset: h5py.Dataset):
+    if type(dataset) is not h5py.Dataset:
+        raise TypeError("'dataset' must be type h5py.Dataset")
+    if dataset.size > 1 or dataset.ndim > 0:
+        return 'INVALID_DATASET_SHAPE'
+    if _DTYPE_VAR_LEN_STR in dataset.dtype.str:
+        return 'OK'
+    elif _DTYPE_FIXED_LEN_STR in dataset.dtype.str:
+        return 'FIXED_LENGTH_STRING'
+    else:
+        return 'INVALID_DATASET_TYPE'
+
+
+def _validate_int(dataset: h5py.Dataset):
+    if type(dataset) is not h5py.Dataset:
+        raise TypeError("'dataset' must be type h5py.Dataset")
+    if dataset.size > 1 or dataset.ndim > 0:
+        return 'INVALID_DATASET_SHAPE'
+    if _DTYPE_INT in dataset.dtype.str:
+        return 'OK'
+    else:
+        return 'INVALID_DATASET_TYPE'
+
+
+def _validate_float(dataset: h5py.Dataset):
+    if type(dataset) is not h5py.Dataset:
+        raise TypeError("'dataset' must be type h5py.Dataset")
+    if dataset.size > 1 or dataset.ndim > 0:
+        return 'INVALID_DATASET_SHAPE'
+    if _DTYPE_FLOAT32 in dataset.dtype.str or _DTYPE_FLOAT64 in dataset.dtype.str:
+        return 'OK'
+    else:
+        return 'INVALID_DATASET_TYPE'
+
+
+def _validate_string_array(dataset: h5py.Dataset, ndims=[1]):
+    if type(dataset) is not h5py.Dataset:
+        raise TypeError("'dataset' must be type h5py.Dataset")
+    if dataset.ndim not in ndims:
+        return 'INVALID_DATASET_SHAPE'
+    if _DTYPE_VAR_LEN_STR in dataset.dtype.str:
+        return 'OK'
+    elif _DTYPE_FIXED_LEN_STR in dataset.dtype.str:
+        return 'FIXED_LENGTH_STRING'
+    else:
+        return 'INVALID_DATASET_TYPE'
+
+
+def _validate_int_array(dataset: h5py.Dataset, ndims=[1]):
+    if type(dataset) is not h5py.Dataset:
+        raise TypeError("'dataset' must be type h5py.Dataset")
+    if dataset.ndim not in ndims:
+        return 'INVALID_DATASET_SHAPE'
+    if _DTYPE_INT in dataset.dtype.str:
+        return 'OK'
+    else:
+        return 'INVALID_DATASET_TYPE'
+
+def _validate_float_array(dataset: h5py.Dataset, ndims=[1]):
+    if type(dataset) is not h5py.Dataset:
+        raise TypeError("'dataset' must be type h5py.Dataset")
+    if dataset.ndim not in ndims:
+        return 'INVALID_DATASET_SHAPE'
+    if _DTYPE_FLOAT32 in dataset.dtype.str or _DTYPE_FLOAT64 in dataset.dtype.str:
+        return 'OK'
+    else:
+        return 'INVALID_DATASET_TYPE'
+
+
 # -----------------------------------------
 
 
@@ -188,14 +346,33 @@ class SnirfConfig:
     dynamic_loading: bool = False  # If False, data is loaded in the constructor, if True, data is loaded on access
 
 
-class AbsentDataset():    
-    def __repr__(self):
-        return str(None)
+#class Singleton(object):
+#    __instance = None
+#    def __new__(cls, val):
+#        if Singleton.__instance is None:
+#            Singleton.__instance = object.__new__(cls)
+#        Singleton.__instance.val = val
+#        return Singleton.__instance
+
+# Placeholder for a Dataset that is not on disk or in memory
+class AbsentDatasetType():
+    pass
 
 
-class AbsentGroup():
-    def __repr__(self):
-        return str(None)
+# Placeholder for a Group that is not on disk or in memory
+class AbsentGroupType():
+    pass
+
+
+# Placeholder for a Dataset that is available only on disk in a dynamic_loading=True wrapper
+class PresentDatasetType():
+    pass
+
+
+# Instantiate singletons
+AbsentDataset = AbsentDatasetType()
+AbsentGroup = AbsentGroupType()
+PresentDataset = PresentDatasetType()
 
 
 class Group(ABC):
@@ -241,7 +418,7 @@ class Group(ABC):
                 file = self._h.file
             self._cfg.logger.info('Group-level save of %s in %s', self.location, file)
             self._save(file)
-            
+
     @property
     def filename(self):
         """
@@ -258,14 +435,29 @@ class Group(ABC):
             return self._h.name
         else:
             return self._location
-    
+
+    def is_empty(self):
+        for name in self._snirf_names:
+            attr = getattr(self, '_' + name)
+            if isinstance(attr, Group) or isinstance(attr, IndexedGroup):
+                if not attr.is_empty():
+                    return False
+            else:
+                if not any([attr is a for a in [None, AbsentGroup, AbsentDataset]]):
+                    return False
+        return True
+
     @abstractmethod
     def _save(self, *args):
         """
         args is path or empty
         """
         raise NotImplementedError('_save is an abstract method')
-        
+
+    # @abstractmethod
+    # def _validate(self, result: ValidationResult):
+    #     raise NotImplementedError('_validate is an abstract method')
+
     def __repr__(self):
         props = [p for p in dir(self) if ('_' not in p and not callable(getattr(self, p)))]
         out = str(self.__class__.__name__) + ' at ' + str(self.location) + '\n'
@@ -286,15 +478,15 @@ class Group(ABC):
             out += '\n'
         return out[:-1]
 
-    def __getitem__(self, key):
-        if self._h != {}:
-            if key in self._h:
-                return self._h[key]
-        else:
-            return None
+    # def __getitem__(self, key):
+    #     if self._h != {}:
+    #         if key in self._h:
+    #             return self._h[key]
+    #     else:
+    #         return None
 
     def __contains__(self, key):
-        return key in self._h;
+        return key in self._h
 
 
 class IndexedGroup(MutableSequence, ABC):
@@ -308,7 +500,7 @@ class IndexedGroup(MutableSequence, ABC):
         denotes the first sub-group of data element name, and /.../name2
         denotes the 2nd element, and so on.
     """
-    
+
     _name: str = ''  # The specified prefix to this indexed group's members, i.e. nirs, data, stim, aux, measurementList
     _element: Group = None  # The type of Group which belongs to this IndexedGroup
 
@@ -322,7 +514,7 @@ class IndexedGroup(MutableSequence, ABC):
         self._populate_list()
         self._cfg.logger.info('IndexedGroup %s at %s in %s initalized with %i instances of %s', self.__class__.__name__,
                               self._parent.location, self.filename, len(self._list), self._element)
-    
+
     @property
     def filename(self):
         return self._parent.filename
@@ -332,7 +524,7 @@ class IndexedGroup(MutableSequence, ABC):
     def __getitem__(self, i): return self._list[i]
 
     def __delitem__(self, i): del self._list[i]
-    
+
     def __setitem__(self, i, item):
         self._check_type(item)
         if not item.location in [e.location for e in self._list]:
@@ -351,6 +543,16 @@ class IndexedGroup(MutableSequence, ABC):
 
     def __repr__(self):
         return str('<' + 'iterable of ' + str(len(self._list)) + ' ' + str(self._element) + '>')
+
+    def __contains__(self, key):
+        return any([key == e.location.split('/')[-1] for e in self._list])
+
+    def is_empty(self):
+        if len(self._list) > 0:
+            for e in self._list:
+                if not e.is_empty():
+                    return False
+        return True
 
     def insert(self, i, item):
         self._check_type(item)
@@ -395,7 +597,7 @@ class IndexedGroup(MutableSequence, ABC):
         self._list.append(self._element(location, self._cfg))
         self._cfg.logger.info('%i th %s appended to IndexedGroup %s at %s in %s', len(self._list),
                           self._element, self.__class__.__name__, self._parent.location, self.filename)
-    
+
     def _populate_list(self):
         """
         Add all the appropriate groups in parent to the list
@@ -404,15 +606,15 @@ class IndexedGroup(MutableSequence, ABC):
         names = self._get_matching_keys()
         for name in names:
             if name in self._parent._h:
-                self._list.append(self._element(self._parent[name].id, self._cfg))
-    
+                self._list.append(self._element(self._parent._h[name].id, self._cfg))
+
     def _check_type(self, item):
         if type(item) is not self._element:
             raise TypeError('elements of ' + str(self.__class__.__name__) +
                             ' must be ' + str(self._element) + ', not ' +
                             str(type(item))
                             )
-        
+
     def _order_names(self, h=None):
         '''
         Enforce the format of the names of HDF5 groups within a group or file on disk. i.e. IndexedGroup stim's elements
@@ -457,7 +659,10 @@ class IndexedGroup(MutableSequence, ABC):
                 indices.append(0)
         order = np.argsort(indices)
         return [unordered[i] for i in order]
-        
+
+    def _validate(self, result: ValidationResult):
+        [e._validate(result) for e in self._list]
+
     def _save(self, *args):
         if len(args) > 0 and type(args[0]) is h5py.File:
             h = args[0]
@@ -475,4 +680,3 @@ class IndexedGroup(MutableSequence, ABC):
         for e in self._list:
             e._save(*args)  # Group save functions handle the write to disk
         self._order_names(h=h)  # Enforce order in the group names
-

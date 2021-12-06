@@ -9,18 +9,19 @@ from numbers import Number
 from collections import deque
 from collections.abc import Set, Mapping
 import numpy as np
+import shutil
 
 VERBOSE = True  # Additional print statements in each test
 
 # Need to run from the repository root
-snirf_directory = 'tests/data'  # Sample data source
-working_directory = 'tests/wd'  # Working directory for testing
+snirf_directory = os.path.join('tests', 'data')  # Sample data source
+working_directory = os.path.join('tests', 'wd')  # Working directory for testing
 
 if not os.path.isdir(working_directory):
     os.mkdir(working_directory)
 
 if len(os.listdir(snirf_directory)) == 0:
-    sys.exit('Failed to find test data in '+ working_directory)
+    sys.exit('Failed to find test data in '+ snirf_directory)
 
 ZERO_DEPTH_BASES = (str, bytes, Number, range, bytearray)
 def getsize(obj_0):
@@ -266,17 +267,12 @@ class TestSnirf(unittest.TestCase):
 
 print('Deleting all files in', working_directory)
 for file in os.listdir(working_directory):
-    os.remove(working_directory + '/' + file)
+    os.remove(os.path.join(working_directory, file))
     print('Deleted', working_directory + '/' + file)
 
 print('Copying all test files to', working_directory)
-if os.name == 'nt':
-    cmd = 'copy '
-else:
-    cmd = 'cp '
 for file in os.listdir(snirf_directory):
-    os.popen(cmd + snirf_directory + '/' + file + ' ' + working_directory + '/' + file)
-    print(cmd + snirf_directory + '/' + file + ' ' + working_directory + '/' + file)
+    shutil.copy(os.path.join(snirf_directory, file),  os.path.join(working_directory, file))
     time.sleep(0.5)  # Sleep while executing copy operation
 
 TEST_FILES = [working_directory + '/' + file for file in os.listdir(working_directory)]

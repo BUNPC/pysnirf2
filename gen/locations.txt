@@ -17,6 +17,7 @@
 /nirs/data/measurementList/wavelengthActual
 /nirs/data/measurementList/wavelengthEmissionActual
 /nirs/data/measurementList/dataType
+/nirs/data/measurementList/dataUnit
 /nirs/data/measurementList/dataTypeLabel
 /nirs/data/measurementList/dataTypeIndex
 /nirs/data/measurementList/sourcePower
@@ -50,5 +51,6 @@
 /nirs/aux
 /nirs/aux/name
 /nirs/aux/dataTimeSeries
+/nirs/aux/dataUnit
 /nirs/aux/time
 /nirs/aux/timeOffset
