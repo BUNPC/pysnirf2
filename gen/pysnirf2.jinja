@@ -207,7 +207,6 @@
         if len(self._{{ CHILD.name }}) == 0:
             result._add(name, 'OPTIONAL_INDEXED_GROUP_EMPTY')
         {% endif %}
-            # print(name, 'not found')
         else:
             self.{{ CHILD.name }}._validate(result)
     {% elif TYPES.GROUP in CHILD.type %}
@@ -217,7 +216,6 @@
         {% else %}
             result._add(name, 'OPTIONAL_GROUP_MISSING')
         {% endif %}
-            # print(name, 'not found')
         else:
             self.{{ CHILD.name }}._validate(result)
     {% else %}
@@ -227,7 +225,6 @@
         {% else %}
             result._add(name, 'OPTIONAL_DATASET_MISSING')
         {% endif %}
-            # print(name, 'not found')
         else:
             try:
                 if type(self._{{ CHILD.name }}) is type(PresentDataset):
@@ -285,7 +282,6 @@
         {% endif %}
             except ValueError:  # If the _create_dataset function can't convert the data
                 result._add(name, 'INVALID_DATASET_TYPE')
-            # print(dataset)
     {% endif %}
     {% endfor %}
     {% if not NODE.name in UNSPECIFIED_DATASETS_OK %}
@@ -397,7 +393,10 @@ class Snirf(Group):
         Returns True, ValidationResult
         '''
         result = ValidationResult()
-        self._validate(result)
+        try:
+            self._validate(result)
+        except Exception:
+            result._add('/', 'INVALID_FILE')
         return (result.is_valid(), result)
 
     def close(self):

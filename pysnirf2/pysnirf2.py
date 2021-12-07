@@ -210,7 +210,7 @@ class ValidationResult:
     _CODES = {
             # Errors (Severity 1)
             'INVALID_FILE_NAME': (0 << 1, 3, 'Valid SNIRF files must end with .snirf'),
-            'INVALID_FILE': (0 << 1, 3, 'The file could not be opened'),
+            'INVALID_FILE': (0 << 1, 3, 'The file could not be opened, or the validator crashed'),
             'REQUIRED_DATASET_MISSING': (0 << 1, 3, 'A required dataset is missing from the file'),
             'REQUIRED_GROUP_MISSING': (0 << 1, 3, 'A required Group is missing from the file'),
             'REQUIRED_INDEXED_GROUP_EMPTY': (0 << 1, 3, 'At least one member of the indexed group must be present in the file'),
@@ -218,13 +218,10 @@ class ValidationResult:
             'INVALID_DATASET_SHAPE': (0 << 1, 3, 'An HDF5 Dataset is not stored in the specified shape. Strings and scalars should never be stored as arrays of length 1.'),
             'INVALID_MEASUREMENTLIST': (0 << 1, 3, 'The number of measurementList elements does not match the second dimension of dataTimeSeries'),
             'INVALID_TIME': (0 << 1, 3, 'The length of the data/time vector does not match the first dimension of data/dataTimeSeries'),
+            'INVALID_STIM_DATALABELS': (0 << 1, 3, 'The length of stim/dataLabels exceeds the columns of stim/data'),
             'INVALID_SOURCE_INDEX': (0 << 1, 3, 'measurementList/sourceIndex exceeds probe/sourceLabels'),
             'INVALID_DETECTOR_INDEX': (0 << 1, 3, 'measurementList/detectorIndex exceeds probe/detectorLabels'),
-            'INVALID_PROBE_LABEL': (0 << 1, 3, 'a duplicate sourceLabel or detectorLabel appears'),
-            'INVALID_WAVELENGTH_INDEX': (0 << 1, 3, 'measurementList/waveLengthIndex exceeds probe/wavelengths, probe/wavelengthsEmission, or probe/sourceLabels'),
-            'INVALID_DATATYPE_INDEX': (0 << 1, 3, 'measurementList/dataTypeIndex exceeds probe/frequencies, probe/timeDelays, probe/timeDelayWidths, probe/momentOrders, probe/correlationTimeDelayWidths or probe/correlationTimeDelays'),
-            'INVALID_PROBE_MODULE_INDEX': (0 << 1, 3, 'sourceModuleIndex and detectorModuleIndex are used along with moduleIndex'),
-            'INVALID_STIM_DATALABELS': (0 << 1, 3, 'The length of stim/dataLabels exceeds the columns of stim/data'),
+            'INVALID_WAVELENGTH_INDEX': (0 << 1, 3, 'measurementList/waveLengthIndex exceeds probe/wavelengths'),
             'NEGATIVE_INDEX': (0 << 1, 3, 'An index is negative'),
             # Warnings (Severity 2)
             'INDEX_OF_ZERO': (0 << 1, 2, 'An index of zero is usually undefined'),
@@ -252,7 +249,6 @@ class ValidationResult:
             raise KeyError("Invalid code '" + key + "'")
         # Locations is nested tuple (code, (id, level, msg))
         self._locations[location] = (key, self._CODES[key])
-        print('\n', location, key, self._CODES[key][0])
         
     def display(self, severity=2):
         longest_key = max([len(key) for key in self._locations.keys()])
@@ -469,9 +465,9 @@ class Group(ABC):
         """
         raise NotImplementedError('_save is an abstract method')
 
-    # @abstractmethod
-    # def _validate(self, result: ValidationResult):
-    #     raise NotImplementedError('_validate is an abstract method')
+    @abstractmethod
+    def _validate(self, result: ValidationResult):
+        raise NotImplementedError('_validate is an abstract method')
 
     def __repr__(self):
         props = [p for p in dir(self) if ('_' not in p and not callable(getattr(self, p)))]
@@ -492,13 +488,6 @@ class Group(ABC):
                     out += '\n' + prepr
             out += '\n'
         return out[:-1]
-
-    # def __getitem__(self, key):
-    #     if self._h != {}:
-    #         if key in self._h:
-    #             return self._h[key]
-    #     else:
-    #         return None
 
     def __contains__(self, key):
         return key in self._h
@@ -980,7 +969,6 @@ class MetaDataTags(Group):
         name = self.location + '/SubjectID'
         if type(self._SubjectID) in [type(AbsentDataset), type(None)]:
             result._add(name, 'REQUIRED_DATASET_MISSING')
-            # print(name, 'not found')
         else:
             try:
                 if type(self._SubjectID) is type(PresentDataset):
@@ -990,11 +978,9 @@ class MetaDataTags(Group):
                 result._add(name, _validate_string(dataset))
             except ValueError:  # If the _create_dataset function can't convert the data
                 result._add(name, 'INVALID_DATASET_TYPE')
-            # print(dataset)
         name = self.location + '/MeasurementDate'
         if type(self._MeasurementDate) in [type(AbsentDataset), type(None)]:
             result._add(name, 'REQUIRED_DATASET_MISSING')
-            # print(name, 'not found')
         else:
             try:
                 if type(self._MeasurementDate) is type(PresentDataset):
@@ -1004,11 +990,9 @@ class MetaDataTags(Group):
                 result._add(name, _validate_string(dataset))
             except ValueError:  # If the _create_dataset function can't convert the data
                 result._add(name, 'INVALID_DATASET_TYPE')
-            # print(dataset)
         name = self.location + '/MeasurementTime'
         if type(self._MeasurementTime) in [type(AbsentDataset), type(None)]:
             result._add(name, 'REQUIRED_DATASET_MISSING')
-            # print(name, 'not found')
         else:
             try:
                 if type(self._MeasurementTime) is type(PresentDataset):
@@ -1018,11 +1002,9 @@ class MetaDataTags(Group):
                 result._add(name, _validate_string(dataset))
             except ValueError:  # If the _create_dataset function can't convert the data
                 result._add(name, 'INVALID_DATASET_TYPE')
-            # print(dataset)
         name = self.location + '/LengthUnit'
         if type(self._LengthUnit) in [type(AbsentDataset), type(None)]:
             result._add(name, 'REQUIRED_DATASET_MISSING')
-            # print(name, 'not found')
         else:
             try:
                 if type(self._LengthUnit) is type(PresentDataset):
@@ -1032,11 +1014,9 @@ class MetaDataTags(Group):
                 result._add(name, _validate_string(dataset))
             except ValueError:  # If the _create_dataset function can't convert the data
                 result._add(name, 'INVALID_DATASET_TYPE')
-            # print(dataset)
         name = self.location + '/TimeUnit'
         if type(self._TimeUnit) in [type(AbsentDataset), type(None)]:
             result._add(name, 'REQUIRED_DATASET_MISSING')
-            # print(name, 'not found')
         else:
             try:
                 if type(self._TimeUnit) is type(PresentDataset):
@@ -1046,11 +1026,9 @@ class MetaDataTags(Group):
                 result._add(name, _validate_string(dataset))
             except ValueError:  # If the _create_dataset function can't convert the data
                 result._add(name, 'INVALID_DATASET_TYPE')
-            # print(dataset)
         name = self.location + '/FrequencyUnit'
         if type(self._FrequencyUnit) in [type(AbsentDataset), type(None)]:
             result._add(name, 'REQUIRED_DATASET_MISSING')
-            # print(name, 'not found')
         else:
             try:
                 if type(self._FrequencyUnit) is type(PresentDataset):
@@ -1060,7 +1038,6 @@ class MetaDataTags(Group):
                 result._add(name, _validate_string(dataset))
             except ValueError:  # If the _create_dataset function can't convert the data
                 result._add(name, 'INVALID_DATASET_TYPE')
-            # print(dataset)
 
 
 
@@ -1781,7 +1758,6 @@ class Probe(Group):
         name = self.location + '/wavelengths'
         if type(self._wavelengths) in [type(AbsentDataset), type(None)]:
             result._add(name, 'REQUIRED_DATASET_MISSING')
-            # print(name, 'not found')
         else:
             try:
                 if type(self._wavelengths) is type(PresentDataset):
@@ -1791,11 +1767,9 @@ class Probe(Group):
                 result._add(name, _validate_float_array(dataset, ndims=[1]))
             except ValueError:  # If the _create_dataset function can't convert the data
                 result._add(name, 'INVALID_DATASET_TYPE')
-            # print(dataset)
         name = self.location + '/wavelengthsEmission'
         if type(self._wavelengthsEmission) in [type(AbsentDataset), type(None)]:
             result._add(name, 'OPTIONAL_DATASET_MISSING')
-            # print(name, 'not found')
         else:
             try:
                 if type(self._wavelengthsEmission) is type(PresentDataset):
@@ -1805,11 +1779,9 @@ class Probe(Group):
                 result._add(name, _validate_float_array(dataset, ndims=[1]))
             except ValueError:  # If the _create_dataset function can't convert the data
                 result._add(name, 'INVALID_DATASET_TYPE')
-            # print(dataset)
         name = self.location + '/sourcePos2D'
         if type(self._sourcePos2D) in [type(AbsentDataset), type(None)]:
             result._add(name, 'REQUIRED_DATASET_MISSING')
-            # print(name, 'not found')
         else:
             try:
                 if type(self._sourcePos2D) is type(PresentDataset):
@@ -1819,11 +1791,9 @@ class Probe(Group):
                 result._add(name, _validate_float_array(dataset, ndims=[2]))
             except ValueError:  # If the _create_dataset function can't convert the data
                 result._add(name, 'INVALID_DATASET_TYPE')
-            # print(dataset)
         name = self.location + '/sourcePos3D'
         if type(self._sourcePos3D) in [type(AbsentDataset), type(None)]:
             result._add(name, 'REQUIRED_DATASET_MISSING')
-            # print(name, 'not found')
         else:
             try:
                 if type(self._sourcePos3D) is type(PresentDataset):
@@ -1833,11 +1803,9 @@ class Probe(Group):
                 result._add(name, _validate_float_array(dataset, ndims=[2]))
             except ValueError:  # If the _create_dataset function can't convert the data
                 result._add(name, 'INVALID_DATASET_TYPE')
-            # print(dataset)
         name = self.location + '/detectorPos2D'
         if type(self._detectorPos2D) in [type(AbsentDataset), type(None)]:
             result._add(name, 'REQUIRED_DATASET_MISSING')
-            # print(name, 'not found')
         else:
             try:
                 if type(self._detectorPos2D) is type(PresentDataset):
@@ -1847,11 +1815,9 @@ class Probe(Group):
                 result._add(name, _validate_float_array(dataset, ndims=[2]))
             except ValueError:  # If the _create_dataset function can't convert the data
                 result._add(name, 'INVALID_DATASET_TYPE')
-            # print(dataset)
         name = self.location + '/detectorPos3D'
         if type(self._detectorPos3D) in [type(AbsentDataset), type(None)]:
             result._add(name, 'REQUIRED_DATASET_MISSING')
-            # print(name, 'not found')
         else:
             try:
                 if type(self._detectorPos3D) is type(PresentDataset):
@@ -1861,11 +1827,9 @@ class Probe(Group):
                 result._add(name, _validate_float_array(dataset, ndims=[2]))
             except ValueError:  # If the _create_dataset function can't convert the data
                 result._add(name, 'INVALID_DATASET_TYPE')
-            # print(dataset)
         name = self.location + '/frequencies'
         if type(self._frequencies) in [type(AbsentDataset), type(None)]:
             result._add(name, 'OPTIONAL_DATASET_MISSING')
-            # print(name, 'not found')
         else:
             try:
                 if type(self._frequencies) is type(PresentDataset):
@@ -1875,11 +1839,9 @@ class Probe(Group):
                 result._add(name, _validate_float_array(dataset, ndims=[1]))
             except ValueError:  # If the _create_dataset function can't convert the data
                 result._add(name, 'INVALID_DATASET_TYPE')
-            # print(dataset)
         name = self.location + '/timeDelays'
         if type(self._timeDelays) in [type(AbsentDataset), type(None)]:
             result._add(name, 'OPTIONAL_DATASET_MISSING')
-            # print(name, 'not found')
         else:
             try:
                 if type(self._timeDelays) is type(PresentDataset):
@@ -1889,11 +1851,9 @@ class Probe(Group):
                 result._add(name, _validate_float_array(dataset, ndims=[1]))
             except ValueError:  # If the _create_dataset function can't convert the data
                 result._add(name, 'INVALID_DATASET_TYPE')
-            # print(dataset)
         name = self.location + '/timeDelayWidths'
         if type(self._timeDelayWidths) in [type(AbsentDataset), type(None)]:
             result._add(name, 'OPTIONAL_DATASET_MISSING')
-            # print(name, 'not found')
         else:
             try:
                 if type(self._timeDelayWidths) is type(PresentDataset):
@@ -1903,11 +1863,9 @@ class Probe(Group):
                 result._add(name, _validate_float_array(dataset, ndims=[1]))
             except ValueError:  # If the _create_dataset function can't convert the data
                 result._add(name, 'INVALID_DATASET_TYPE')
-            # print(dataset)
         name = self.location + '/momentOrders'
         if type(self._momentOrders) in [type(AbsentDataset), type(None)]:
             result._add(name, 'OPTIONAL_DATASET_MISSING')
-            # print(name, 'not found')
         else:
             try:
                 if type(self._momentOrders) is type(PresentDataset):
@@ -1917,11 +1875,9 @@ class Probe(Group):
                 result._add(name, _validate_float_array(dataset, ndims=[1]))
             except ValueError:  # If the _create_dataset function can't convert the data
                 result._add(name, 'INVALID_DATASET_TYPE')
-            # print(dataset)
         name = self.location + '/correlationTimeDelays'
         if type(self._correlationTimeDelays) in [type(AbsentDataset), type(None)]:
             result._add(name, 'OPTIONAL_DATASET_MISSING')
-            # print(name, 'not found')
         else:
             try:
                 if type(self._correlationTimeDelays) is type(PresentDataset):
@@ -1931,11 +1887,9 @@ class Probe(Group):
                 result._add(name, _validate_float_array(dataset, ndims=[1]))
             except ValueError:  # If the _create_dataset function can't convert the data
                 result._add(name, 'INVALID_DATASET_TYPE')
-            # print(dataset)
         name = self.location + '/correlationTimeDelayWidths'
         if type(self._correlationTimeDelayWidths) in [type(AbsentDataset), type(None)]:
             result._add(name, 'OPTIONAL_DATASET_MISSING')
-            # print(name, 'not found')
         else:
             try:
                 if type(self._correlationTimeDelayWidths) is type(PresentDataset):
@@ -1945,11 +1899,9 @@ class Probe(Group):
                 result._add(name, _validate_float_array(dataset, ndims=[1]))
             except ValueError:  # If the _create_dataset function can't convert the data
                 result._add(name, 'INVALID_DATASET_TYPE')
-            # print(dataset)
         name = self.location + '/sourceLabels'
         if type(self._sourceLabels) in [type(AbsentDataset), type(None)]:
             result._add(name, 'OPTIONAL_DATASET_MISSING')
-            # print(name, 'not found')
         else:
             try:
                 if type(self._sourceLabels) is type(PresentDataset):
@@ -1959,11 +1911,9 @@ class Probe(Group):
                 result._add(name, _validate_string_array(dataset, ndims=[1]))
             except ValueError:  # If the _create_dataset function can't convert the data
                 result._add(name, 'INVALID_DATASET_TYPE')
-            # print(dataset)
         name = self.location + '/detectorLabels'
         if type(self._detectorLabels) in [type(AbsentDataset), type(None)]:
             result._add(name, 'OPTIONAL_DATASET_MISSING')
-            # print(name, 'not found')
         else:
             try:
                 if type(self._detectorLabels) is type(PresentDataset):
@@ -1973,11 +1923,9 @@ class Probe(Group):
                 result._add(name, _validate_string_array(dataset, ndims=[1]))
             except ValueError:  # If the _create_dataset function can't convert the data
                 result._add(name, 'INVALID_DATASET_TYPE')
-            # print(dataset)
         name = self.location + '/landmarkPos2D'
         if type(self._landmarkPos2D) in [type(AbsentDataset), type(None)]:
             result._add(name, 'OPTIONAL_DATASET_MISSING')
-            # print(name, 'not found')
         else:
             try:
                 if type(self._landmarkPos2D) is type(PresentDataset):
@@ -1987,11 +1935,9 @@ class Probe(Group):
                 result._add(name, _validate_float_array(dataset, ndims=[2]))
             except ValueError:  # If the _create_dataset function can't convert the data
                 result._add(name, 'INVALID_DATASET_TYPE')
-            # print(dataset)
         name = self.location + '/landmarkPos3D'
         if type(self._landmarkPos3D) in [type(AbsentDataset), type(None)]:
             result._add(name, 'OPTIONAL_DATASET_MISSING')
-            # print(name, 'not found')
         else:
             try:
                 if type(self._landmarkPos3D) is type(PresentDataset):
@@ -2001,11 +1947,9 @@ class Probe(Group):
                 result._add(name, _validate_float_array(dataset, ndims=[2]))
             except ValueError:  # If the _create_dataset function can't convert the data
                 result._add(name, 'INVALID_DATASET_TYPE')
-            # print(dataset)
         name = self.location + '/landmarkLabels'
         if type(self._landmarkLabels) in [type(AbsentDataset), type(None)]:
             result._add(name, 'OPTIONAL_DATASET_MISSING')
-            # print(name, 'not found')
         else:
             try:
                 if type(self._landmarkLabels) is type(PresentDataset):
@@ -2015,11 +1959,9 @@ class Probe(Group):
                 result._add(name, _validate_string_array(dataset, ndims=[1]))
             except ValueError:  # If the _create_dataset function can't convert the data
                 result._add(name, 'INVALID_DATASET_TYPE')
-            # print(dataset)
         name = self.location + '/useLocalIndex'
         if type(self._useLocalIndex) in [type(AbsentDataset), type(None)]:
             result._add(name, 'OPTIONAL_DATASET_MISSING')
-            # print(name, 'not found')
         else:
             try:
                 if type(self._useLocalIndex) is type(PresentDataset):
@@ -2035,7 +1977,6 @@ class Probe(Group):
                     result._add(name, err_code)
             except ValueError:  # If the _create_dataset function can't convert the data
                 result._add(name, 'INVALID_DATASET_TYPE')
-            # print(dataset)
         for key in self._h.keys():
             if not any([key.startswith(name) for name in self._snirf_names]):
                 if type(self._h[key]) is h5py.Group:
@@ -2186,31 +2127,26 @@ class NirsElement(Group):
         name = self.location + '/metaDataTags'
         if type(self._metaDataTags) in [type(AbsentDataset), type(None)]:
             result._add(name, 'REQUIRED_GROUP_MISSING')
-            # print(name, 'not found')
         else:
             self.metaDataTags._validate(result)
         name = self.location + '/data'
         if len(self._data) == 0:
             result._add(name, 'REQUIRED_INDEXED_GROUP_EMPTY')
-            # print(name, 'not found')
         else:
             self.data._validate(result)
         name = self.location + '/stim'
         if len(self._stim) == 0:
             result._add(name, 'OPTIONAL_INDEXED_GROUP_EMPTY')
-            # print(name, 'not found')
         else:
             self.stim._validate(result)
         name = self.location + '/probe'
         if type(self._probe) in [type(AbsentDataset), type(None)]:
             result._add(name, 'REQUIRED_GROUP_MISSING')
-            # print(name, 'not found')
         else:
             self.probe._validate(result)
         name = self.location + '/aux'
         if len(self._aux) == 0:
             result._add(name, 'OPTIONAL_INDEXED_GROUP_EMPTY')
-            # print(name, 'not found')
         else:
             self.aux._validate(result)
         for key in self._h.keys():
@@ -2357,7 +2293,6 @@ class DataElement(Group):
         name = self.location + '/dataTimeSeries'
         if type(self._dataTimeSeries) in [type(AbsentDataset), type(None)]:
             result._add(name, 'REQUIRED_DATASET_MISSING')
-            # print(name, 'not found')
         else:
             try:
                 if type(self._dataTimeSeries) is type(PresentDataset):
@@ -2367,11 +2302,9 @@ class DataElement(Group):
                 result._add(name, _validate_float_array(dataset, ndims=[2]))
             except ValueError:  # If the _create_dataset function can't convert the data
                 result._add(name, 'INVALID_DATASET_TYPE')
-            # print(dataset)
         name = self.location + '/time'
         if type(self._time) in [type(AbsentDataset), type(None)]:
             result._add(name, 'REQUIRED_DATASET_MISSING')
-            # print(name, 'not found')
         else:
             try:
                 if type(self._time) is type(PresentDataset):
@@ -2381,11 +2314,9 @@ class DataElement(Group):
                 result._add(name, _validate_float_array(dataset, ndims=[1]))
             except ValueError:  # If the _create_dataset function can't convert the data
                 result._add(name, 'INVALID_DATASET_TYPE')
-            # print(dataset)
         name = self.location + '/measurementList'
         if len(self._measurementList) == 0:
             result._add(name, 'REQUIRED_INDEXED_GROUP_EMPTY')
-            # print(name, 'not found')
         else:
             self.measurementList._validate(result)
         for key in self._h.keys():
@@ -2970,7 +2901,6 @@ class MeasurementListElement(Group):
         name = self.location + '/sourceIndex'
         if type(self._sourceIndex) in [type(AbsentDataset), type(None)]:
             result._add(name, 'REQUIRED_DATASET_MISSING')
-            # print(name, 'not found')
         else:
             try:
                 if type(self._sourceIndex) is type(PresentDataset):
@@ -2986,11 +2916,9 @@ class MeasurementListElement(Group):
                     result._add(name, err_code)
             except ValueError:  # If the _create_dataset function can't convert the data
                 result._add(name, 'INVALID_DATASET_TYPE')
-            # print(dataset)
         name = self.location + '/detectorIndex'
         if type(self._detectorIndex) in [type(AbsentDataset), type(None)]:
             result._add(name, 'REQUIRED_DATASET_MISSING')
-            # print(name, 'not found')
         else:
             try:
                 if type(self._detectorIndex) is type(PresentDataset):
@@ -3006,11 +2934,9 @@ class MeasurementListElement(Group):
                     result._add(name, err_code)
             except ValueError:  # If the _create_dataset function can't convert the data
                 result._add(name, 'INVALID_DATASET_TYPE')
-            # print(dataset)
         name = self.location + '/wavelengthIndex'
         if type(self._wavelengthIndex) in [type(AbsentDataset), type(None)]:
             result._add(name, 'REQUIRED_DATASET_MISSING')
-            # print(name, 'not found')
         else:
             try:
                 if type(self._wavelengthIndex) is type(PresentDataset):
@@ -3026,11 +2952,9 @@ class MeasurementListElement(Group):
                     result._add(name, err_code)
             except ValueError:  # If the _create_dataset function can't convert the data
                 result._add(name, 'INVALID_DATASET_TYPE')
-            # print(dataset)
         name = self.location + '/wavelengthActual'
         if type(self._wavelengthActual) in [type(AbsentDataset), type(None)]:
             result._add(name, 'OPTIONAL_DATASET_MISSING')
-            # print(name, 'not found')
         else:
             try:
                 if type(self._wavelengthActual) is type(PresentDataset):
@@ -3040,11 +2964,9 @@ class MeasurementListElement(Group):
                 result._add(name, _validate_float(dataset))
             except ValueError:  # If the _create_dataset function can't convert the data
                 result._add(name, 'INVALID_DATASET_TYPE')
-            # print(dataset)
         name = self.location + '/wavelengthEmissionActual'
         if type(self._wavelengthEmissionActual) in [type(AbsentDataset), type(None)]:
             result._add(name, 'OPTIONAL_DATASET_MISSING')
-            # print(name, 'not found')
         else:
             try:
                 if type(self._wavelengthEmissionActual) is type(PresentDataset):
@@ -3054,11 +2976,9 @@ class MeasurementListElement(Group):
                 result._add(name, _validate_float(dataset))
             except ValueError:  # If the _create_dataset function can't convert the data
                 result._add(name, 'INVALID_DATASET_TYPE')
-            # print(dataset)
         name = self.location + '/dataType'
         if type(self._dataType) in [type(AbsentDataset), type(None)]:
             result._add(name, 'REQUIRED_DATASET_MISSING')
-            # print(name, 'not found')
         else:
             try:
                 if type(self._dataType) is type(PresentDataset):
@@ -3068,11 +2988,9 @@ class MeasurementListElement(Group):
                 result._add(name, _validate_int(dataset))
             except ValueError:  # If the _create_dataset function can't convert the data
                 result._add(name, 'INVALID_DATASET_TYPE')
-            # print(dataset)
         name = self.location + '/dataUnit'
         if type(self._dataUnit) in [type(AbsentDataset), type(None)]:
             result._add(name, 'OPTIONAL_DATASET_MISSING')
-            # print(name, 'not found')
         else:
             try:
                 if type(self._dataUnit) is type(PresentDataset):
@@ -3082,11 +3000,9 @@ class MeasurementListElement(Group):
                 result._add(name, _validate_string(dataset))
             except ValueError:  # If the _create_dataset function can't convert the data
                 result._add(name, 'INVALID_DATASET_TYPE')
-            # print(dataset)
         name = self.location + '/dataTypeLabel'
         if type(self._dataTypeLabel) in [type(AbsentDataset), type(None)]:
             result._add(name, 'OPTIONAL_DATASET_MISSING')
-            # print(name, 'not found')
         else:
             try:
                 if type(self._dataTypeLabel) is type(PresentDataset):
@@ -3096,11 +3012,9 @@ class MeasurementListElement(Group):
                 result._add(name, _validate_string(dataset))
             except ValueError:  # If the _create_dataset function can't convert the data
                 result._add(name, 'INVALID_DATASET_TYPE')
-            # print(dataset)
         name = self.location + '/dataTypeIndex'
         if type(self._dataTypeIndex) in [type(AbsentDataset), type(None)]:
             result._add(name, 'REQUIRED_DATASET_MISSING')
-            # print(name, 'not found')
         else:
             try:
                 if type(self._dataTypeIndex) is type(PresentDataset):
@@ -3116,11 +3030,9 @@ class MeasurementListElement(Group):
                     result._add(name, err_code)
             except ValueError:  # If the _create_dataset function can't convert the data
                 result._add(name, 'INVALID_DATASET_TYPE')
-            # print(dataset)
         name = self.location + '/sourcePower'
         if type(self._sourcePower) in [type(AbsentDataset), type(None)]:
             result._add(name, 'OPTIONAL_DATASET_MISSING')
-            # print(name, 'not found')
         else:
             try:
                 if type(self._sourcePower) is type(PresentDataset):
@@ -3130,11 +3042,9 @@ class MeasurementListElement(Group):
                 result._add(name, _validate_float(dataset))
             except ValueError:  # If the _create_dataset function can't convert the data
                 result._add(name, 'INVALID_DATASET_TYPE')
-            # print(dataset)
         name = self.location + '/detectorGain'
         if type(self._detectorGain) in [type(AbsentDataset), type(None)]:
             result._add(name, 'OPTIONAL_DATASET_MISSING')
-            # print(name, 'not found')
         else:
             try:
                 if type(self._detectorGain) is type(PresentDataset):
@@ -3144,11 +3054,9 @@ class MeasurementListElement(Group):
                 result._add(name, _validate_float(dataset))
             except ValueError:  # If the _create_dataset function can't convert the data
                 result._add(name, 'INVALID_DATASET_TYPE')
-            # print(dataset)
         name = self.location + '/moduleIndex'
         if type(self._moduleIndex) in [type(AbsentDataset), type(None)]:
             result._add(name, 'OPTIONAL_DATASET_MISSING')
-            # print(name, 'not found')
         else:
             try:
                 if type(self._moduleIndex) is type(PresentDataset):
@@ -3164,11 +3072,9 @@ class MeasurementListElement(Group):
                     result._add(name, err_code)
             except ValueError:  # If the _create_dataset function can't convert the data
                 result._add(name, 'INVALID_DATASET_TYPE')
-            # print(dataset)
         name = self.location + '/sourceModuleIndex'
         if type(self._sourceModuleIndex) in [type(AbsentDataset), type(None)]:
             result._add(name, 'OPTIONAL_DATASET_MISSING')
-            # print(name, 'not found')
         else:
             try:
                 if type(self._sourceModuleIndex) is type(PresentDataset):
@@ -3184,11 +3090,9 @@ class MeasurementListElement(Group):
                     result._add(name, err_code)
             except ValueError:  # If the _create_dataset function can't convert the data
                 result._add(name, 'INVALID_DATASET_TYPE')
-            # print(dataset)
         name = self.location + '/detectorModuleIndex'
         if type(self._detectorModuleIndex) in [type(AbsentDataset), type(None)]:
             result._add(name, 'OPTIONAL_DATASET_MISSING')
-            # print(name, 'not found')
         else:
             try:
                 if type(self._detectorModuleIndex) is type(PresentDataset):
@@ -3204,7 +3108,6 @@ class MeasurementListElement(Group):
                     result._add(name, err_code)
             except ValueError:  # If the _create_dataset function can't convert the data
                 result._add(name, 'INVALID_DATASET_TYPE')
-            # print(dataset)
         for key in self._h.keys():
             if not any([key.startswith(name) for name in self._snirf_names]):
                 if type(self._h[key]) is h5py.Group:
@@ -3369,7 +3272,6 @@ class StimElement(Group):
         name = self.location + '/name'
         if type(self._name) in [type(AbsentDataset), type(None)]:
             result._add(name, 'OPTIONAL_DATASET_MISSING')
-            # print(name, 'not found')
         else:
             try:
                 if type(self._name) is type(PresentDataset):
@@ -3379,11 +3281,9 @@ class StimElement(Group):
                 result._add(name, _validate_string(dataset))
             except ValueError:  # If the _create_dataset function can't convert the data
                 result._add(name, 'INVALID_DATASET_TYPE')
-            # print(dataset)
         name = self.location + '/data'
         if type(self._data) in [type(AbsentDataset), type(None)]:
             result._add(name, 'OPTIONAL_DATASET_MISSING')
-            # print(name, 'not found')
         else:
             try:
                 if type(self._data) is type(PresentDataset):
@@ -3393,11 +3293,9 @@ class StimElement(Group):
                 result._add(name, _validate_float_array(dataset, ndims=[2]))
             except ValueError:  # If the _create_dataset function can't convert the data
                 result._add(name, 'INVALID_DATASET_TYPE')
-            # print(dataset)
         name = self.location + '/dataLabels'
         if type(self._dataLabels) in [type(AbsentDataset), type(None)]:
             result._add(name, 'OPTIONAL_DATASET_MISSING')
-            # print(name, 'not found')
         else:
             try:
                 if type(self._dataLabels) is type(PresentDataset):
@@ -3407,7 +3305,6 @@ class StimElement(Group):
                 result._add(name, _validate_string_array(dataset, ndims=[1]))
             except ValueError:  # If the _create_dataset function can't convert the data
                 result._add(name, 'INVALID_DATASET_TYPE')
-            # print(dataset)
         for key in self._h.keys():
             if not any([key.startswith(name) for name in self._snirf_names]):
                 if type(self._h[key]) is h5py.Group:
@@ -3648,7 +3545,6 @@ class AuxElement(Group):
         name = self.location + '/name'
         if type(self._name) in [type(AbsentDataset), type(None)]:
             result._add(name, 'OPTIONAL_DATASET_MISSING')
-            # print(name, 'not found')
         else:
             try:
                 if type(self._name) is type(PresentDataset):
@@ -3658,11 +3554,9 @@ class AuxElement(Group):
                 result._add(name, _validate_string(dataset))
             except ValueError:  # If the _create_dataset function can't convert the data
                 result._add(name, 'INVALID_DATASET_TYPE')
-            # print(dataset)
         name = self.location + '/dataTimeSeries'
         if type(self._dataTimeSeries) in [type(AbsentDataset), type(None)]:
             result._add(name, 'OPTIONAL_DATASET_MISSING')
-            # print(name, 'not found')
         else:
             try:
                 if type(self._dataTimeSeries) is type(PresentDataset):
@@ -3672,11 +3566,9 @@ class AuxElement(Group):
                 result._add(name, _validate_float_array(dataset, ndims=[1]))
             except ValueError:  # If the _create_dataset function can't convert the data
                 result._add(name, 'INVALID_DATASET_TYPE')
-            # print(dataset)
         name = self.location + '/dataUnit'
         if type(self._dataUnit) in [type(AbsentDataset), type(None)]:
             result._add(name, 'OPTIONAL_DATASET_MISSING')
-            # print(name, 'not found')
         else:
             try:
                 if type(self._dataUnit) is type(PresentDataset):
@@ -3686,11 +3578,9 @@ class AuxElement(Group):
                 result._add(name, _validate_string(dataset))
             except ValueError:  # If the _create_dataset function can't convert the data
                 result._add(name, 'INVALID_DATASET_TYPE')
-            # print(dataset)
         name = self.location + '/time'
         if type(self._time) in [type(AbsentDataset), type(None)]:
             result._add(name, 'OPTIONAL_DATASET_MISSING')
-            # print(name, 'not found')
         else:
             try:
                 if type(self._time) is type(PresentDataset):
@@ -3700,11 +3590,9 @@ class AuxElement(Group):
                 result._add(name, _validate_float_array(dataset, ndims=[1]))
             except ValueError:  # If the _create_dataset function can't convert the data
                 result._add(name, 'INVALID_DATASET_TYPE')
-            # print(dataset)
         name = self.location + '/timeOffset'
         if type(self._timeOffset) in [type(AbsentDataset), type(None)]:
             result._add(name, 'OPTIONAL_DATASET_MISSING')
-            # print(name, 'not found')
         else:
             try:
                 if type(self._timeOffset) is type(PresentDataset):
@@ -3714,7 +3602,6 @@ class AuxElement(Group):
                 result._add(name, _validate_float_array(dataset, ndims=[1]))
             except ValueError:  # If the _create_dataset function can't convert the data
                 result._add(name, 'INVALID_DATASET_TYPE')
-            # print(dataset)
         for key in self._h.keys():
             if not any([key.startswith(name) for name in self._snirf_names]):
                 if type(self._h[key]) is h5py.Group:
@@ -3846,7 +3733,6 @@ class Snirf(Group):
         name = self.location + '/formatVersion'
         if type(self._formatVersion) in [type(AbsentDataset), type(None)]:
             result._add(name, 'REQUIRED_DATASET_MISSING')
-            # print(name, 'not found')
         else:
             try:
                 if type(self._formatVersion) is type(PresentDataset):
@@ -3856,11 +3742,9 @@ class Snirf(Group):
                 result._add(name, _validate_string(dataset))
             except ValueError:  # If the _create_dataset function can't convert the data
                 result._add(name, 'INVALID_DATASET_TYPE')
-            # print(dataset)
         name = self.location + '/nirs'
         if len(self._nirs) == 0:
             result._add(name, 'REQUIRED_INDEXED_GROUP_EMPTY')
-            # print(name, 'not found')
         else:
             self.nirs._validate(result)
         for key in self._h.keys():
@@ -3893,7 +3777,10 @@ class Snirf(Group):
         Returns True, ValidationResult
         '''
         result = ValidationResult()
-        self._validate(result)
+        try:
+            self._validate(result)
+        except Exception:
+            result._add('/', 'INVALID_FILE')
         return (result.is_valid(), result)
 
     def close(self):
@@ -3934,6 +3821,19 @@ class MetaDataTags(MetaDataTags):
 # Manually extend _validate to provide detailed error codes
 
 
+class StimElement(StimElement):
+    
+    def _validate(self, result: ValidationResult):
+        super()._validate(result)
+        
+        if np.shape(self.data)[1] != len(self.dataLabels):
+            result._add(self.location + '/dataLabels', 'INVALID_STIM_DATALABELS')
+
+
+class Stim(Stim):
+    _element = StimElement
+
+
 class AuxElement(AuxElement):
     
     def _validate(self, result: ValidationResult):
@@ -3941,6 +3841,7 @@ class AuxElement(AuxElement):
         
         if len(self.time) != len(self.dataTimeSeries):
             result._add(self.location + '/time', 'INVALID_TIME')
+
 
 class Aux(Aux):
     _element = AuxElement
@@ -3958,5 +3859,36 @@ class DataElement(DataElement):
         if len(self.measurementList) != np.shape(self.dataTimeSeries)[1]:
             result._add(self.location, 'INVALID_MEASUREMENTLIST')
 
+
 class Data(Data):
     _element = DataElement
+    
+    
+class Snirf(Snirf):
+    
+    def _validate(self, result: ValidationResult):
+        super()._validate(result)
+        
+        if not self._h.filename.endswith('.snirf'):
+            result._add('/', 'INVALID_FILE_NAME')
+            
+        for nirs in self.nirs:
+            lenSourceLabels = len(nirs.probe.sourceLabels)
+            lenDetectorLabels = len(nirs.probe.sourceLabels)
+            lenWavelengths = len(nirs.probe.sourceLabels)
+            for data in nirs.data:
+                for ml in data:
+                    if ml.sourceIndex > lenSourceLabels:
+                        result._add(ml.location + '/sourceIndex', 'INVALID_SOURCE_INDEX')
+                    if ml.detectorIndex > lenDetectorLabels:
+                        result._add(ml.location + '/detectorIndex', 'INVALID_DETECTOR_INDEX')
+                    if ml.wavelengthIndex > lenWavelengths:
+                        result._add(ml.location + '/wavelengthIndex', 'INVALID_WAVELENGTH_INDEX')
+                    
+                    
+            
+        
+        
+        
+        
+        

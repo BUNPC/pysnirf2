@@ -210,7 +210,7 @@ class ValidationResult:
     _CODES = {
             # Errors (Severity 1)
             'INVALID_FILE_NAME': (0 << 1, 3, 'Valid SNIRF files must end with .snirf'),
-            'INVALID_FILE': (0 << 1, 3, 'The file could not be opened'),
+            'INVALID_FILE': (0 << 1, 3, 'The file could not be opened, or the validator crashed'),
             'REQUIRED_DATASET_MISSING': (0 << 1, 3, 'A required dataset is missing from the file'),
             'REQUIRED_GROUP_MISSING': (0 << 1, 3, 'A required Group is missing from the file'),
             'REQUIRED_INDEXED_GROUP_EMPTY': (0 << 1, 3, 'At least one member of the indexed group must be present in the file'),
@@ -218,13 +218,10 @@ class ValidationResult:
             'INVALID_DATASET_SHAPE': (0 << 1, 3, 'An HDF5 Dataset is not stored in the specified shape. Strings and scalars should never be stored as arrays of length 1.'),
             'INVALID_MEASUREMENTLIST': (0 << 1, 3, 'The number of measurementList elements does not match the second dimension of dataTimeSeries'),
             'INVALID_TIME': (0 << 1, 3, 'The length of the data/time vector does not match the first dimension of data/dataTimeSeries'),
+            'INVALID_STIM_DATALABELS': (0 << 1, 3, 'The length of stim/dataLabels exceeds the columns of stim/data'),
             'INVALID_SOURCE_INDEX': (0 << 1, 3, 'measurementList/sourceIndex exceeds probe/sourceLabels'),
             'INVALID_DETECTOR_INDEX': (0 << 1, 3, 'measurementList/detectorIndex exceeds probe/detectorLabels'),
-            'INVALID_PROBE_LABEL': (0 << 1, 3, 'a duplicate sourceLabel or detectorLabel appears'),
-            'INVALID_WAVELENGTH_INDEX': (0 << 1, 3, 'measurementList/waveLengthIndex exceeds probe/wavelengths, probe/wavelengthsEmission, or probe/sourceLabels'),
-            'INVALID_DATATYPE_INDEX': (0 << 1, 3, 'measurementList/dataTypeIndex exceeds probe/frequencies, probe/timeDelays, probe/timeDelayWidths, probe/momentOrders, probe/correlationTimeDelayWidths or probe/correlationTimeDelays'),
-            'INVALID_PROBE_MODULE_INDEX': (0 << 1, 3, 'sourceModuleIndex and detectorModuleIndex are used along with moduleIndex'),
-            'INVALID_STIM_DATALABELS': (0 << 1, 3, 'The length of stim/dataLabels exceeds the columns of stim/data'),
+            'INVALID_WAVELENGTH_INDEX': (0 << 1, 3, 'measurementList/waveLengthIndex exceeds probe/wavelengths'),
             'NEGATIVE_INDEX': (0 << 1, 3, 'An index is negative'),
             # Warnings (Severity 2)
             'INDEX_OF_ZERO': (0 << 1, 2, 'An index of zero is usually undefined'),
@@ -252,7 +249,6 @@ class ValidationResult:
             raise KeyError("Invalid code '" + key + "'")
         # Locations is nested tuple (code, (id, level, msg))
         self._locations[location] = (key, self._CODES[key])
-        print('\n', location, key, self._CODES[key][0])
         
     def display(self, severity=2):
         longest_key = max([len(key) for key in self._locations.keys()])
@@ -469,9 +465,9 @@ class Group(ABC):
         """
         raise NotImplementedError('_save is an abstract method')
 
-    # @abstractmethod
-    # def _validate(self, result: ValidationResult):
-    #     raise NotImplementedError('_validate is an abstract method')
+    @abstractmethod
+    def _validate(self, result: ValidationResult):
+        raise NotImplementedError('_validate is an abstract method')
 
     def __repr__(self):
         props = [p for p in dir(self) if ('_' not in p and not callable(getattr(self, p)))]
@@ -492,13 +488,6 @@ class Group(ABC):
                     out += '\n' + prepr
             out += '\n'
         return out[:-1]
-
-    # def __getitem__(self, key):
-    #     if self._h != {}:
-    #         if key in self._h:
-    #             return self._h[key]
-    #     else:
-    #         return None
 
     def __contains__(self, key):
         return key in self._h
