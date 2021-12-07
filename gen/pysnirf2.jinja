@@ -75,7 +75,7 @@
     {% else %}
         if type(self._{{ CHILD.name }}) is type(AbsentDataset):
             return None
-        if type(self._{{ CHILD.name }}) is type(PresentDataset) and '{{ CHILD.name }}' in self._h:
+        if type(self._{{ CHILD.name }}) is type(PresentDataset):
         {% if (TYPES.ARRAY_1D in CHILD.type) or (TYPES.ARRAY_2D in CHILD.type) %}
             {% if TYPES.VARLEN_STRING in CHILD.type %}
             return _read_string_array(self._h['{{ CHILD.name }}'])
@@ -98,8 +98,7 @@
             {% endif %}
         {% endif %}
             self._cfg.logger.info('Dynamically loaded %s/{{ CHILD.name }} from %s', self.location, self.filename)
-        else:
-            return self._{{ CHILD.name }}
+        return self._{{ CHILD.name }}
     {% endif %}
 
     @{{ CHILD.name }}.setter
@@ -148,11 +147,10 @@
             self.{{ CHILD.name }}._save(*args)
     {% else %}
         name = self.location + '/{{ CHILD.name }}'
-        if name in file:
-            del file[name]
-            self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
-        data = self.{{ CHILD.name }}
         if type(self._{{ CHILD.name }}) not in [type(AbsentDataset), type(None)]:
+            data = self.{{ CHILD.name }}  # Use loader function via getter
+            if name in file:
+                del file[name]
         {% if (TYPES.ARRAY_1D in CHILD.type) or (TYPES.ARRAY_2D in CHILD.type) %}
             {% if TYPES.VARLEN_STRING in CHILD.type %}
             _create_dataset_string_array(file, name, data)
@@ -175,6 +173,10 @@
             {% endif %}
         {% endif %}
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
+        else:   
+            if name in file:
+                del file[name]
+                self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
     {% endif %}
     {% endfor %}
     {% if NODE.name in UNSPECIFIED_DATASETS_OK %}
@@ -193,20 +195,29 @@
 {% endmacro %}
 {% macro gen_validator(NODE) %}
     def _validate(self, result: ValidationResult):
+        # Validate unwritten datasets after writing them to this tempfile
+        tmp = h5py.File(TemporaryFile(), 'w')
     {% for CHILD in NODE.children %}
         name = self.location + '/{{ CHILD.name }}'
     {% if TYPES.INDEXED_GROUP in CHILD.type %}
-        self.{{ CHILD.name }}._validate(result)
+        {% if TYPES.REQUIRED in CHILD.type %}
+        if len(self._{{ CHILD.name }}) == 0:
+            result._add(name, 'REQUIRED_INDEXED_GROUP_EMPTY')
+        {% else %}
+        if len(self._{{ CHILD.name }}) == 0:
+            result._add(name, 'OPTIONAL_INDEXED_GROUP_EMPTY')
+        {% endif %}
+        else:
+            self.{{ CHILD.name }}._validate(result)
     {% elif TYPES.GROUP in CHILD.type %}
-        if type(self._{{ CHILD.name }}) in [type(AbsentDataset), type(None)]:
+        if type(self._{{ CHILD.name }}) in [type(AbsentGroup), type(None)]:
         {% if TYPES.REQUIRED in CHILD.type %}
             result._add(name, 'REQUIRED_GROUP_MISSING')
         {% else %}
             result._add(name, 'OPTIONAL_GROUP_MISSING')
         {% endif %}
-            # print(name, 'not found')
         else:
-            self.{{ CHILD.name }}._validate(result)
+            self._{{ CHILD.name }}._validate(result)
     {% else %}
         if type(self._{{ CHILD.name }}) in [type(AbsentDataset), type(None)]:
         {% if TYPES.REQUIRED in CHILD.type %}
@@ -214,26 +225,19 @@
         {% else %}
             result._add(name, 'OPTIONAL_DATASET_MISSING')
         {% endif %}
-            # print(name, 'not found')
         else:
-            # Validate unwritten datasets after writing them to this tempfile
-            tmp = h5py.File(TemporaryFile(), 'w')
             try:
                 if type(self._{{ CHILD.name }}) is type(PresentDataset):
-        {% if TYPES.ARRAY_2D in CHILD.type %}
-            {% if TYPES.VARLEN_STRING in CHILD.type %}
                     dataset = self._h['{{ CHILD.name }}']
                 else:
+        {% if TYPES.ARRAY_2D in CHILD.type %}
+            {% if TYPES.VARLEN_STRING in CHILD.type %}
                     dataset = _create_dataset_string_array(tmp, '{{ CHILD.name }}', self._{{ CHILD.name }})
                 result._add(name, _validate_string_array(dataset, ndims=[2]))
             {% elif TYPES.INT_VALUE in CHILD.type %}
-                    dataset = self._h['{{ CHILD.name }}']
-                else:
                     dataset = _create_dataset_int_array(tmp, '{{ CHILD.name }}', self._{{ CHILD.name }})
                 result._add(name, _validate_int_array(dataset, ndims=[2]))
             {% elif TYPES.FLOAT_VALUE in CHILD.type %}
-                    dataset = self._h['{{ CHILD.name }}']
-                else:
                     dataset = _create_dataset_float_array(tmp, '{{ CHILD.name }}', self._{{ CHILD.name }})
                 result._add(name, _validate_float_array(dataset, ndims=[2]))
             {% else %}
@@ -241,18 +245,12 @@
             {% endif %}
         {% elif TYPES.ARRAY_1D in CHILD.type %}
             {% if TYPES.VARLEN_STRING in CHILD.type %}
-                    dataset = self._h['{{ CHILD.name }}']
-                else:
                     dataset = _create_dataset_string_array(tmp, '{{ CHILD.name }}', self._{{ CHILD.name }})
                 result._add(name, _validate_string_array(dataset, ndims=[1]))
             {% elif TYPES.INT_VALUE in CHILD.type %}
-                    dataset = self._h['{{ CHILD.name }}']
-                else:
                     dataset = _create_dataset_int_array(tmp, '{{ CHILD.name }}', self._{{ CHILD.name }})
                 result._add(name, _validate_int_array(dataset, ndims=[1]))
             {% elif TYPES.FLOAT_VALUE in CHILD.type %}
-                    dataset = self._h['{{ CHILD.name }}']
-                else:
                     dataset = _create_dataset_float_array(tmp, '{{ CHILD.name }}', self._{{ CHILD.name }})
                 result._add(name, _validate_float_array(dataset, ndims=[1]))
             {% else %}
@@ -260,18 +258,22 @@
             {% endif %}
         {% else %}
             {% if TYPES.VARLEN_STRING in CHILD.type %}
-                    dataset = self._h['{{ CHILD.name }}']
-                else:
                     dataset = _create_dataset_string(tmp, '{{ CHILD.name }}', self._{{ CHILD.name }})
                 result._add(name, _validate_string(dataset))
             {% elif TYPES.INT_VALUE in CHILD.type %}
-                    dataset = self._h['{{ CHILD.name }}']
-                else:
                     dataset = _create_dataset_int(tmp, '{{ CHILD.name }}', self._{{ CHILD.name }})
-                result._add(name, _validate_int(dataset))
-            {% elif TYPES.FLOAT_VALUE in CHILD.type %}
-                    dataset = self._h['{{ CHILD.name }}']
+                {% if 'Index' in CHILD.name %}
+                err_code = _validate_int(dataset)
+                if _read_int(dataset) < 0 and err_code == 'OK':
+                    result._add(name, 'NEGATIVE_INDEX')
+                elif _read_int(dataset) == 0 and err_code == 'OK':
+                    result._add(name, 'INDEX_OF_ZERO')
                 else:
+                    result._add(name, err_code)
+                {% else %}
+                result._add(name, _validate_int(dataset))
+                {% endif %}
+            {% elif TYPES.FLOAT_VALUE in CHILD.type %}
                     dataset = _create_dataset_float(tmp, '{{ CHILD.name }}', self._{{ CHILD.name }})
                 result._add(name, _validate_float(dataset))
             {% else %}
@@ -280,11 +282,10 @@
         {% endif %}
             except ValueError:  # If the _create_dataset function can't convert the data
                 result._add(name, 'INVALID_DATASET_TYPE')
-            # print(dataset)
     {% endif %}
     {% endfor %}
     {% if not NODE.name in UNSPECIFIED_DATASETS_OK %}
-        for key in self._h.keys():  # TODO attributes too
+        for key in self._h.keys():
             if not any([key.startswith(name) for name in self._snirf_names]):
                 if type(self._h[key]) is h5py.Group:
                     result._add(self.location + '/' + key, 'UNRECOGNIZED_GROUP')
@@ -387,9 +388,10 @@ class Snirf(Group):
         else:
             self._save(self._h.file)
 
-    def validate(self):
+    def validate(self) -> Tuple[bool, ValidationResult]:
         '''
-        Returns True, ValidationResult
+        Returns a bool representing the validity of the Snirf object and the
+        detailed output structure ValidationResult instance
         '''
         result = ValidationResult()
         self._validate(result)

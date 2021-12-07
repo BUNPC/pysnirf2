@@ -8,23 +8,31 @@ from collections.abc import MutableSequence
 from tempfile import TemporaryFile
 import logging
 import termcolor
+import colorama
+from pysnirf2.__version__ import __version__ as __version__
+from typing import Tuple
 
 # Colored prints for validator
+if os.name == 'nt':
+    colorama.init()
 
 printr = lambda x: termcolor.cprint(x, 'red')
 printg = lambda x: termcolor.cprint(x, 'green')
 printb = lambda x: termcolor.cprint(x, 'blue')
 printm = lambda x: termcolor.cprint(x, 'magenta')
 
+
+
 _loggers = {}
 def _create_logger(name, log_file, level=logging.INFO):
     if name in _loggers.keys():
         return _loggers[name]
     handler = logging.FileHandler(log_file)
-    handler.setFormatter(logging.Formatter('%(asctime)s | %(name)s | %(message)s'))
+    handler.setFormatter(logging.Formatter('%(asctime)s | %(name)s v%(version)s | %(message)s'))
     logger = logging.getLogger(name)
     logger.setLevel(level)
     logger.addHandler(handler)
+    logger = logging.LoggerAdapter(logger, {'version': __version__})
     _loggers[name] = logger
     return logger
 
@@ -182,81 +190,180 @@ def _read_float_array(dataset: h5py.Dataset):
 
 # -- Validation types ---------------------------------------
 
+_SEVERITY_LEVELS = {
+                    0: 'OK     ',
+                    1: 'INFO   ',
+                    2: 'WARNING',
+                    3: 'FATAL  ',
+                    }
+
+_SEVERITY_COLORS = {
+                    0: 'green',
+                    1: 'blue',
+                    2: 'magenta',
+                    3: 'red',
+                    }
+_CODES = {
+        # Errors (Severity 1)
+        'INVALID_FILE_NAME': (1, 3, 'Valid SNIRF files must end with .snirf'),
+        'INVALID_FILE': (2, 3, 'The file could not be opened, or the validator crashed'),
+        'REQUIRED_DATASET_MISSING': (3, 3, 'A required dataset is missing from the file'),
+        'REQUIRED_GROUP_MISSING': (4, 3, 'A required Group is missing from the file'),
+        'REQUIRED_INDEXED_GROUP_EMPTY': (5, 3, 'At least one member of the indexed group must be present in the file'),
+        'INVALID_DATASET_TYPE': (6, 3, 'An HDF5 Dataset is not stored in the specified format'),
+        'INVALID_DATASET_SHAPE': (7, 3, 'An HDF5 Dataset is not stored in the specified shape. Strings and scalars should never be stored as arrays of length 1.'),
+        'INVALID_MEASUREMENTLIST': (8, 3, 'The number of measurementList elements does not match the second dimension of dataTimeSeries'),
+        'INVALID_TIME': (9, 3, 'The length of the data/time vector does not match the first dimension of data/dataTimeSeries'),
+        'INVALID_STIM_DATALABELS': (10, 3, 'The length of stim/dataLabels exceeds the second dimension of stim/data'),
+        'INVALID_SOURCE_INDEX': (11, 3, 'measurementList/sourceIndex exceeds length of probe/sourceLabels'),
+        'INVALID_DETECTOR_INDEX': (12, 3, 'measurementList/detectorIndex exceeds length of probe/detectorLabels'),
+        'INVALID_WAVELENGTH_INDEX': (13, 3, 'measurementList/waveLengthIndex exceeds length of probe/wavelengths'),
+        'NEGATIVE_INDEX': (14, 3, 'An index is negative'),
+        # Warnings (Severity 2)
+        'INDEX_OF_ZERO': (15, 2, 'An index of zero is usually undefined'),
+        'UNRECOGNIZED_GROUP': (16, 2, 'An unspecified Group is a part of the file'),
+        'UNRECOGNIZED_DATASET': (17, 2, 'An unspecified Dataset is a part of the file in an unexpected place'),
+        'UNRECOGNIZED_DATATYPELABEL': (18, 2, 'measurementList/dataTypeLabel is not one of the recognized values listed in the Appendix'),
+        'UNRECOGNIZED_DATATYPE': (19, 2, 'measurementList/dataType is not one of the recognized values listed in the Appendix'),
+        'FIXED_LENGTH_STRING': (20, 2, 'The use of fixed-length strings is discouraged and may be banned by a future spec version. Rewrite this file with pysnirf2 to use variable length strings'),
+        # Info (Severity 1)
+        'OPTIONAL_GROUP_MISSING': (21, 1, 'Missing an optional Group in this location'),
+        'OPTIONAL_DATASET_MISSING': (22, 1, 'Missing optional Dataset in this location'),
+        'OPTIONAL_INDEXED_GROUP_EMPTY': (23, 1, 'The optional indexed group has no elements'),
+        # OK (Severity 0)
+        'OK': (24, 0, 'No issues detected'),
+        }
+
+
+class ValidationIssue:
+    """
+    Pretty-printable structure for the result of validation on an HDF5 name
+    """
+    
+    def __init__(self, name: str, location: str):
+        self.name = name  # The name of the issue, a key in _CODES above
+        self.location = location  # A location in the Snirf file matching an HDF5 name
+        self.id = _CODES[name][0]  # The ID of the issue
+        self.severity = _CODES[name][1]  # The severity level of the issue
+        self.message = _CODES[name][2]  # A string describing the issue
+
+    def __repr__(self):
+        s = super().__repr__()
+        s += '\nlocation: ' + self.location + '\nseverity: '
+        s += str(self.severity).ljust(4) + _SEVERITY_LEVELS[self.severity]
+        s += '\nname:     ' + str(self.id).ljust(4) + self.name +  '\nmessage:  ' + self.message
+        return s
 
 class ValidationResult:
+    """
+    ORganzies the result of the pysnirf2 validation routine like so:
+    <ValidationResult>.is_valid(), <ValidationResult> = <Snirf>.validate()
+    """
     
-    _locations = {}  # HDF locations associated with errors or an additional validation result
-
-    _SEVERITY_LEVELS = {
-                        0: 'OK     ',
-                        1: 'INFO   ',
-                        2: 'WARNING',
-                        3: 'FATAL  ',
-                        }
-    _CODES = {
-            # Errors (Severity 1)
-            'INVALID_FILE_NAME': (0 << 1, 3, 'Valid SNIRF files must end with .snirf'),
-            'INVALID_FILE': (0 << 1, 3, 'The file could not be opened'),
-            'REQUIRED_DATASET_MISSING': (0 << 1, 3, 'A required dataset is missing from the file'),
-            'REQUIRED_GROUP_MISSING': (0 << 1, 3, 'A required Group is missing from the file'),
-            'INVALID_DATASET_TYPE': (0 << 1, 3, 'An HDF5 Dataset is not stored in the specified format'),
-            'INVALID_DATASET_SHAPE': (0 << 1, 3, 'An HDF5 Dataset is not stored in the specified shape. Strings and scalars should never be stored as arrays of length 1.'),
-            'INVALID_MEASUREMENTLIST': (0 << 1, 3, 'The number of measurementList elements does not match the second dimension of dataTimeSeries'),
-            'INVALID_TIME': (0 << 1, 3, 'The length of the data/time vector does not match the first dimension of data/dataTimeSeries'),
-            'INVALID_INDEX': (0 << 1, 3, 'An index is negative'),
-            'INVALID_SOURCE_INDEX': (0 << 1, 3, 'measurementList/sourceIndex exceeds probe/sourceLabels'),
-            'INVALID_DETECTOR_INDEX': (0 << 1, 3, 'measurementList/detectorIndex exceeds probe/detectorLabels'),
-            'INVALID_PROBE_LABEL': (0 << 1, 3, 'a duplicate sourceLabel or detectorLabel appears'),
-            'INVALID_WAVELENGTH_INDEX': (0 << 1, 3, 'measurementList/waveLengthIndex exceeds probe/wavelengths, probe/wavelengthsEmission, or probe/sourceLabels'),
-            'INVALID_DATATYPE_INDEX': (0 << 1, 3, 'measurementList/dataTypeIndex exceeds probe/frequencies, probe/timeDelays, probe/timeDelayWidths, probe/momentOrders, probe/correlationTimeDelayWidths or probe/correlationTimeDelays'),
-            'INVALID_PROBE_MODULE_INDEX': (0 << 1, 3, 'sourceModuleIndex and detectorModuleIndex are used along with moduleIndex'),
-    #            'INVALID_LANDMARKPOS': (0 << 1, 3, 'A value in the last column of landmarkPos2D or landmarkPos3D exceeds the length of'),
-            'INVALID_STIM_DATALABELS': (0 << 1, 3, 'The length of stim/dataLabels exceeds the columns of stim/data'),
-            # Warnings (Severity 2)
-            'UNRECOGNIZED_GROUP': (0 << 1, 2, 'An unspecified Group is a part of the file'),
-            'UNRECOGNIZED_DATASET': (0 << 1, 2, 'An unspecified Dataset is a part of the file in an unexpected place'),
-            'UNRECOGNIZED_DATATYPELABEL': (0 << 1, 2, 'measurementList/dataTypeLabel is not one of the recognized values listed in the Appendix'),
-            'UNRECOGNIZED_DATATYPE': (0 << 1, 2, 'measurementList/dataType is not one of the recognized values listed in the Appendix'),
-            'INDEX_OF_ZERO': (0 << 1, 2, 'An index of zero is usually undefined'),
-            'FIXED_LENGTH_STRING': (0 << 1, 2, 'The use of fixed-length strings is discouraged and may be banned by a future spec version. Rewrite this file with pysnirf2 to use variable length strings'),
-            # Info (Severity 1)
-            'OPTIONAL_GROUP_MISSING': (0 << 1, 1, 'OK (missing optional Group)'),
-            'OPTIONAL_DATASET_MISSING': (0 << 1, 1, 'OK (missing optional Dataset)'),
-            # OK (Severity 0)
-            'OK': (0 << 1, 0, 'OK'),
-            }
+    _issues = []
+    _locations = []
 
     def is_valid(self):
-        for value in self._locations.values():
-            if value[1][1] > 2:  # Severity
+        """
+        Returns True if valid (if no FATAL errors found)
+        """
+        for issue in self._issues:
+            if issue.severity > 2:
                 return False
         return True
-
-    def _add(self, location, key):
-        if key not in self._CODES.keys():
-            raise KeyError("Invalid code '" + key + "'")
-        # Locations is nested tuple (code, (id, level, msg))
-        self._locations[location] = (key, self._CODES[key])
-        print('\n', location, key, self._CODES[key][0])
+    
+    @property
+    def issues(self):
+        return self._issues
+    
+    @property
+    def locations(self):
+        return self._locations
+    
+    @property
+    def codes(self):
+        return [issue.name for issue in self._issues]
+    
+    @property
+    def errors(self):
+        """
+        Returns list of fatal errors
+        -------
+        errors : List of ValidationIssue
+        """
+        errors = []
+        for issue in self._issues:
+            if issue.severity == 3:
+                errors.append(issue)
+        return errors
+    
+    @property
+    def warnings(self):
+        """
+        Returns list of warnings
+        -------
+        warnings : List of ValidationIssue
+        """
+        warnings = []
+        for issue in self._issues:
+            if issue.severity == 2:
+                warnings.append(issue)
+        return warnings
+    
+    @property
+    def info(self):
+        """
+        Returns list of info issues
+        -------
+        info : List of ValidationIssue
+        """
+        info = []
+        for issue in self._issues:
+            if issue.severity == 1:
+                info.append(issue)
+        return info
         
-    def display(self, severity=1):
-        longest_key = max([len(key) for key in self._locations.keys()])
-        longest_code = max([len(key[0]) for key in self._locations.keys()])
+    def display(self, severity=2):
+        """
+        Prints the detailed results of the validation.
+        kwarg severity filters the display by message severity (default 2)
+        severity=0: All messages will be shown, including OK
+        severity=1: Prints INFO, WARNING, and FATAL messages
+        severity=2: Prints WARNING and FATAL messages
+        severity=3: Prints only FATAL error messages
+        """
+        try:
+            longest_key = max([len(key) for key in self.locations])
+            longest_code = max([len(code) for code in self.codes])
+        except ValueError:
+            print('Empty ValidationResult: nothing to display')
         s = object.__repr__(self) + '\n'
         printed = [0, 0, 0, 0]
-        for key in self._locations.keys():
-            sev = self._locations[key][1][1]
+        for issue in self._issues:
+            sev = issue.severity
             printed[sev] += 1
             if sev >= severity:
-                s += key.ljust(longest_key) + ' ' + self._SEVERITY_LEVELS[sev] + ' ' + self._locations[key][0].ljust(longest_code) + '\n'
+                s += issue.location.ljust(longest_key) + ' ' + _SEVERITY_LEVELS[sev] + ' ' + issue.name.ljust(longest_code) + '\n'
         print(s)
         for i in range(0, severity):
-            [printg, printb, printm, printr][i]('Found ' + str(printed[i]) + ' ' + self._SEVERITY_LEVELS[i] + ' (hidden)')            
+            [printg, printb, printm, printr][i]('Found ' + str(printed[i]) + ' ' + termcolor.colored(_SEVERITY_LEVELS[i], _SEVERITY_COLORS[i]) + ' (hidden)')            
         for i in range(severity, 4):
-            [printg, printb, printm, printr][i]('Found ' + str(printed[i]) + ' ' + self._SEVERITY_LEVELS[i])
+            [printg, printb, printm, printr][i]('Found ' + str(printed[i]) + ' ' + termcolor.colored(_SEVERITY_LEVELS[i], _SEVERITY_COLORS[i]))
         i = int(self.is_valid())
         [printr, printg][i]('\nFile is ' +['INVALID', 'VALID'][i])
+
+    def _add(self, location, key):
+        if key not in _CODES.keys():
+            raise KeyError("Invalid code '" + key + "'")
+        if location not in self._locations:  # only one issue per HDF5 name
+            issue = ValidationIssue(key, location)
+            self._locations.append(location)
+            self._issues.append(issue) 
         
+    def __contains__(self, key):
+        for issue in self._issues:
+            if issue.location is key:
+                return issue
         
     def __repr__(self):
         return object.__repr__(self) + ' is_valid ' + str(self.is_valid()) 
@@ -342,17 +449,12 @@ class SnirfFormatError(Exception):
 
 
 class SnirfConfig:
-    logger: logging.Logger = _logger
+    """
+    Structure for containing Snirf-wide data and settings
+    """
+    logger: logging.Logger = _logger  # The logger that the interface will write to
     dynamic_loading: bool = False  # If False, data is loaded in the constructor, if True, data is loaded on access
 
-
-#class Singleton(object):
-#    __instance = None
-#    def __new__(cls, val):
-#        if Singleton.__instance is None:
-#            Singleton.__instance = object.__new__(cls)
-#        Singleton.__instance.val = val
-#        return Singleton.__instance
 
 # Placeholder for a Dataset that is not on disk or in memory
 class AbsentDatasetType():
@@ -369,7 +471,7 @@ class PresentDatasetType():
     pass
 
 
-# Instantiate singletons
+# Instantiate faux singletons
 AbsentDataset = AbsentDatasetType()
 AbsentGroup = AbsentGroupType()
 PresentDataset = PresentDatasetType()
@@ -454,9 +556,9 @@ class Group(ABC):
         """
         raise NotImplementedError('_save is an abstract method')
 
-    # @abstractmethod
-    # def _validate(self, result: ValidationResult):
-    #     raise NotImplementedError('_validate is an abstract method')
+    @abstractmethod
+    def _validate(self, result: ValidationResult):
+        raise NotImplementedError('_validate is an abstract method')
 
     def __repr__(self):
         props = [p for p in dir(self) if ('_' not in p and not callable(getattr(self, p)))]
@@ -477,13 +579,6 @@ class Group(ABC):
                     out += '\n' + prepr
             out += '\n'
         return out[:-1]
-
-    # def __getitem__(self, key):
-    #     if self._h != {}:
-    #         if key in self._h:
-    #             return self._h[key]
-    #     else:
-    #         return None
 
     def __contains__(self, key):
         return key in self._h
@@ -654,7 +749,7 @@ class IndexedGroup(MutableSequence, ABC):
                 if len(numsplit[1]) == len(str(int(numsplit[1]))):
                     unordered.append(key)
                     indices.append(int(numsplit[1]))
-            elif key.endswith(self._name):
+            elif key.endswith(self._name):  # Case of single Group with no index
                 unordered.append(key)
                 indices.append(0)
         order = np.argsort(indices)

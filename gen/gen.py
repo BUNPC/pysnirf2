@@ -168,7 +168,7 @@ if __name__ == '__main__':
     template = env.get_template(TEMPLATE)
     
     # Generate the complete Snirf interface from base.py and the template + data
-    dst = os.path.abspath(os.path.join(os.getcwd(), os.pardir))
+    dst = os.path.abspath(os.getcwd())
     output_path = dst + '/pysnirf2/' + 'pysnirf2.py'
     with open(HEADER, 'r') as f_header:
         with open(FOOTER, 'r') as f_footer:
