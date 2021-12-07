@@ -161,6 +161,18 @@ def _print_keys(group):
 
 class PySnirf2_Test(unittest.TestCase):
     
+    def test_validator_required_group_missing(self):
+        for i, mode in enumerate([False, True]):
+            for file in test_files[0:1]:
+                if VERBOSE:
+                    print('Loading', file + '.snirf', 'with dynamic_loading=' + str(mode))
+                s = Snirf(file, dynamic_loading=mode)
+                del s.nirs[0].probe
+                if VERBOSE:
+                    print('Performing local validation on probeless', file + '.snirf')
+                valid, result = s.validate()
+                self.assertFalse(valid, msg='The file was incorrectly validated')
+                self.assertTrue('REQUIRED_GROUP_MISSING' in [issue.name for issue in result.errors], msg='REQUIRED_GROUP_MISSING not found')
     
     def test_edit_probe_group(self):
         """

@@ -210,14 +210,14 @@
         else:
             self.{{ CHILD.name }}._validate(result)
     {% elif TYPES.GROUP in CHILD.type %}
-        if type(self._{{ CHILD.name }}) in [type(AbsentDataset), type(None)]:
+        if type(self._{{ CHILD.name }}) in [type(AbsentGroup), type(None)]:
         {% if TYPES.REQUIRED in CHILD.type %}
             result._add(name, 'REQUIRED_GROUP_MISSING')
         {% else %}
             result._add(name, 'OPTIONAL_GROUP_MISSING')
         {% endif %}
         else:
-            self.{{ CHILD.name }}._validate(result)
+            self._{{ CHILD.name }}._validate(result)
     {% else %}
         if type(self._{{ CHILD.name }}) in [type(AbsentDataset), type(None)]:
         {% if TYPES.REQUIRED in CHILD.type %}
@@ -393,10 +393,7 @@ class Snirf(Group):
         Returns True, ValidationResult
         '''
         result = ValidationResult()
-        try:
-            self._validate(result)
-        except Exception:
-            result._add('/', 'INVALID_FILE')
+        self._validate(result)
         return (result.is_valid(), result)
 
     def close(self):

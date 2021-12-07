@@ -71,17 +71,18 @@ class Snirf(Snirf):
             result._add('/', 'INVALID_FILE_NAME')
             
         for nirs in self.nirs:
-            lenSourceLabels = len(nirs.probe.sourceLabels)
-            lenDetectorLabels = len(nirs.probe.sourceLabels)
-            lenWavelengths = len(nirs.probe.sourceLabels)
-            for data in nirs.data:
-                for ml in data:
-                    if ml.sourceIndex > lenSourceLabels:
-                        result._add(ml.location + '/sourceIndex', 'INVALID_SOURCE_INDEX')
-                    if ml.detectorIndex > lenDetectorLabels:
-                        result._add(ml.location + '/detectorIndex', 'INVALID_DETECTOR_INDEX')
-                    if ml.wavelengthIndex > lenWavelengths:
-                        result._add(ml.location + '/wavelengthIndex', 'INVALID_WAVELENGTH_INDEX')
+            if nirs.probe is not None:
+                lenSourceLabels = len(nirs.probe.sourceLabels)
+                lenDetectorLabels = len(nirs.probe.detectorLabels)
+                lenWavelengths = len(nirs.probe.sourceLabels)
+                for data in nirs.data:
+                    for ml in data.measurementList:
+                        if ml.sourceIndex > lenSourceLabels:
+                            result._add(ml.location + '/sourceIndex', 'INVALID_SOURCE_INDEX')
+                        if ml.detectorIndex > lenDetectorLabels:
+                            result._add(ml.location + '/detectorIndex', 'INVALID_DETECTOR_INDEX')
+                        if ml.wavelengthIndex > lenWavelengths:
+                            result._add(ml.location + '/wavelengthIndex', 'INVALID_WAVELENGTH_INDEX')
                     
                     
             
