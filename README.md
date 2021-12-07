@@ -1,18 +1,18 @@
 ![testing](https://github.com/BUNPC/pysnirf2/actions/workflows/test.yml/badge.svg)
 [![pypi](https://img.shields.io/badge/-pip%20install%20pysnirf2-yellow)](https://pypi.org/project/pysnirf2/)
 
-# pysnirf2
+# pysnirf2 v0.3
 
-Dynamically generated Python library for loading, saving, and validating Snirf files.
+Dynamically generated Python library for reading, writing, and validating [Shared Near Infrared Spectroscopy Format (SNIRF) files](https://github.com/fNIRS/snirf).
 
-Developed and maintained by the [Boston University Neurophotonics Center]().
+Developed and maintained by the [Boston University Neurophotonics Center](https://www.bu.edu/neurophotonics/).
 
-pysnirf2 requires Python > 3 and h5py > 3.6
+pysnirf2 requires Python > 3.6
 
 # Features
 
 ## Load a SNIRF file
-`Snirf(filepath)` loads a SNIRF file from the path or creates a new one if it doesn't exist.
+`Snirf(<path>)` loads a SNIRF file from the path _or creates a new one if it doesn't exist._
 ```python
 from pysnirf2 import Snirf
 >>> snirf = Snirf(r'some\path\subj1_run01.snirf')
@@ -203,11 +203,53 @@ For larger files, it may be useful to load data dynamically: data will only be l
 >        [   0. ,   90. ],
 >        [  60. ,   90. ]])
 
+# Validating a SNIRF file
+pysnirf2 features functions for validating SNIRF files against the specification and generating detailed error reports.
+## Validate a Snirf object you have created
+```python
+>> valid, result = snirf.validate()
+```
+## Validate a SNIRF file on disk
+To validate a SNIRF file on disk
+```python
+>> valid, result = validateSnirf(r'some\path\subj1_run01.snirf')
+```
+## Validation results
+The validation functions return a `bool` reflecting the validity of the file and a detailed `ValidationResult` structure.
+```python
+>> assert valid
+```
+To view the validation result:
+```python
+>> result.display(severity=3)
+<pysnirf2.pysnirf2.ValidationResult object at 0x000001C0CCF05A00>
+/nirs1/data1/measurementList103/dataType                 FATAL   REQUIRED_DATASET_MISSING
+/nirs1/data1/measurementList103/dataTypeIndex            FATAL   REQUIRED_DATASET_MISSING
+/nirs1/data1                                             FATAL   INVALID_MEASUREMENTLIST 
+
+Found 668 OK      (hidden)
+Found 635 INFO    (hidden)
+Found 204 WARNING (hidden)
+Found 3 FATAL  
+
+File is INVALID
+```
+To look at a particular result:
+```python
+>> result.errors[3]
+<pysnirf2.pysnirf2.ValidationIssue object at 0x000001C0CB502F70>
+location: /nirs1/data1
+severity: 3   FATAL  
+name:     8   INVALID_MEASUREMENTLIST
+message:  The number of measurementList elements does not match the second dimension of dataTimeSeries
+```
+The full list of validation results `result.issues` can be explored programatically.
+
 # Code generation
 
-The interface and validator are generated via metacode that downloads and parses the latest [SNIRF specification](https://github.com/fNIRS/snirf). 
+The interface and validator are generated via metacode that downloads and parses [the latest SNIRF specification](https://raw.githubusercontent.com/fNIRS/snirf/master/snirf_specification.md). 
 
-See [\gen]() for details.
+See [\gen](tree/main/gen) for details.
 
 
   
