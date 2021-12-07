@@ -9,6 +9,7 @@ Developed and maintained by the [Boston University Neurophotonics Center](https:
 
 ## Installation
 `pip install pysnirf2`
+
 pysnirf2 requires Python > 3.6
 
 # Features
