@@ -7,6 +7,8 @@ Dynamically generated Python library for reading, writing, and validating [Share
 
 Developed and maintained by the [Boston University Neurophotonics Center](https://www.bu.edu/neurophotonics/).
 
+## Installation
+`pip install pysnirf2`
 pysnirf2 requires Python > 3.6
 
 # Features
