@@ -388,9 +388,10 @@ class Snirf(Group):
         else:
             self._save(self._h.file)
 
-    def validate(self):
+    def validate(self) -> Tuple[bool, ValidationResult]:
         '''
-        Returns True, ValidationResult
+        Returns a bool representing the validity of the Snirf object and the
+        detailed output structure ValidationResult instance
         '''
         result = ValidationResult()
         self._validate(result)

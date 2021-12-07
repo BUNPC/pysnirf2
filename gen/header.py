@@ -10,6 +10,7 @@ import logging
 import termcolor
 import colorama
 from pysnirf2.__version__ import __version__ as __version__
+from typing import Tuple
 
 # Colored prints for validator
 if os.name == 'nt':

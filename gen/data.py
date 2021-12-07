@@ -23,9 +23,9 @@ Groups with these names will be exempt from warnings and attempt to load all Dat
 """
 UNSPECIFIED_DATASETS_OK = ['metaDataTags']
 
-TEMPLATE = 'pysnirf2.jinja'  # The name of the template file to use
-HEADER = 'header.py'  # The contents of this file are appended to the front of the template
-FOOTER = 'footer.py'  # The contents of the file and appended to the end of the file
+TEMPLATE = 'gen/pysnirf2.jinja'  # The name of the template file to use
+HEADER = 'gen/header.py'  # The contents of this file are appended to the front of the template
+FOOTER = 'gen/footer.py'  # The contents of the file and appended to the end of the file
 
 """
 These strings are used to identify the beginning and end of the table
