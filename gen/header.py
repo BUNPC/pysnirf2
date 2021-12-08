@@ -355,15 +355,23 @@ class ValidationResult:
     def _add(self, location, key):
         if key not in _CODES.keys():
             raise KeyError("Invalid code '" + key + "'")
-        if location not in self._locations:  # only one issue per HDF5 name
+        if location not in self:  # only one issue per HDF5 name
             issue = ValidationIssue(key, location)
             self._locations.append(location)
             self._issues.append(issue) 
         
     def __contains__(self, key):
         for issue in self._issues:
-            if issue.location is key:
+            if issue.location == key:
+                return True
+        return False
+        
+    def __getitem__(self, key):
+        for issue in self._issues:
+            if issue.location == key:
                 return issue
+        raise KeyError("'" + key + "' not in issues list")
+            
         
     def __repr__(self):
         return object.__repr__(self) + ' is_valid ' + str(self.is_valid()) 

@@ -4,12 +4,12 @@
 {% macro declare_members(NODE) %}
     {%- for CHILD in NODE.children %}
     {%- if TYPES.GROUP in CHILD.type %}
-    _{{ CHILD.name }} = AbsentGroup  # {{ CHILD.type }}
+    self._{{ CHILD.name }} = AbsentGroup  # {{ CHILD.type }}
     {% else  %}
-    _{{ CHILD.name }} = AbsentDataset  # {{ CHILD.type }}
+    self._{{ CHILD.name }} = AbsentDataset  # {{ CHILD.type }}
     {% endif -%}    
     {% endfor %}
-    _snirf_names = [{% for CHILD in NODE.children %}'{{ CHILD.name }}', {% endfor -%}]
+    self._snirf_names = [{% for CHILD in NODE.children %}'{{ CHILD.name }}', {% endfor -%}]
 {% endmacro %}
 {% macro init_members(NODE) %}
     self._indexed_groups = []
@@ -302,10 +302,9 @@
 {% for GROUP in GROUPS %}
 class {{ sentencecase(GROUP.name) -}}(Group):
 
-{{ declare_members(GROUP) }}
-
     def __init__(self, var, cfg: SnirfConfig):
         super().__init__(var, cfg)
+    {{ declare_members(GROUP) | indent }}
     {{ init_members(GROUP) | indent }}
 {{ gen_properties(GROUP) }}
 {{ gen_writer(GROUP) }}
@@ -316,10 +315,9 @@ class {{ sentencecase(GROUP.name) -}}(Group):
 {% for INDEXED_GROUP in INDEXED_GROUPS %}
 class {{ sentencecase(INDEXED_GROUP.name) -}}Element(Group):
 
-{{ declare_members(INDEXED_GROUP) }}
-
     def __init__(self, gid: h5py.h5g.GroupID, cfg: SnirfConfig):
         super().__init__(gid, cfg)
+    {{ declare_members(INDEXED_GROUP) | indent }}
     {{ init_members(INDEXED_GROUP) | indent }}
 {{ gen_properties(INDEXED_GROUP) }}
 {{ gen_writer(INDEXED_GROUP) }}
@@ -338,7 +336,6 @@ class {{ sentencecase(INDEXED_GROUP.name) -}}(IndexedGroup):
 class Snirf(Group):
     
     _name = '/'
-{{ declare_members(ROOT) }}
     
     # overload
     def __init__(self, *args, dynamic_loading: bool = False, logfile: bool = False):
@@ -366,6 +363,7 @@ class Snirf(Group):
             self._cfg.logger.info('Created Snirf object based on tempfile')
             path = None
             self._h = h5py.File(TemporaryFile(), 'w')
+    {{ declare_members(ROOT) | indent }}
     {{ init_members(ROOT) | indent }}
 {{ gen_properties(ROOT) }}
 {{ gen_writer(ROOT) }}
