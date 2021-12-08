@@ -259,9 +259,10 @@ class ValidationResult:
     ORganzies the result of the pysnirf2 validation routine like so:
     <ValidationResult>.is_valid(), <ValidationResult> = <Snirf>.validate()
     """
-    
-    _issues = []
-    _locations = []
+
+    def __init__(self):    
+        self._issues = []
+        self._locations = []
 
     def is_valid(self):
         """
