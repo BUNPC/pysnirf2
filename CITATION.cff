@@ -1,0 +1,14 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: pysnirf2
+message: Cite this software
+type: software
+authors:
+  - given-names: Stephen
+    family-names: Tucker
+    email: sstucker@bu.edu
+    affiliation: Boston University Neurophotonics Center
+title: "pysnirf2"
+date-released: 2021-12-7

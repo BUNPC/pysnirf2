@@ -1,11 +1,14 @@
 ![testing](https://github.com/BUNPC/pysnirf2/actions/workflows/test.yml/badge.svg)
-[![pypi](https://img.shields.io/badge/-pip%20install%20pysnirf2-yellow)](https://pypi.org/project/pysnirf2/)
+[![pypi](https://img.shields.io/badge/-pip%20install%20pysnirf2==0.3.0-yellow)](https://pypi.org/project/pysnirf2/)
 
 # pysnirf2 v0.3
 
 Dynamically generated Python library for reading, writing, and validating [Shared Near Infrared Spectroscopy Format (SNIRF) files](https://github.com/fNIRS/snirf).
 
 Developed and maintained by the [Boston University Neurophotonics Center](https://www.bu.edu/neurophotonics/).
+
+## Installation
+`pip install pysnirf2`
 
 pysnirf2 requires Python > 3.6
 
@@ -249,7 +252,7 @@ The full list of validation results `result.issues` can be explored programatica
 
 The interface and validator are generated via metacode that downloads and parses [the latest SNIRF specification](https://raw.githubusercontent.com/fNIRS/snirf/master/snirf_specification.md). 
 
-See [\gen](tree/main/gen) for details.
+See [\gen](https://github.com/BUNPC/pysnirf2/tree/main/gen) for details.
 
 
   
