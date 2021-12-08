@@ -48,7 +48,8 @@ if sys.version_info[0] < 3:
 _varlen_str_type = h5py.string_dtype(encoding='ascii', length=None)  # Length=None creates HDF5 variable length string
 _DTYPE_FLOAT32 = 'f4'
 _DTYPE_FLOAT64 = 'f8'
-_DTYPE_INT = 'i4'
+_DTYPE_INT32 = 'i4'
+_DTYPE_INT64 = 'i8'
 _DTYPE_FIXED_LEN_STR = 'S'  # Not sure how robust this is, but fixed length strings will always at least contain S
 _DTYPE_VAR_LEN_STR = 'O'  # Variable length string
 
@@ -91,7 +92,7 @@ def _create_dataset_string(file: h5py.File, name: str, data: str):
 
 
 def _create_dataset_int(file: h5py.File, name: str, data: int):
-    return file.create_dataset(name, dtype=_DTYPE_INT, data=int(data))
+    return file.create_dataset(name, dtype=_DTYPE_INT32, data=int(data))
 
 
 def _create_dataset_float(file: h5py.File, name: str, data: float):
@@ -105,7 +106,7 @@ def _create_dataset_string_array(file: h5py.File, name: str, data: np.ndarray):
 
 def _create_dataset_int_array(file: h5py.File, name: str, data: np.ndarray):
     array = np.array(data).astype(int)
-    return file.create_dataset(name, dtype=_DTYPE_INT, data=array)
+    return file.create_dataset(name, dtype=_DTYPE_INT32, data=array)
 
 
 def _create_dataset_float_array(file: h5py.File, name: str, data: np.ndarray):
@@ -126,20 +127,20 @@ def _read_dataset(h_dataset: h5py.Dataset):
     if h_dataset.size > 1:
         if _DTYPE_FIXED_LEN_STR in h_dataset.dtype or _DTYPE_VAR_LEN_STR in h_dataset.dtype.str:
             return _read_string_array(h_dataset)
-        elif _DTYPE_INT in h_dataset.dtype.str:
+        elif _DTYPE_INT32 in h_dataset.dtype.str or _DTYPE_INT64 in h_dataset.dtype.str:
             return _read_int_array(h_dataset)
         elif _DTYPE_FLOAT32 in h_dataset.dtype.str or _DTYPE_FLOAT64 in h_dataset.dtype.str:
             return _read_float_array(h_dataset)
     else:
         if _DTYPE_FIXED_LEN_STR in h_dataset.dtype.str or _DTYPE_VAR_LEN_STR in h_dataset.dtype.str:
             return _read_string(h_dataset)
-        elif _DTYPE_INT in h_dataset.dtype.str:
+        elif _DTYPE_INT32 in h_dataset.dtype.str or _DTYPE_INT64 in h_dataset.dtype.str:
             return _read_int(h_dataset)
         elif _DTYPE_FLOAT32 in h_dataset.dtype.str or _DTYPE_FLOAT64 in h_dataset.dtype.str:
             return _read_float(h_dataset)
     raise TypeError("Dataset dtype='" + str(h_dataset.dtype)
                     + "' not recognized. Expecting dtype to contain one of these: "
-                    + str([_DTYPE_FIXED_LEN_STR, _DTYPE_VAR_LEN_STR, _DTYPE_INT, _DTYPE_FLOAT32, _DTYPE_FLOAT64]))
+                    + str([_DTYPE_FIXED_LEN_STR, _DTYPE_VAR_LEN_STR, _DTYPE_INT32, _DTYPE_INT64, _DTYPE_FLOAT32, _DTYPE_FLOAT64]))
 
 
 def _read_string(dataset: h5py.Dataset):
@@ -225,6 +226,7 @@ _CODES = {
         'UNRECOGNIZED_DATASET': (17, 2, 'An unspecified Dataset is a part of the file in an unexpected place'),
         'UNRECOGNIZED_DATATYPELABEL': (18, 2, 'measurementList/dataTypeLabel is not one of the recognized values listed in the Appendix'),
         'UNRECOGNIZED_DATATYPE': (19, 2, 'measurementList/dataType is not one of the recognized values listed in the Appendix'),
+        'INT_64': (25, 2, 'The SNIRF specification limits users to the use of 32 bit native integer types'),
         'FIXED_LENGTH_STRING': (20, 2, 'The use of fixed-length strings is discouraged and may be banned by a future spec version. Rewrite this file with pysnirf2 to use variable length strings'),
         # Info (Severity 1)
         'OPTIONAL_GROUP_MISSING': (21, 1, 'Missing an optional Group in this location'),
@@ -259,9 +261,10 @@ class ValidationResult:
     ORganzies the result of the pysnirf2 validation routine like so:
     <ValidationResult>.is_valid(), <ValidationResult> = <Snirf>.validate()
     """
-    
-    _issues = []
-    _locations = []
+
+    def __init__(self):    
+        self._issues = []
+        self._locations = []
 
     def is_valid(self):
         """
@@ -355,15 +358,23 @@ class ValidationResult:
     def _add(self, location, key):
         if key not in _CODES.keys():
             raise KeyError("Invalid code '" + key + "'")
-        if location not in self._locations:  # only one issue per HDF5 name
+        if location not in self:  # only one issue per HDF5 name
             issue = ValidationIssue(key, location)
             self._locations.append(location)
             self._issues.append(issue) 
         
     def __contains__(self, key):
         for issue in self._issues:
-            if issue.location is key:
+            if issue.location == key:
+                return True
+        return False
+        
+    def __getitem__(self, key):
+        for issue in self._issues:
+            if issue.location == key:
                 return issue
+        raise KeyError("'" + key + "' not in issues list")
+            
         
     def __repr__(self):
         return object.__repr__(self) + ' is_valid ' + str(self.is_valid()) 
@@ -390,8 +401,10 @@ def _validate_int(dataset: h5py.Dataset):
         raise TypeError("'dataset' must be type h5py.Dataset")
     if dataset.size > 1 or dataset.ndim > 0:
         return 'INVALID_DATASET_SHAPE'
-    if _DTYPE_INT in dataset.dtype.str:
+    if _DTYPE_INT32 in dataset.dtype.str:
         return 'OK'
+    if _DTYPE_INT64 in dataset.dtype.str:
+        return 'INT_64'
     else:
         return 'INVALID_DATASET_TYPE'
 
@@ -425,8 +438,10 @@ def _validate_int_array(dataset: h5py.Dataset, ndims=[1]):
         raise TypeError("'dataset' must be type h5py.Dataset")
     if dataset.ndim not in ndims:
         return 'INVALID_DATASET_SHAPE'
-    if _DTYPE_INT in dataset.dtype.str:
+    if _DTYPE_INT32 in dataset.dtype.str:
         return 'OK'
+    if _DTYPE_INT64 in dataset.dtype.str:
+        return 'INT_64'
     else:
         return 'INVALID_DATASET_TYPE'
 
@@ -777,23 +792,22 @@ class IndexedGroup(MutableSequence, ABC):
         self._order_names(h=h)  # Enforce order in the group names
 
 
-# generated by sstucker on 2021-12-07
+# generated by sstucker on 2021-12-08
 # version v1.0.1-development SNIRF specification parsed from https://raw.githubusercontent.com/fNIRS/snirf/master/snirf_specification.md
 
 
 class MetaDataTags(Group):
 
-    _SubjectID = AbsentDataset  # "s"*
-    _MeasurementDate = AbsentDataset  # "s"*
-    _MeasurementTime = AbsentDataset  # "s"*
-    _LengthUnit = AbsentDataset  # "s"*
-    _TimeUnit = AbsentDataset  # "s"*
-    _FrequencyUnit = AbsentDataset  # "s"*
-    _snirf_names = ['SubjectID', 'MeasurementDate', 'MeasurementTime', 'LengthUnit', 'TimeUnit', 'FrequencyUnit', ]
-
-
     def __init__(self, var, cfg: SnirfConfig):
         super().__init__(var, cfg)
+        self._SubjectID = AbsentDataset  # "s"*
+        self._MeasurementDate = AbsentDataset  # "s"*
+        self._MeasurementTime = AbsentDataset  # "s"*
+        self._LengthUnit = AbsentDataset  # "s"*
+        self._TimeUnit = AbsentDataset  # "s"*
+        self._FrequencyUnit = AbsentDataset  # "s"*
+        self._snirf_names = ['SubjectID', 'MeasurementDate', 'MeasurementTime', 'LengthUnit', 'TimeUnit', 'FrequencyUnit', ]
+
         self._indexed_groups = []
         if 'SubjectID' in self._h:
             if not self._cfg.dynamic_loading:
@@ -1134,29 +1148,28 @@ class MetaDataTags(Group):
 
 class Probe(Group):
 
-    _wavelengths = AbsentDataset  # [<f>,...]*
-    _wavelengthsEmission = AbsentDataset  # [<f>,...]
-    _sourcePos2D = AbsentDataset  # [[<f>,...]]*1
-    _sourcePos3D = AbsentDataset  # [[<f>,...]]*1
-    _detectorPos2D = AbsentDataset  # [[<f>,...]]*2
-    _detectorPos3D = AbsentDataset  # [[<f>,...]]*2
-    _frequencies = AbsentDataset  # [<f>,...]
-    _timeDelays = AbsentDataset  # [<f>,...]
-    _timeDelayWidths = AbsentDataset  # [<f>,...]
-    _momentOrders = AbsentDataset  # [<f>,...]
-    _correlationTimeDelays = AbsentDataset  # [<f>,...]
-    _correlationTimeDelayWidths = AbsentDataset  # [<f>,...]
-    _sourceLabels = AbsentDataset  # ["s",...]
-    _detectorLabels = AbsentDataset  # ["s",...]
-    _landmarkPos2D = AbsentDataset  # [[<f>,...]]
-    _landmarkPos3D = AbsentDataset  # [[<f>,...]]
-    _landmarkLabels = AbsentDataset  # ["s",...]
-    _useLocalIndex = AbsentDataset  # <i>
-    _snirf_names = ['wavelengths', 'wavelengthsEmission', 'sourcePos2D', 'sourcePos3D', 'detectorPos2D', 'detectorPos3D', 'frequencies', 'timeDelays', 'timeDelayWidths', 'momentOrders', 'correlationTimeDelays', 'correlationTimeDelayWidths', 'sourceLabels', 'detectorLabels', 'landmarkPos2D', 'landmarkPos3D', 'landmarkLabels', 'useLocalIndex', ]
-
-
     def __init__(self, var, cfg: SnirfConfig):
         super().__init__(var, cfg)
+        self._wavelengths = AbsentDataset  # [<f>,...]*
+        self._wavelengthsEmission = AbsentDataset  # [<f>,...]
+        self._sourcePos2D = AbsentDataset  # [[<f>,...]]*1
+        self._sourcePos3D = AbsentDataset  # [[<f>,...]]*1
+        self._detectorPos2D = AbsentDataset  # [[<f>,...]]*2
+        self._detectorPos3D = AbsentDataset  # [[<f>,...]]*2
+        self._frequencies = AbsentDataset  # [<f>,...]
+        self._timeDelays = AbsentDataset  # [<f>,...]
+        self._timeDelayWidths = AbsentDataset  # [<f>,...]
+        self._momentOrders = AbsentDataset  # [<f>,...]
+        self._correlationTimeDelays = AbsentDataset  # [<f>,...]
+        self._correlationTimeDelayWidths = AbsentDataset  # [<f>,...]
+        self._sourceLabels = AbsentDataset  # ["s",...]
+        self._detectorLabels = AbsentDataset  # ["s",...]
+        self._landmarkPos2D = AbsentDataset  # [[<f>,...]]
+        self._landmarkPos3D = AbsentDataset  # [[<f>,...]]
+        self._landmarkLabels = AbsentDataset  # ["s",...]
+        self._useLocalIndex = AbsentDataset  # <i>
+        self._snirf_names = ['wavelengths', 'wavelengthsEmission', 'sourcePos2D', 'sourcePos3D', 'detectorPos2D', 'detectorPos3D', 'frequencies', 'timeDelays', 'timeDelayWidths', 'momentOrders', 'correlationTimeDelays', 'correlationTimeDelayWidths', 'sourceLabels', 'detectorLabels', 'landmarkPos2D', 'landmarkPos3D', 'landmarkLabels', 'useLocalIndex', ]
+
         self._indexed_groups = []
         if 'wavelengths' in self._h:
             if not self._cfg.dynamic_loading:
@@ -2079,16 +2092,15 @@ class Probe(Group):
 
 class NirsElement(Group):
 
-    _metaDataTags = AbsentGroup  # {.}*
-    _data = AbsentDataset  # {i}*
-    _stim = AbsentDataset  # {i}
-    _probe = AbsentGroup  # {.}*
-    _aux = AbsentDataset  # {i}
-    _snirf_names = ['metaDataTags', 'data', 'stim', 'probe', 'aux', ]
-
-
     def __init__(self, gid: h5py.h5g.GroupID, cfg: SnirfConfig):
         super().__init__(gid, cfg)
+        self._metaDataTags = AbsentGroup  # {.}*
+        self._data = AbsentDataset  # {i}*
+        self._stim = AbsentDataset  # {i}
+        self._probe = AbsentGroup  # {.}*
+        self._aux = AbsentDataset  # {i}
+        self._snirf_names = ['metaDataTags', 'data', 'stim', 'probe', 'aux', ]
+
         self._indexed_groups = []
         if 'metaDataTags' in self._h:
             self._metaDataTags = MetaDataTags(self._h['metaDataTags'].id, self._cfg)  # Group
@@ -2259,14 +2271,13 @@ class Nirs(IndexedGroup):
 
 class DataElement(Group):
 
-    _dataTimeSeries = AbsentDataset  # [[<f>,...]]*
-    _time = AbsentDataset  # [<f>,...]*
-    _measurementList = AbsentDataset  # {i}*
-    _snirf_names = ['dataTimeSeries', 'time', 'measurementList', ]
-
-
     def __init__(self, gid: h5py.h5g.GroupID, cfg: SnirfConfig):
         super().__init__(gid, cfg)
+        self._dataTimeSeries = AbsentDataset  # [[<f>,...]]*
+        self._time = AbsentDataset  # [<f>,...]*
+        self._measurementList = AbsentDataset  # {i}*
+        self._snirf_names = ['dataTimeSeries', 'time', 'measurementList', ]
+
         self._indexed_groups = []
         if 'dataTimeSeries' in self._h:
             if not self._cfg.dynamic_loading:
@@ -2429,25 +2440,24 @@ class Data(IndexedGroup):
 
 class MeasurementListElement(Group):
 
-    _sourceIndex = AbsentDataset  # <i>*
-    _detectorIndex = AbsentDataset  # <i>*
-    _wavelengthIndex = AbsentDataset  # <i>*
-    _wavelengthActual = AbsentDataset  # <f>
-    _wavelengthEmissionActual = AbsentDataset  # <f>
-    _dataType = AbsentDataset  # <i>*
-    _dataUnit = AbsentDataset  # "s"
-    _dataTypeLabel = AbsentDataset  # "s"
-    _dataTypeIndex = AbsentDataset  # <i>*
-    _sourcePower = AbsentDataset  # <f>
-    _detectorGain = AbsentDataset  # <f>
-    _moduleIndex = AbsentDataset  # <i>
-    _sourceModuleIndex = AbsentDataset  # <i>
-    _detectorModuleIndex = AbsentDataset  # <i>
-    _snirf_names = ['sourceIndex', 'detectorIndex', 'wavelengthIndex', 'wavelengthActual', 'wavelengthEmissionActual', 'dataType', 'dataUnit', 'dataTypeLabel', 'dataTypeIndex', 'sourcePower', 'detectorGain', 'moduleIndex', 'sourceModuleIndex', 'detectorModuleIndex', ]
-
-
     def __init__(self, gid: h5py.h5g.GroupID, cfg: SnirfConfig):
         super().__init__(gid, cfg)
+        self._sourceIndex = AbsentDataset  # <i>*
+        self._detectorIndex = AbsentDataset  # <i>*
+        self._wavelengthIndex = AbsentDataset  # <i>*
+        self._wavelengthActual = AbsentDataset  # <f>
+        self._wavelengthEmissionActual = AbsentDataset  # <f>
+        self._dataType = AbsentDataset  # <i>*
+        self._dataUnit = AbsentDataset  # "s"
+        self._dataTypeLabel = AbsentDataset  # "s"
+        self._dataTypeIndex = AbsentDataset  # <i>*
+        self._sourcePower = AbsentDataset  # <f>
+        self._detectorGain = AbsentDataset  # <f>
+        self._moduleIndex = AbsentDataset  # <i>
+        self._sourceModuleIndex = AbsentDataset  # <i>
+        self._detectorModuleIndex = AbsentDataset  # <i>
+        self._snirf_names = ['sourceIndex', 'detectorIndex', 'wavelengthIndex', 'wavelengthActual', 'wavelengthEmissionActual', 'dataType', 'dataUnit', 'dataTypeLabel', 'dataTypeIndex', 'sourcePower', 'detectorGain', 'moduleIndex', 'sourceModuleIndex', 'detectorModuleIndex', ]
+
         self._indexed_groups = []
         if 'sourceIndex' in self._h:
             if not self._cfg.dynamic_loading:
@@ -3218,14 +3228,13 @@ class MeasurementList(IndexedGroup):
 
 class StimElement(Group):
 
-    _name = AbsentDataset  # "s"+
-    _data = AbsentDataset  # [[<f>,...]]+
-    _dataLabels = AbsentDataset  # ["s",...]
-    _snirf_names = ['name', 'data', 'dataLabels', ]
-
-
     def __init__(self, gid: h5py.h5g.GroupID, cfg: SnirfConfig):
         super().__init__(gid, cfg)
+        self._name = AbsentDataset  # "s"+
+        self._data = AbsentDataset  # [[<f>,...]]+
+        self._dataLabels = AbsentDataset  # ["s",...]
+        self._snirf_names = ['name', 'data', 'dataLabels', ]
+
         self._indexed_groups = []
         if 'name' in self._h:
             if not self._cfg.dynamic_loading:
@@ -3415,16 +3424,15 @@ class Stim(IndexedGroup):
 
 class AuxElement(Group):
 
-    _name = AbsentDataset  # "s"+
-    _dataTimeSeries = AbsentDataset  # [<f>,...]+
-    _dataUnit = AbsentDataset  # "s"
-    _time = AbsentDataset  # [<f>,...]+
-    _timeOffset = AbsentDataset  # [<f>,...]
-    _snirf_names = ['name', 'dataTimeSeries', 'dataUnit', 'time', 'timeOffset', ]
-
-
     def __init__(self, gid: h5py.h5g.GroupID, cfg: SnirfConfig):
         super().__init__(gid, cfg)
+        self._name = AbsentDataset  # "s"+
+        self._dataTimeSeries = AbsentDataset  # [<f>,...]+
+        self._dataUnit = AbsentDataset  # "s"
+        self._time = AbsentDataset  # [<f>,...]+
+        self._timeOffset = AbsentDataset  # [<f>,...]
+        self._snirf_names = ['name', 'dataTimeSeries', 'dataUnit', 'time', 'timeOffset', ]
+
         self._indexed_groups = []
         if 'name' in self._h:
             if not self._cfg.dynamic_loading:
@@ -3713,10 +3721,6 @@ class Aux(IndexedGroup):
 class Snirf(Group):
     
     _name = '/'
-    _formatVersion = AbsentDataset  # "s"*
-    _nirs = AbsentDataset  # {i}*
-    _snirf_names = ['formatVersion', 'nirs', ]
-
     
     # overload
     def __init__(self, *args, dynamic_loading: bool = False, logfile: bool = False):
@@ -3744,6 +3748,10 @@ class Snirf(Group):
             self._cfg.logger.info('Created Snirf object based on tempfile')
             path = None
             self._h = h5py.File(TemporaryFile(), 'w')
+        self._formatVersion = AbsentDataset  # "s"*
+        self._nirs = AbsentDataset  # {i}*
+        self._snirf_names = ['formatVersion', 'nirs', ]
+
         self._indexed_groups = []
         if 'formatVersion' in self._h:
             if not self._cfg.dynamic_loading:
@@ -3915,8 +3923,9 @@ class StimElement(StimElement):
     def _validate(self, result: ValidationResult):
         super()._validate(result)
         
-        if np.shape(self.data)[1] != len(self.dataLabels):
-            result._add(self.location + '/dataLabels', 'INVALID_STIM_DATALABELS')        
+        if all(attr is not None for attr in [self.data, self.dataLabels]):
+            if np.shape(self.data)[1] != len(self.dataLabels):
+                result._add(self.location + '/dataLabels', 'INVALID_STIM_DATALABELS')        
 
 
 class Stim(Stim):
@@ -3928,8 +3937,9 @@ class AuxElement(AuxElement):
     def _validate(self, result: ValidationResult):
         super()._validate(result)
         
-        if len(self.time) != len(self.dataTimeSeries):
-            result._add(self.location + '/time', 'INVALID_TIME')
+        if all(attr is not None for attr in [self.time, self.dataTimeSeries]):
+            if len(self.time) != len(self.dataTimeSeries):
+                result._add(self.location + '/time', 'INVALID_TIME')
 
 
 class Aux(Aux):
@@ -3939,19 +3949,48 @@ class Aux(Aux):
 class DataElement(DataElement):
     
     def _validate(self, result: ValidationResult):
-        super()._validate(result)
+        super()._validate(result)  
         
-        if len(self.time) != np.shape(self.dataTimeSeries)[0]:
-            result._add(self.location + '/time', 'INVALID_TIME')
-        
-        print(len(self.measurementList), np.shape(self.dataTimeSeries))
-        if len(self.measurementList) != np.shape(self.dataTimeSeries)[1]:
-            result._add(self.location, 'INVALID_MEASUREMENTLIST')
+        if all(attr is not None for attr in [self.time, self.dataTimeSeries]):
+            if len(self.time) != np.shape(self.dataTimeSeries)[0]:
+                result._add(self.location + '/time', 'INVALID_TIME')
+            
+            if len(self.measurementList) != np.shape(self.dataTimeSeries)[1]:
+                result._add(self.location, 'INVALID_MEASUREMENTLIST')
 
 
 class Data(Data):
     _element = DataElement
+
+
+class Probe(Probe):
     
+    def _validate(self, result: ValidationResult):
+        
+        s2 = self.sourcePos2D is not None
+        d2 = self.detectorPos2D is not None
+        s3 = self.sourcePos3D is not None
+        d3 = self.detectorPos3D is not None
+        if (s2 and d2):
+            result._add(self.location + '/sourcePos2D', 'OK')
+            result._add(self.location + '/detectorPos2D', 'OK')
+            result._add(self.location + '/sourcePos3D', 'OPTIONAL_DATASET_MISSING')
+            result._add(self.location + '/detectorPos3D', 'OPTIONAL_DATASET_MISSING')
+        elif (s3 and d3):
+            result._add(self.location + '/sourcePos2D', 'OPTIONAL_DATASET_MISSING')
+            result._add(self.location + '/detectorPos2D', 'OPTIONAL_DATASET_MISSING')
+            result._add(self.location + '/sourcePos3D', 'OK')
+            result._add(self.location + '/detectorPos3D', 'OK')
+        else:
+            result._add(self.location + '/sourcePos2D', ['REQUIRED_DATASET_MISSING', 'OK'][int(s2)])
+            result._add(self.location + '/detectorPos2D', ['REQUIRED_DATASET_MISSING', 'OK'][int(d2)])
+            result._add(self.location + '/sourcePos3D', ['REQUIRED_DATASET_MISSING', 'OK'][int(s3)])
+            result._add(self.location + '/detectorPos3D', ['REQUIRED_DATASET_MISSING', 'OK'][int(d3)])
+        
+        # The above will supersede the errors from the template code because
+        # duplicate names cannot be added to the issues list
+        super()._validate(result)
+
     
 class Snirf(Snirf):
     

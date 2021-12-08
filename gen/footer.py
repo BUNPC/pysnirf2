@@ -24,8 +24,9 @@ class StimElement(StimElement):
     def _validate(self, result: ValidationResult):
         super()._validate(result)
         
-        if np.shape(self.data)[1] != len(self.dataLabels):
-            result._add(self.location + '/dataLabels', 'INVALID_STIM_DATALABELS')        
+        if all(attr is not None for attr in [self.data, self.dataLabels]):
+            if np.shape(self.data)[1] != len(self.dataLabels):
+                result._add(self.location + '/dataLabels', 'INVALID_STIM_DATALABELS')        
 
 
 class Stim(Stim):
@@ -37,8 +38,9 @@ class AuxElement(AuxElement):
     def _validate(self, result: ValidationResult):
         super()._validate(result)
         
-        if len(self.time) != len(self.dataTimeSeries):
-            result._add(self.location + '/time', 'INVALID_TIME')
+        if all(attr is not None for attr in [self.time, self.dataTimeSeries]):
+            if len(self.time) != len(self.dataTimeSeries):
+                result._add(self.location + '/time', 'INVALID_TIME')
 
 
 class Aux(Aux):
@@ -48,19 +50,48 @@ class Aux(Aux):
 class DataElement(DataElement):
     
     def _validate(self, result: ValidationResult):
-        super()._validate(result)
+        super()._validate(result)  
         
-        if len(self.time) != np.shape(self.dataTimeSeries)[0]:
-            result._add(self.location + '/time', 'INVALID_TIME')
-        
-        print(len(self.measurementList), np.shape(self.dataTimeSeries))
-        if len(self.measurementList) != np.shape(self.dataTimeSeries)[1]:
-            result._add(self.location, 'INVALID_MEASUREMENTLIST')
+        if all(attr is not None for attr in [self.time, self.dataTimeSeries]):
+            if len(self.time) != np.shape(self.dataTimeSeries)[0]:
+                result._add(self.location + '/time', 'INVALID_TIME')
+            
+            if len(self.measurementList) != np.shape(self.dataTimeSeries)[1]:
+                result._add(self.location, 'INVALID_MEASUREMENTLIST')
 
 
 class Data(Data):
     _element = DataElement
+
+
+class Probe(Probe):
     
+    def _validate(self, result: ValidationResult):
+        
+        s2 = self.sourcePos2D is not None
+        d2 = self.detectorPos2D is not None
+        s3 = self.sourcePos3D is not None
+        d3 = self.detectorPos3D is not None
+        if (s2 and d2):
+            result._add(self.location + '/sourcePos2D', 'OK')
+            result._add(self.location + '/detectorPos2D', 'OK')
+            result._add(self.location + '/sourcePos3D', 'OPTIONAL_DATASET_MISSING')
+            result._add(self.location + '/detectorPos3D', 'OPTIONAL_DATASET_MISSING')
+        elif (s3 and d3):
+            result._add(self.location + '/sourcePos2D', 'OPTIONAL_DATASET_MISSING')
+            result._add(self.location + '/detectorPos2D', 'OPTIONAL_DATASET_MISSING')
+            result._add(self.location + '/sourcePos3D', 'OK')
+            result._add(self.location + '/detectorPos3D', 'OK')
+        else:
+            result._add(self.location + '/sourcePos2D', ['REQUIRED_DATASET_MISSING', 'OK'][int(s2)])
+            result._add(self.location + '/detectorPos2D', ['REQUIRED_DATASET_MISSING', 'OK'][int(d2)])
+            result._add(self.location + '/sourcePos3D', ['REQUIRED_DATASET_MISSING', 'OK'][int(s3)])
+            result._add(self.location + '/detectorPos3D', ['REQUIRED_DATASET_MISSING', 'OK'][int(d3)])
+        
+        # The above will supersede the errors from the template code because
+        # duplicate names cannot be added to the issues list
+        super()._validate(result)
+
     
 class Snirf(Snirf):
     

@@ -48,7 +48,8 @@ if sys.version_info[0] < 3:
 _varlen_str_type = h5py.string_dtype(encoding='ascii', length=None)  # Length=None creates HDF5 variable length string
 _DTYPE_FLOAT32 = 'f4'
 _DTYPE_FLOAT64 = 'f8'
-_DTYPE_INT = 'i4'
+_DTYPE_INT32 = 'i4'
+_DTYPE_INT64 = 'i8'
 _DTYPE_FIXED_LEN_STR = 'S'  # Not sure how robust this is, but fixed length strings will always at least contain S
 _DTYPE_VAR_LEN_STR = 'O'  # Variable length string
 
@@ -91,7 +92,7 @@ def _create_dataset_string(file: h5py.File, name: str, data: str):
 
 
 def _create_dataset_int(file: h5py.File, name: str, data: int):
-    return file.create_dataset(name, dtype=_DTYPE_INT, data=int(data))
+    return file.create_dataset(name, dtype=_DTYPE_INT32, data=int(data))
 
 
 def _create_dataset_float(file: h5py.File, name: str, data: float):
@@ -105,7 +106,7 @@ def _create_dataset_string_array(file: h5py.File, name: str, data: np.ndarray):
 
 def _create_dataset_int_array(file: h5py.File, name: str, data: np.ndarray):
     array = np.array(data).astype(int)
-    return file.create_dataset(name, dtype=_DTYPE_INT, data=array)
+    return file.create_dataset(name, dtype=_DTYPE_INT32, data=array)
 
 
 def _create_dataset_float_array(file: h5py.File, name: str, data: np.ndarray):
@@ -126,20 +127,20 @@ def _read_dataset(h_dataset: h5py.Dataset):
     if h_dataset.size > 1:
         if _DTYPE_FIXED_LEN_STR in h_dataset.dtype or _DTYPE_VAR_LEN_STR in h_dataset.dtype.str:
             return _read_string_array(h_dataset)
-        elif _DTYPE_INT in h_dataset.dtype.str:
+        elif _DTYPE_INT32 in h_dataset.dtype.str or _DTYPE_INT64 in h_dataset.dtype.str:
             return _read_int_array(h_dataset)
         elif _DTYPE_FLOAT32 in h_dataset.dtype.str or _DTYPE_FLOAT64 in h_dataset.dtype.str:
             return _read_float_array(h_dataset)
     else:
         if _DTYPE_FIXED_LEN_STR in h_dataset.dtype.str or _DTYPE_VAR_LEN_STR in h_dataset.dtype.str:
             return _read_string(h_dataset)
-        elif _DTYPE_INT in h_dataset.dtype.str:
+        elif _DTYPE_INT32 in h_dataset.dtype.str or _DTYPE_INT64 in h_dataset.dtype.str:
             return _read_int(h_dataset)
         elif _DTYPE_FLOAT32 in h_dataset.dtype.str or _DTYPE_FLOAT64 in h_dataset.dtype.str:
             return _read_float(h_dataset)
     raise TypeError("Dataset dtype='" + str(h_dataset.dtype)
                     + "' not recognized. Expecting dtype to contain one of these: "
-                    + str([_DTYPE_FIXED_LEN_STR, _DTYPE_VAR_LEN_STR, _DTYPE_INT, _DTYPE_FLOAT32, _DTYPE_FLOAT64]))
+                    + str([_DTYPE_FIXED_LEN_STR, _DTYPE_VAR_LEN_STR, _DTYPE_INT32, _DTYPE_INT64, _DTYPE_FLOAT32, _DTYPE_FLOAT64]))
 
 
 def _read_string(dataset: h5py.Dataset):
@@ -225,6 +226,7 @@ _CODES = {
         'UNRECOGNIZED_DATASET': (17, 2, 'An unspecified Dataset is a part of the file in an unexpected place'),
         'UNRECOGNIZED_DATATYPELABEL': (18, 2, 'measurementList/dataTypeLabel is not one of the recognized values listed in the Appendix'),
         'UNRECOGNIZED_DATATYPE': (19, 2, 'measurementList/dataType is not one of the recognized values listed in the Appendix'),
+        'INT_64': (25, 2, 'The SNIRF specification limits users to the use of 32 bit native integer types'),
         'FIXED_LENGTH_STRING': (20, 2, 'The use of fixed-length strings is discouraged and may be banned by a future spec version. Rewrite this file with pysnirf2 to use variable length strings'),
         # Info (Severity 1)
         'OPTIONAL_GROUP_MISSING': (21, 1, 'Missing an optional Group in this location'),
@@ -259,9 +261,10 @@ class ValidationResult:
     ORganzies the result of the pysnirf2 validation routine like so:
     <ValidationResult>.is_valid(), <ValidationResult> = <Snirf>.validate()
     """
-    
-    _issues = []
-    _locations = []
+
+    def __init__(self):    
+        self._issues = []
+        self._locations = []
 
     def is_valid(self):
         """
@@ -355,15 +358,23 @@ class ValidationResult:
     def _add(self, location, key):
         if key not in _CODES.keys():
             raise KeyError("Invalid code '" + key + "'")
-        if location not in self._locations:  # only one issue per HDF5 name
+        if location not in self:  # only one issue per HDF5 name
             issue = ValidationIssue(key, location)
             self._locations.append(location)
             self._issues.append(issue) 
         
     def __contains__(self, key):
         for issue in self._issues:
-            if issue.location is key:
+            if issue.location == key:
+                return True
+        return False
+        
+    def __getitem__(self, key):
+        for issue in self._issues:
+            if issue.location == key:
                 return issue
+        raise KeyError("'" + key + "' not in issues list")
+            
         
     def __repr__(self):
         return object.__repr__(self) + ' is_valid ' + str(self.is_valid()) 
@@ -390,8 +401,10 @@ def _validate_int(dataset: h5py.Dataset):
         raise TypeError("'dataset' must be type h5py.Dataset")
     if dataset.size > 1 or dataset.ndim > 0:
         return 'INVALID_DATASET_SHAPE'
-    if _DTYPE_INT in dataset.dtype.str:
+    if _DTYPE_INT32 in dataset.dtype.str:
         return 'OK'
+    if _DTYPE_INT64 in dataset.dtype.str:
+        return 'INT_64'
     else:
         return 'INVALID_DATASET_TYPE'
 
@@ -425,8 +438,10 @@ def _validate_int_array(dataset: h5py.Dataset, ndims=[1]):
         raise TypeError("'dataset' must be type h5py.Dataset")
     if dataset.ndim not in ndims:
         return 'INVALID_DATASET_SHAPE'
-    if _DTYPE_INT in dataset.dtype.str:
+    if _DTYPE_INT32 in dataset.dtype.str:
         return 'OK'
+    if _DTYPE_INT64 in dataset.dtype.str:
+        return 'INT_64'
     else:
         return 'INVALID_DATASET_TYPE'
 
