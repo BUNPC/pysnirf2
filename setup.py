@@ -77,6 +77,8 @@ setup(
         'numpy',
         'setuptools',
         'pip',
+        'termcolor',
+        'colorama',
     ],
     url='https://github.com/BUNPC/pysnirf2',
     packages=find_packages(exclude=('tests', 'gen')),
