@@ -66,6 +66,9 @@
 {% for CHILD in NODE.children %}
     @property
     def {{ CHILD.name }}(self):
+        """
+        {{ CHILD.description | indent(8) }}
+        """
     {% if TYPES.INDEXED_GROUP in CHILD.type %}
         return self._{{ CHILD.name }}
     {% elif TYPES.GROUP in CHILD.type %}
