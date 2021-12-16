@@ -7,7 +7,8 @@ import getpass
 import os
 import sys
 
-from data import *
+from gen.data import *
+from pysnirf2 import __version__ as __version__
 
 """
 Generates SNIRF interface and validator from the summary table of the specification
@@ -15,6 +16,10 @@ hosted at SPEC_SRC.
 """
 
 if __name__ == '__main__':
+    
+    print('-------------------------------------')
+    print('pysnirf2 generation script v' + __version__)
+    print('-------------------------------------')
     
     local_spec = SPEC_SRC.split('/')[-1].split('.')[0] + '_retrieved_' + datetime.now().strftime('%d_%m_%y') + '.txt'
     
@@ -69,20 +74,30 @@ if __name__ == '__main__':
     
     # Parse headings in spec for complete HDF style locations with which to build tree
     definitions = unidecode(text).split(DEFINITIONS_DELIM_START)[1].split(DEFINITIONS_DELIM_END)[0]
-    lines = definitions.split('\n')
-    while '' in lines:
-        lines.remove('')
+    definitions_lines = definitions.split('\n')
+    # while '' in definitions_lines:
+    #     definitions_lines.remove('')
         
-    # Create list of hdf5 names ("locations") by assuming each follows a '####' header character
+    # Create list of hdf5 names ("locations") by assuming each follows a '####' header character in the definitions section
     locations = []
-    for line in lines:
+    descriptions = []
+    for i, line in enumerate(definitions_lines):
         line = line.replace(' ', '')
         if line.startswith('####'):
             locations.append(line.replace('`', '').replace('#', '').replace(',', ''))
-    
+            description_lines = []
+            j = i + 4
+            while not definitions_lines[j].startswith('####'):
+                description_lines.append(definitions_lines[j])
+                j += 1
+                if j >= len(definitions_lines):
+                    break
+            descriptions.append('\n'.join(description_lines))
+                
     # Create flat list of all nodes
     flat = []
 
+    print('Found', len(descriptions), 'descriptions...')
     print('Found', len(locations), 'locations...')
     
     # Write locations to file
@@ -94,10 +109,10 @@ if __name__ == '__main__':
     print('Wrote to locations.txt')
     
     
-    if len(locations) != len(type_codes):
+    if len(locations) != len(type_codes) or len(locations) != len(descriptions):
         sys.exit('Parsed ' + str(len(type_codes)) + ' type codes from the summary table but '
-                 + str(len(locations)) + ' names from the definitions: the specification hosted at '
-                 + SPEC_SRC +' was parsed incorrectly. Try adjusting the delimiters and then debug the parsing code (gen.py).')
+                 + str(len(locations)) + ' names from the definitions and ' + str(len(descriptions))
+                 + ' descriptions: the specification hosted at ' + SPEC_SRC +' was parsed incorrectly. Try adjusting the delimiters and then debug the parsing code (gen.py).')
     
     # Append root (flat will have 1 extra element compared to locations)
     flat.append({
@@ -109,7 +124,7 @@ if __name__ == '__main__':
                 'required': False
                 })
     
-    for i, location in enumerate(locations):
+    for i, (location, description) in enumerate(zip(locations, descriptions)):
             type_code = type_codes[i]
             name = location.split('/')[-1].split('(')[0]  # Remove (i), (j)
             parent = location.split('/')[-2].split('(')[0]  # Remove (i), (j)
@@ -122,6 +137,7 @@ if __name__ == '__main__':
                 flat.append({
                             'name': name,
                             'location': location,
+                            'description': description,
                             'parent': parent,
                             'type': type_code,
                             'children': [],
