@@ -25,7 +25,7 @@ jobs:
           pip install -r requirements.txt
           pip install lazydocs
       - name: Generate documentation
-        run: lazydocs pysnirf2/pysnirf2.py docs
+        run: lazydocs ./pysnirf2/pysnirf2.py docs
       - name: Commit
         run: |
           echo ${{ github.ref }}
