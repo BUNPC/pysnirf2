@@ -66,8 +66,11 @@
 {% for CHILD in NODE.children %}
     @property
     def {{ CHILD.name }}(self):
-        """
+        """    
         {{ CHILD.description | indent(8) }}
+        
+        If dynamic_loading=True, the data is loaded from the SNIRF file only
+        when accessed through the getter
         """
     {% if TYPES.INDEXED_GROUP in CHILD.type %}
         return self._{{ CHILD.name }}
@@ -304,7 +307,9 @@
 
 {% for GROUP in GROUPS %}
 class {{ sentencecase(GROUP.name) -}}(Group):
-
+    """
+    {{ GROUP.description | indent }}
+    """
     def __init__(self, var, cfg: SnirfConfig):
         super().__init__(var, cfg)
     {{ declare_members(GROUP) | indent }}
@@ -317,7 +322,9 @@ class {{ sentencecase(GROUP.name) -}}(Group):
 {% endfor %}
 {% for INDEXED_GROUP in INDEXED_GROUPS %}
 class {{ sentencecase(INDEXED_GROUP.name) -}}Element(Group):
-
+    """    
+    An element of indexed group `{{ sentencecase(INDEXED_GROUP.name) }}`.
+    """
     def __init__(self, gid: h5py.h5g.GroupID, cfg: SnirfConfig):
         super().__init__(gid, cfg)
     {{ declare_members(INDEXED_GROUP) | indent }}
@@ -327,7 +334,9 @@ class {{ sentencecase(INDEXED_GROUP.name) -}}Element(Group):
 {{ gen_validator(INDEXED_GROUP) }}
 
 class {{ sentencecase(INDEXED_GROUP.name) -}}(IndexedGroup):
-
+    """
+    {{ INDEXED_GROUP.description | indent }}
+    """
     _name: str = '{{ INDEXED_GROUP.name }}'
     _element: Group = {{ sentencecase(INDEXED_GROUP.name) -}}Element
 
@@ -374,10 +383,18 @@ class Snirf(Group):
 
     # overload
     def save(self, *args):
-        '''
-        Save changes you have made to the Snirf object to disk. If a filepath is supplied, the changes will be
-        'saved as' in a new file.
-        '''
+        """Save a SNIRF file to disk.
+        
+        Args:
+            args (str or h5py.File): A path to a closed or nonexistant SNIRF file on disk or an open `h5py.File` instance
+    
+        Examples:
+            save can overwrite the current contents of a Snirf file:
+            >>> mysnirf.save()
+            
+            or take a new filename to write the file there:
+            >>> mysnirf.save(<new destination>)
+        """
         if len(args) > 0 and type(args[0]) is str:
             path = args[0]
             if not path.endswith('.snirf'):
@@ -390,15 +407,30 @@ class Snirf(Group):
             self._save(self._h.file)
 
     def validate(self) -> Tuple[bool, ValidationResult]:
-        '''
-        Returns a bool representing the validity of the Snirf object and the
-        detailed output structure ValidationResult instance
-        '''
+        """Validate a Snirf object.
+
+        Returns the validity of the current state of a `Snirf` object, including
+        modifications made in memory to a loaded SNIRF file.
+
+        Returns a bool representing the validity of the `Snirf` object and the
+        detailed output structure `ValidationResult` instance
+
+        Returns:
+            bool: True if the file is valid
+            ValidationResult: structure containing detailed validation results
+        """
         result = ValidationResult()
         self._validate(result)
         return (result.is_valid(), result)
 
     def close(self):
+        """Close a Snirf file.
+
+        After closing, the underlying SNIRF file cannot be accessed from this interface again.
+        Use `close` if you need to open a new interface on the same HDF5 file.
+
+        `close` is called automatically by the destructor.
+        """
         self._cfg.logger.info('Closing Snirf file %s', self.filename)
         self._h.close()
 
