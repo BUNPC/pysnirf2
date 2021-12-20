@@ -1,3 +1,13 @@
+# -*- coding: utf-8 -*-
+"""pysnirf2
+
+Module for reading, writing and validating SNIRF files.
+
+Attributes:
+    __version__ (str): Library version
+
+"""
+
 from abc import ABC, abstractmethod
 import h5py
 import os
@@ -12,15 +22,19 @@ import colorama
 from pysnirf2.__version__ import __version__ as __version__
 from typing import Tuple
 
-# Colored prints for validator
+
+if sys.version_info[0] < 3:
+    raise ImportError('pysnirf2 requires Python > 3')
+
+
+# Colored prints for validation output to console
 if os.name == 'nt':
     colorama.init()
 
-printr = lambda x: termcolor.cprint(x, 'red')
-printg = lambda x: termcolor.cprint(x, 'green')
-printb = lambda x: termcolor.cprint(x, 'blue')
-printm = lambda x: termcolor.cprint(x, 'magenta')
-
+_printr = lambda x: termcolor.cprint(x, 'red')
+_printg = lambda x: termcolor.cprint(x, 'green')
+_printb = lambda x: termcolor.cprint(x, 'blue')
+_printm = lambda x: termcolor.cprint(x, 'magenta')
 
 
 _loggers = {}
@@ -36,12 +50,9 @@ def _create_logger(name, log_file, level=logging.INFO):
     _loggers[name] = logger
     return logger
 
-
 # Package-wide logger
 _logger = _create_logger('pysnirf2', 'pysnirf2.log')
 
-if sys.version_info[0] < 3:
-    raise ImportError('pysnirf2 requires Python > 3')
 
 # -- methods to cast data prior to writing to and after reading from h5py interfaces------
 
@@ -57,13 +68,24 @@ _DTYPE_VAR_LEN_STR = 'O'  # Variable length string
 # -- Dataset creators  ---------------------------------------
 
 
-def _create_dataset(file, name, data):
-    """
-    Formats the input to satisfy the SNIRF specification as well as the HDF5 format. Determines appropriate write
-    function from the type of data. The returned value should be passed to h5py.create_dataset() as kwarg "data" to be
-    saved to an HDF5 file.
+def _create_dataset(file: h5py.File, name: str, data):
+    """Saves a variable to an h5py.File on disk as a new Dataset.
 
-    Returns None if input is invalid and an h5py.Dataset instance if successful.
+    Discerns the type of a given variable and adds it to an h5py File as a
+    new dataset with SNIRF compliant formatting.
+
+    Args:
+        file: An open `h5py.File` or `h5py.Group` instance to which the Dataset will be added
+        name (str): The name of the new dataset. Can be a relative HDF5 name.
+        data: The variable to save to the Dataset.
+
+    Returns:
+        A dict mapping keys to the corresponding table row data
+        fetched. Each row is represented as a tuple of strings. For
+        example:
+
+    Raises:
+        TypeError: The data could not be mapped to a SNIRF compliant h5py format.
     """
     data = np.array(data)  # Cast to numpy type to identify
     try:
@@ -88,28 +110,88 @@ def _create_dataset(file, name, data):
 
 
 def _create_dataset_string(file: h5py.File, name: str, data: str):
+    """Saves a variable to an h5py.File on disk as a new SNIRF compliant variable length string Dataset.
+
+    Args:
+        file: An open `h5py.File` or `h5py.Group` instance to which the Dataset will be added
+        name (str): The name of the new dataset. Can be a relative HDF5 name.
+        data: The string to save to the Dataset.
+
+    Returns:
+        An h5py.Dataset instance created
+    """
     return file.create_dataset(name, dtype=_varlen_str_type, data=str(data))
 
 
 def _create_dataset_int(file: h5py.File, name: str, data: int):
+    """Saves a variable to an h5py.File on disk as a new SNIRF compliant integer Dataset.
+
+    Args:
+        file: An open `h5py.File` or `h5py.Group` instance to which the Dataset will be added
+        name (str): The name of the new dataset. Can be a relative HDF5 name.
+        data: The integer to save to the Dataset.
+
+    Returns:
+        An h5py.Dataset instance created
+    """
     return file.create_dataset(name, dtype=_DTYPE_INT32, data=int(data))
 
 
 def _create_dataset_float(file: h5py.File, name: str, data: float):
+    """Saves a variable to an h5py.File on disk as a new SNIRF compliant float Dataset.
+
+    Args:
+        file: An open `h5py.File` or `h5py.Group` instance to which the Dataset will be added
+        name (str): The name of the new dataset. Can be a relative HDF5 name.
+        data: The float to save to the Dataset.
+
+    Returns:
+        An h5py.Dataset instance created
+    """
     return file.create_dataset(name, dtype=_DTYPE_FLOAT64, data=float(data))
 
 
 def _create_dataset_string_array(file: h5py.File, name: str, data: np.ndarray):
+    """Saves a NumPy array to an h5py.File on disk as a new SNIRF compliant array of variable length strings.
+
+    Args:
+        file: An open `h5py.File` or `h5py.Group` instance to which the Dataset will be added
+        name (str): The name of the new dataset. Can be a relative HDF5 name.
+        data: The array to save to the Dataset.
+
+    Returns:
+        An h5py.Dataset instance created
+    """
     array = np.array(data).astype('O')
     return file.create_dataset(name, dtype=_varlen_str_type, data=array)
 
 
 def _create_dataset_int_array(file: h5py.File, name: str, data: np.ndarray):
+    """Saves a NumPy array to an h5py.File on disk as a new SNIRF compliant array of 32-bit integers.
+
+    Args:
+        file: An open `h5py.File` or `h5py.Group` instance to which the Dataset will be added
+        name (str): The name of the new dataset. Can be a relative HDF5 name.
+        data: The array to save to the Dataset.
+
+    Returns:
+        An h5py.Dataset instance created
+    """
     array = np.array(data).astype(int)
     return file.create_dataset(name, dtype=_DTYPE_INT32, data=array)
 
 
 def _create_dataset_float_array(file: h5py.File, name: str, data: np.ndarray):
+    """Saves a NumPy array to an h5py.File on disk as a new SNIRF compliant array of 64-bit floats.
+
+    Args:
+        file: An open `h5py.File` or `h5py.Group` instance to which the Dataset will be added
+        name (str): The name of the new dataset. Can be a relative HDF5 name.
+        data: The array to save to the Dataset.
+
+    Returns:
+        An h5py.Dataset instance created
+    """
     array = np.array(data).astype(float)
     return file.create_dataset(name, dtype=_DTYPE_FLOAT64, data=array)
 
@@ -117,33 +199,51 @@ def _create_dataset_float_array(file: h5py.File, name: str, data: np.ndarray):
 # -- Dataset readers  ---------------------------------------
 
 
-def _read_dataset(h_dataset: h5py.Dataset):
+def _read_dataset(dataset: h5py.Dataset):
+    """Converts the contents of an h5py Dataset into a NumPy object.
+
+    Converts the contents of an `h5py.Dataset` into a NumPy object after
+    attempting to determine the appropriate SNIRF compliant type.
+
+    Args:
+        dataset (h5py.Dataset): An open` h5py.Dataset` instance.
+
+    Returns:
+        A dict mapping keys to the corresponding table row data
+        fetched. Each row is represented as a tuple of strings. For
+        example:
+
+    Raises:
+        TypeError: The Dataset could not be mapped to a SNIRF compliant type.
     """
-    Reads data from a SNIRF file using the HDF5 interface and casts it to a Pythonic type or numpy array. Determines
-    the appropriate read function from the properties of h_dataset
-    """
-    if type(h_dataset) is not h5py.Dataset:
+    if type(dataset) is not h5py.Dataset:
         raise TypeError("'dataset' must be type h5py.Dataset")
-    if h_dataset.size > 1:
-        if _DTYPE_FIXED_LEN_STR in h_dataset.dtype or _DTYPE_VAR_LEN_STR in h_dataset.dtype.str:
-            return _read_string_array(h_dataset)
-        elif _DTYPE_INT32 in h_dataset.dtype.str or _DTYPE_INT64 in h_dataset.dtype.str:
-            return _read_int_array(h_dataset)
-        elif _DTYPE_FLOAT32 in h_dataset.dtype.str or _DTYPE_FLOAT64 in h_dataset.dtype.str:
-            return _read_float_array(h_dataset)
+    if dataset.size > 1:
+        if _DTYPE_FIXED_LEN_STR in dataset.dtype or _DTYPE_VAR_LEN_STR in dataset.dtype.str:
+            return _read_string_array(dataset)
+        elif _DTYPE_INT32 in dataset.dtype.str or _DTYPE_INT64 in dataset.dtype.str:
+            return _read_int_array(dataset)
+        elif _DTYPE_FLOAT32 in dataset.dtype.str or _DTYPE_FLOAT64 in dataset.dtype.str:
+            return _read_float_array(dataset)
     else:
-        if _DTYPE_FIXED_LEN_STR in h_dataset.dtype.str or _DTYPE_VAR_LEN_STR in h_dataset.dtype.str:
-            return _read_string(h_dataset)
-        elif _DTYPE_INT32 in h_dataset.dtype.str or _DTYPE_INT64 in h_dataset.dtype.str:
-            return _read_int(h_dataset)
-        elif _DTYPE_FLOAT32 in h_dataset.dtype.str or _DTYPE_FLOAT64 in h_dataset.dtype.str:
-            return _read_float(h_dataset)
-    raise TypeError("Dataset dtype='" + str(h_dataset.dtype)
+        if _DTYPE_FIXED_LEN_STR in dataset.dtype.str or _DTYPE_VAR_LEN_STR in dataset.dtype.str:
+            return _read_string(dataset)
+        elif _DTYPE_INT32 in dataset.dtype.str or _DTYPE_INT64 in dataset.dtype.str:
+            return _read_int(dataset)
+        elif _DTYPE_FLOAT32 in dataset.dtype.str or _DTYPE_FLOAT64 in dataset.dtype.str:
+            return _read_float(dataset)
+    raise TypeError("Dataset dtype='" + str(dataset.dtype)
                     + "' not recognized. Expecting dtype to contain one of these: "
                     + str([_DTYPE_FIXED_LEN_STR, _DTYPE_VAR_LEN_STR, _DTYPE_INT32, _DTYPE_INT64, _DTYPE_FLOAT32, _DTYPE_FLOAT64]))
 
 
-def _read_string(dataset: h5py.Dataset):
+def _read_string(dataset: h5py.Dataset) -> str:
+    """Reads the contents of an `h5py.Dataset` to a `str`.
+    Args:
+        dataset (h5py.Dataset): An open` h5py.Dataset` instance
+    Returns:
+        A `str`
+    """
     if type(dataset) is not h5py.Dataset:
         raise TypeError("'dataset' must be type h5py.Dataset")
     # Because many SNIRF files are saved with string values in length 1 arrays
@@ -153,7 +253,13 @@ def _read_string(dataset: h5py.Dataset):
         return str(dataset[()].decode('ascii'))
 
 
-def _read_int(dataset: h5py.Dataset):
+def _read_int(dataset: h5py.Dataset) -> int:
+    """Reads the contents of an `h5py.Dataset` to an `int`.
+    Args:
+        dataset (h5py.Dataset): An open` h5py.Dataset` instance
+    Returns:
+        An `int`
+    """
     if type(dataset) is not h5py.Dataset:
         raise TypeError("'dataset' must be type h5py.Dataset")
     if dataset.ndim > 0:
@@ -162,7 +268,13 @@ def _read_int(dataset: h5py.Dataset):
         return int(dataset[()])
 
 
-def _read_float(dataset: h5py.Dataset):
+def _read_float(dataset: h5py.Dataset) -> float:
+    """Reads the contents of an `h5py.Dataset` to a `float`.
+    Args:
+        dataset (h5py.Dataset): An open` h5py.Dataset` instance
+    Returns:
+        A `float`
+    """
     if type(dataset) is not h5py.Dataset:
         raise TypeError("'dataset' must be type h5py.Dataset")
     if dataset.ndim > 0:
@@ -171,19 +283,37 @@ def _read_float(dataset: h5py.Dataset):
         return float(dataset[()])
 
 
-def _read_string_array(dataset: h5py.Dataset):
+def _read_string_array(dataset: h5py.Dataset) -> np.ndarray:
+    """Reads the contents of an `h5py.Dataset` to an array of `dtype=str`.
+    Args:
+        dataset (h5py.Dataset): An open` h5py.Dataset` instance
+    Returns:
+        A numpy array `astype(str)`
+    """
     if type(dataset) is not h5py.Dataset:
         raise TypeError("'dataset' must be type h5py.Dataset")
     return np.array(dataset).astype(str)
 
 
-def _read_int_array(dataset: h5py.Dataset):
+def _read_int_array(dataset: h5py.Dataset) -> np.ndarray:
+    """Reads the contents of an `h5py.Dataset` to an array of `dtype=int`.
+    Args:
+        dataset (h5py.Dataset): An open` h5py.Dataset` instance
+    Returns:
+        A numpy array `astype(int)`
+    """
     if type(dataset) is not h5py.Dataset:
         raise TypeError("'dataset' must be type h5py.Dataset")
     return np.array(dataset).astype(int)
 
 
-def _read_float_array(dataset: h5py.Dataset):
+def _read_float_array(dataset: h5py.Dataset) -> np.ndarray:
+    """Reads the contents of an `h5py.Dataset` to an array of `dtype=float`.
+    Args:
+        dataset (h5py.Dataset): An open` h5py.Dataset` instance
+    Returns:
+        A numpy array astype(float)
+    """
     if type(dataset) is not h5py.Dataset:
         raise TypeError("'dataset' must be type h5py.Dataset")
     return np.array(dataset).astype(float)
@@ -238,13 +368,23 @@ _CODES = {
 
 
 class ValidationIssue:
-    """
-    Pretty-printable structure for the result of validation on an HDF5 name
+    """Information about the validity of a given SNIRF file location
+
+    Properties:
+        location: A relative HDF5 name corresponding to the location of the issue
+        name: A string describing the issue. Must be predefined in `_CODES`
+        id: An integer corresponding to the predefined error type
+        severity: An integer ranking the serverity level of the issue. 
+            0 OK, Nothing remarkable
+            1 Potentially useful `INFO`
+            2 `WARNING`, the file is valid but exhibits undefined behavior or features marked deprecation
+            3 `FATAL`, The file is invalid.
+        message: A string containing a more verbose description of the issue
     """
     
     def __init__(self, name: str, location: str):
-        self.name = name  # The name of the issue, a key in _CODES above
         self.location = location  # A location in the Snirf file matching an HDF5 name
+        self.name = name  # The name of the issue, a key in _CODES above
         self.id = _CODES[name][0]  # The ID of the issue
         self.severity = _CODES[name][1]  # The severity level of the issue
         self.message = _CODES[name][2]  # A string describing the issue
@@ -256,19 +396,40 @@ class ValidationIssue:
         s += '\nname:     ' + str(self.id).ljust(4) + self.name +  '\nmessage:  ' + self.message
         return s
 
+
 class ValidationResult:
-    """
-    ORganzies the result of the pysnirf2 validation routine like so:
-    <ValidationResult>.is_valid(), <ValidationResult> = <Snirf>.validate()
+    """The result of Snirf file validation routines.
+    
+    Validation results in a list of issues. Each issue records information about
+    the validity of each location (each named Dataset and Group) in a SNIRF file.
+    ValidationResult organizes the issues catalogued during validation and affords interfaces
+    to retrieve and display them.
+
+    ```
+    (<ValidationResult>.is_valid(), <ValidationResult>) = <Snirf instance>.validate()
+    (<ValidationResult>.is_valid(), <ValidationResult>) = validateSnirf(<path>)
+    ```
+    
+    Properties:
+        issues: A comprehensive list of all `ValidationIssue` instances for the result
+        locations: A list of the HDF5 location associated with each issue
+        codes: A list of each unique code name associated with all catalogued issues
+        errors: A list of the `FATAL` issues catalogued during validation
+        warnings: A list of the `WARNING` issues catalogued during validation
+        info: A list of the `INFO` issues catalogued during validation
     """
 
-    def __init__(self):    
+    def __init__(self):
+        """
+        `ValidationResult` should only be created by a `Snirf` instance's `validate` method
+        """
         self._issues = []
         self._locations = []
 
-    def is_valid(self):
-        """
-        Returns True if valid (if no FATAL errors found)
+    def is_valid(self) -> bool:
+        """Returns True if no `FATAL` issues were catalogued during validation
+        Returns:
+            A `bool` reflecting the validity of the Snirf file
         """
         for issue in self._issues:
             if issue.severity > 2:
@@ -277,22 +438,29 @@ class ValidationResult:
     
     @property
     def issues(self):
+        """
+        A comprehensive list of all `ValidationIssue` instances for the result
+        """
         return self._issues
     
     @property
     def locations(self):
+        """
+        A list of the HDF5 location associated with each issue
+        """
         return self._locations
     
     @property
     def codes(self):
-        return [issue.name for issue in self._issues]
+        """
+        A list of each unique code name associated with all catalogued issues
+        """
+        return list(set([issue.name for issue in self._issues]))
     
     @property
     def errors(self):
         """
-        Returns list of fatal errors
-        -------
-        errors : List of ValidationIssue
+        A list of the `FATAL` issues catalogued during validation
         """
         errors = []
         for issue in self._issues:
@@ -303,9 +471,7 @@ class ValidationResult:
     @property
     def warnings(self):
         """
-        Returns list of warnings
-        -------
-        warnings : List of ValidationIssue
+        A list of the `WARNING` issues catalogued during validation
         """
         warnings = []
         for issue in self._issues:
@@ -316,9 +482,7 @@ class ValidationResult:
     @property
     def info(self):
         """
-        Returns list of info issues
-        -------
-        info : List of ValidationIssue
+        A list of the `INFO` issues catalogued during validation
         """
         info = []
         for issue in self._issues:
@@ -327,13 +491,14 @@ class ValidationResult:
         return info
         
     def display(self, severity=2):
-        """
-        Prints the detailed results of the validation.
-        kwarg severity filters the display by message severity (default 2)
-        severity=0: All messages will be shown, including OK
-        severity=1: Prints INFO, WARNING, and FATAL messages
-        severity=2: Prints WARNING and FATAL messages
-        severity=3: Prints only FATAL error messages
+        """Reads the contents of an `h5py.Dataset` to an array of `dtype=str`.
+        Args:
+            severity: An `int` which sets the minimum severity message to
+            display. Default is 2.
+                severity=0 All messages will be shown, including `OK`
+                severity=1 Prints `INFO`, `WARNING`, and `FATAL` messages
+                severity=2 Prints `WARNING` and `FATAL` messages
+                severity=3 Prints only `FATAL` error messages
         """
         try:
             longest_key = max([len(key) for key in self.locations])
@@ -349,11 +514,11 @@ class ValidationResult:
                 s += issue.location.ljust(longest_key) + ' ' + _SEVERITY_LEVELS[sev] + ' ' + issue.name.ljust(longest_code) + '\n'
         print(s)
         for i in range(0, severity):
-            [printg, printb, printm, printr][i]('Found ' + str(printed[i]) + ' ' + termcolor.colored(_SEVERITY_LEVELS[i], _SEVERITY_COLORS[i]) + ' (hidden)')            
+            [_printg, _printb, _printm, _printr][i]('Found ' + str(printed[i]) + ' ' + termcolor.colored(_SEVERITY_LEVELS[i], _SEVERITY_COLORS[i]) + ' (hidden)')            
         for i in range(severity, 4):
-            [printg, printb, printm, printr][i]('Found ' + str(printed[i]) + ' ' + termcolor.colored(_SEVERITY_LEVELS[i], _SEVERITY_COLORS[i]))
+            [_printg, _printb, _printm, _printr][i]('Found ' + str(printed[i]) + ' ' + termcolor.colored(_SEVERITY_LEVELS[i], _SEVERITY_COLORS[i]))
         i = int(self.is_valid())
-        [printr, printg][i]('\nFile is ' +['INVALID', 'VALID'][i])
+        [_printr, _printg][i]('\nFile is ' +['INVALID', 'VALID'][i])
 
     def _add(self, location, key):
         if key not in _CODES.keys():
@@ -383,7 +548,15 @@ class ValidationResult:
 # -- Validation functions ---------------------------------------
 
 
-def _validate_string(dataset: h5py.Dataset):
+def _validate_string(dataset: h5py.Dataset) -> str:
+    """Determines an issue code (as predefined in `_CODES`) based on the contents an `h5py.Dataset` instance
+
+    Args:
+        dataset (h5py.Dataset): An open` h5py.Dataset` instance 
+
+    Returns:
+        An issue code describing the validity of the dataset based on its format and shape
+    """
     if type(dataset) is not h5py.Dataset:
         raise TypeError("'dataset' must be type h5py.Dataset")
     if dataset.size > 1 or dataset.ndim > 0:
@@ -396,7 +569,15 @@ def _validate_string(dataset: h5py.Dataset):
         return 'INVALID_DATASET_TYPE'
 
 
-def _validate_int(dataset: h5py.Dataset):
+def _validate_int(dataset: h5py.Dataset) -> str:
+    """Determines an issue code (as predefined in `_CODES`) based on the contents an `h5py.Dataset` instance
+
+    Args:
+        dataset (h5py.Dataset): An open` h5py.Dataset` instance 
+
+    Returns:
+        An issue code describing the validity of the dataset based on its format and shape
+    """
     if type(dataset) is not h5py.Dataset:
         raise TypeError("'dataset' must be type h5py.Dataset")
     if dataset.size > 1 or dataset.ndim > 0:
@@ -409,7 +590,15 @@ def _validate_int(dataset: h5py.Dataset):
         return 'INVALID_DATASET_TYPE'
 
 
-def _validate_float(dataset: h5py.Dataset):
+def _validate_float(dataset: h5py.Dataset) -> str:
+    """Determines an issue code (as predefined in `_CODES`) based on the contents an `h5py.Dataset` instance
+
+    Args:
+        dataset (h5py.Dataset): An open` h5py.Dataset` instance 
+
+    Returns:
+        An issue code describing the validity of the dataset based on its format and shape
+    """
     if type(dataset) is not h5py.Dataset:
         raise TypeError("'dataset' must be type h5py.Dataset")
     if dataset.size > 1 or dataset.ndim > 0:
@@ -420,7 +609,15 @@ def _validate_float(dataset: h5py.Dataset):
         return 'INVALID_DATASET_TYPE'
 
 
-def _validate_string_array(dataset: h5py.Dataset, ndims=[1]):
+def _validate_string_array(dataset: h5py.Dataset, ndims=[1]) -> str:
+    """Determines an issue code (as predefined in `_CODES`) based on the contents an `h5py.Dataset` instance
+
+    Args:
+        dataset (h5py.Dataset): An open` h5py.Dataset` instance 
+
+    Returns:
+        An issue code describing the validity of the dataset based on its format and shape
+    """
     if type(dataset) is not h5py.Dataset:
         raise TypeError("'dataset' must be type h5py.Dataset")
     if dataset.ndim not in ndims:
@@ -433,7 +630,15 @@ def _validate_string_array(dataset: h5py.Dataset, ndims=[1]):
         return 'INVALID_DATASET_TYPE'
 
 
-def _validate_int_array(dataset: h5py.Dataset, ndims=[1]):
+def _validate_int_array(dataset: h5py.Dataset, ndims=[1]) -> str:
+    """Determines an issue code (as predefined in `_CODES`) based on the contents an `h5py.Dataset` instance
+
+    Args:
+        dataset (h5py.Dataset): An open` h5py.Dataset` instance 
+
+    Returns:
+        An issue code describing the validity of the dataset based on its format and shape
+    """
     if type(dataset) is not h5py.Dataset:
         raise TypeError("'dataset' must be type h5py.Dataset")
     if dataset.ndim not in ndims:
@@ -445,7 +650,15 @@ def _validate_int_array(dataset: h5py.Dataset, ndims=[1]):
     else:
         return 'INVALID_DATASET_TYPE'
 
-def _validate_float_array(dataset: h5py.Dataset, ndims=[1]):
+def _validate_float_array(dataset: h5py.Dataset, ndims=[1]) -> str:
+    """Determines an issue code (as predefined in `_CODES`) based on the contents an `h5py.Dataset` instance
+
+    Args:
+        dataset (h5py.Dataset): An open` h5py.Dataset` instance 
+
+    Returns:
+        An issue code describing the validity of the dataset based on its format and shape
+    """
     if type(dataset) is not h5py.Dataset:
         raise TypeError("'dataset' must be type h5py.Dataset")
     if dataset.ndim not in ndims:
@@ -465,41 +678,51 @@ class SnirfFormatError(Exception):
 
 class SnirfConfig:
     """
-    Structure for containing Snirf-wide data and settings
+    Structure containing Snirf-wide data and settings
+    
+    Properties:
+        logger (logging.Logger): The logger that the Snirf instance writes to
+        dynamic_loading (bool): If True, data is loaded from the HDF5 file only on access via property
     """
-    logger: logging.Logger = _logger  # The logger that the interface will write to
-    dynamic_loading: bool = False  # If False, data is loaded in the constructor, if True, data is loaded on access
+    def __init__(self):
+        self.logger: logging.Logger = _logger  # The logger that the interface will write to
+        self.dynamic_loading: bool = False  # If False, data is loaded in the constructor, if True, data is loaded on access
 
 
 # Placeholder for a Dataset that is not on disk or in memory
-class AbsentDatasetType():
+class _AbsentDatasetType():
     pass
 
 
 # Placeholder for a Group that is not on disk or in memory
-class AbsentGroupType():
+class _AbsentGroupType():
     pass
 
 
 # Placeholder for a Dataset that is available only on disk in a dynamic_loading=True wrapper
-class PresentDatasetType():
+class _PresentDatasetType():
     pass
 
 
 # Instantiate faux singletons
-AbsentDataset = AbsentDatasetType()
-AbsentGroup = AbsentGroupType()
-PresentDataset = PresentDatasetType()
+AbsentDataset = _AbsentDatasetType()
+AbsentGroup = _AbsentGroupType()
+PresentDataset = _PresentDatasetType()
 
 
 class Group(ABC):
 
     def __init__(self, varg, cfg: SnirfConfig):
-        """
-        Wrapper for an HDF5 Group element defined by SNIRF. Must be created with a
+        """Wrapper for an HDF5 Group element defined by SNIRF.
+
+        Base class for an HDF5 Group element defined by SNIRF. Must be created with a
         Group ID or string specifying a complete path relative to file root--in
         the latter case, the wrapper will not correspond to a real HDF5 group on
-        disk until _save() (with no arguments) is executed for the first time
+        disk until `_save()` (with no arguments) is executed for the first time
+
+        Args:
+            varg (h5py.h5g.GroupID or str): Either a string which maps to a future Group location or an ID corresponding to a current one on disk
+            cfg (SnirfConfig): Injected configuration of parent `Snirf` instance
         """
         self._cfg = cfg
         if type(varg) is str:  # If a Group wrapper is created prior to a save to HDF Group object
@@ -512,8 +735,17 @@ class Group(ABC):
             raise TypeError('must initialize ' + self.__class__.__name__ + ' with a Group ID or string, not ' + str(type(varg)))
 
     def save(self, *args):
-        """
-        Entry to Group-level save
+        """Group level save to a SNIRF file on disk
+        
+        Args:
+            args (str or h5py.File): A path to a closed SNIRF file on disk or an open `h5py.File` instance
+    
+        Examples:
+            save can be called on a Group already on disk to overwrite the current contents:
+            >>> mysnirf.nirs[0].probe.save()
+            
+            or using a new filename to write the Group there:
+            >>> mysnirf.nirs[0].probe.save(<new destination>)
         """
         if len(args) > 0:
             if type(args[0]) is h5py.File:
@@ -538,8 +770,9 @@ class Group(ABC):
 
     @property
     def filename(self):
-        """
-        Returns None if the wrapper is not associated with a Group on disk        
+        """The filename the Snirf object was loaded from and will save to
+        
+        None if not associated with a Group on disk.        
         """
         if self._h != {}:
             return self._h.file.filename
@@ -548,12 +781,21 @@ class Group(ABC):
 
     @property
     def location(self):
+        """The HDF5 relative location indentifier
+        
+        None if not associataed with a Group on disk.
+        """
         if self._h != {}:
             return self._h.name
         else:
             return self._location
 
     def is_empty(self):
+        """If the Group has no member Groups or Datasets
+        
+        Returns:
+            bool: True if empty, False if not
+        """
         for name in self._snirf_names:
             attr = getattr(self, '_' + name)
             if isinstance(attr, Group) or isinstance(attr, IndexedGroup):
@@ -615,10 +857,21 @@ class IndexedGroup(MutableSequence, ABC):
     _element: Group = None  # The type of Group which belongs to this IndexedGroup
 
     def __init__(self, parent: Group, cfg: SnirfConfig):
-        # Because the indexed group is not a true HDF5 group but rather an
-        # iterable list of HDF5 groups, it takes a base group or file and
-        # searches its keys, appending the appropriate elements to itself
-        # in order
+        """
+        Because the indexed group is not a true HDF5 group but rather an
+        iterable list of HDF5 groups, it takes a base group or file and
+        searches its keys, appending the appropriate elements to itself
+        in order.
+        
+        The appropriate elements are identified using the `_name` attribute: if
+        a key begins with `_name` and ends with a number, or is equal to `_name`.
+
+        Args:
+            varg (h5py.h5g.Group): An HDF5 group which is the parent of the indexed groups
+            cfg (SnirfConfig): Injected configuration of parent `Snirf` instance
+
+        """
+
         self._parent = parent
         self._cfg = cfg
         self._populate_list()
@@ -627,6 +880,12 @@ class IndexedGroup(MutableSequence, ABC):
 
     @property
     def filename(self):
+        """The filename the Snirf object was loaded from and will save to
+        
+        Returns the filename of the parent Group or File.
+        
+        None if not associated with a Group on disk.        
+        """
         return self._parent.filename
 
     def __len__(self): return len(self._list)
@@ -658,6 +917,11 @@ class IndexedGroup(MutableSequence, ABC):
         return any([key == e.location.split('/')[-1] for e in self._list])
 
     def is_empty(self):
+        """If the Indexed Group has no member Groups with contents
+        
+        Returns:
+            bool: True if empty, False if not
+        """
         if len(self._list) > 0:
             for e in self._list:
                 if not e.is_empty():
@@ -665,18 +929,43 @@ class IndexedGroup(MutableSequence, ABC):
         return True
 
     def insert(self, i, item):
+        """Insert a new Group into the IndexedGroup
+        
+        Args:
+            item: must be of type _element
+        """
         self._check_type(item)
         self._list.insert(i, item)
         self._cfg.logger.info('%i th element inserted into IndexedGroup %s at %s in %s at %i', len(self._list),
                               self.__class__.__name__, self._parent.location, self.filename, i)
 
     def append(self, item):
+        """Insert a new Group into the IndexedGroup.
+        
+        Args:
+            item: must be of type _element
+        """
         self._check_type(item)
         self._list.append(item)
         self._cfg.logger.info('%i th element appended to IndexedGroup %s at %s in %s', len(self._list),
                               self.__class__.__name__, self._parent.location, self.filename)
 
     def save(self, *args):
+        """Save the groups to a SNIRF file on disk
+        
+        When saving, the naming convention defined by the SNIRF spec is enforced:
+        groups are named `/<name>1`, `/<name>2`, `/<name>3`, and so on.
+        
+        Args:
+            args (str or h5py.File): A path to a closed SNIRF file on disk or an open `h5py.File` instance
+    
+        Examples:
+            save can be called on an Indexed Group already on disk to overwrite the current contents:
+            >>> mysnirf.nirs[0].stim.save()
+            
+            or using a new filename to write the Indexed Group there:
+            >>> mysnirf.nirs[0].stim.save(<new destination>)
+        """
         if len(args) > 0:
             if type(args[0]) is h5py.File:
                 self._save(args[0])
@@ -702,15 +991,34 @@ class IndexedGroup(MutableSequence, ABC):
                       self._parent.location, self.filename)
 
     def appendGroup(self):
-        'Adds a group to the end of the list'
+        """Insert a new Group at the end of the Indexed Group
+        
+        Creates an empty Group with the appropriate name at the end of the 
+        list of Groups managed by the IndexedGroup.
+        """
         location = self._parent.location + '/' + self._name + str(len(self._list) + 1)
+        self._list.append(self._element(location, self._cfg))
+        self._cfg.logger.info('%i th %s appended to IndexedGroup %s at %s in %s', len(self._list),
+                          self._element, self.__class__.__name__, self._parent.location, self.filename)
+
+    def insertGroup(self, i):
+        """Insert a new Group following the index given
+        
+        Creates an empty Group with a placeholder name within the list of Groups
+        managed by the IndexedGroup. The placeholder name will be replaced with a
+        name with the correct order once `save` is called.
+        
+        args:
+            i (int): the position at which to insert the new Group
+        """
+        location = self._parent.location + '/' + self._name + '0' + str(i) + 1
         self._list.append(self._element(location, self._cfg))
         self._cfg.logger.info('%i th %s appended to IndexedGroup %s at %s in %s', len(self._list),
                           self._element, self.__class__.__name__, self._parent.location, self.filename)
 
     def _populate_list(self):
         """
-        Add all the appropriate groups in parent to the list
+        Add all the appropriate groups found in parent's HDF5 keys to the list
         """
         self._list = list()
         names = self._get_matching_keys()
@@ -719,6 +1027,9 @@ class IndexedGroup(MutableSequence, ABC):
                 self._list.append(self._element(self._parent._h[name].id, self._cfg))
 
     def _check_type(self, item):
+        """
+        Raise TypeError if an item does not match `_element`.
+        """
         if type(item) is not self._element:
             raise TypeError('elements of ' + str(self.__class__.__name__) +
                             ' must be ' + str(self._element) + ', not ' +
@@ -727,8 +1038,8 @@ class IndexedGroup(MutableSequence, ABC):
 
     def _order_names(self, h=None):
         '''
-        Enforce the format of the names of HDF5 groups within a group or file on disk. i.e. IndexedGroup stim's elements
-        will be renamed, in order, /stim1, /stim2, /stim3. This is expensive but can be avoided by save()ing individual groups
+        Enforce the format of the names of HDF5 groups within a group or file on disk. i.e. `IndexedGroup` `stim`'s elements
+        will be renamed, in order, /stim1, /stim2, /stim3. This is expensive but can be avoided by `save()`ing individual groups
         within the IndexedGroup
         '''
         if h is None:
@@ -752,7 +1063,7 @@ class IndexedGroup(MutableSequence, ABC):
 
     def _get_matching_keys(self, h=None):
         '''
-        Return sorted list of a group or file's keys which match this IndexedList's _name format
+        Return sorted list of a group or file's keys which match this `IndexedList`'s _name format
         '''
         if h is None:
             h = self._parent._h
@@ -792,12 +1103,22 @@ class IndexedGroup(MutableSequence, ABC):
         self._order_names(h=h)  # Enforce order in the group names
 
 
-# generated by sstucker on 2021-12-08
+# generated by sstucker on 2021-12-20
 # version v1.0.1-development SNIRF specification parsed from https://raw.githubusercontent.com/fNIRS/snirf/master/snirf_specification.md
 
 
 class MetaDataTags(Group):
+    """
+    
+    The `metaDataTags` group contains the metadata associated with the measurements.
+    Each metadata record is represented as a dataset under this group - with the name of
+    the record, i.e. the key, as the dataset's name, and the value of the record as the 
+    actual data stored in the dataset. Each metadata record can potentially have different 
+    data types.
 
+    The below five metadata records are minimally required in a SNIRF file
+
+    """
     def __init__(self, var, cfg: SnirfConfig):
         super().__init__(var, cfg)
         self._SubjectID = AbsentDataset  # "s"*
@@ -862,6 +1183,14 @@ class MetaDataTags(Group):
 
     @property
     def SubjectID(self):
+        """    
+        
+        This record stores the string-valued ID of the study subject or experiment.
+
+        
+        If dynamic_loading=True, the data is loaded from the SNIRF file only
+        when accessed through the getter
+        """
         if type(self._SubjectID) is type(AbsentDataset):
             return None
         if type(self._SubjectID) is type(PresentDataset):
@@ -881,6 +1210,18 @@ class MetaDataTags(Group):
 
     @property
     def MeasurementDate(self):
+        """    
+        
+        This record stores the date of the measurement as a string. The format of the date
+        string must either be `"unknown"`, or follow the ISO 8601 date string format `YYYY-MM-DD`, where
+        - `YYYY` is the 4-digit year
+        - `MM` is the 2-digit month (padding zero if a single digit)
+        - `DD` is the 2-digit date (padding zero if a single digit)
+
+        
+        If dynamic_loading=True, the data is loaded from the SNIRF file only
+        when accessed through the getter
+        """
         if type(self._MeasurementDate) is type(AbsentDataset):
             return None
         if type(self._MeasurementDate) is type(PresentDataset):
@@ -900,6 +1241,20 @@ class MetaDataTags(Group):
 
     @property
     def MeasurementTime(self):
+        """    
+        
+        This record stores the time of the measurement as a string. The format of the time
+        string must either be `"unknown"` or follow the ISO 8601 time string format `hh:mm:ss.sTZD`, where
+        - `hh` is the 2-digit hour
+        - `mm` is the 2-digit minute
+        - `ss` is the 2-digit second
+        - `.s` is 1 or more digit representing a decimal fraction of a second (optional)
+        - `TZD` is the time zone designator (`Z` or `+hh:mm` or `-hh:mm`)
+
+        
+        If dynamic_loading=True, the data is loaded from the SNIRF file only
+        when accessed through the getter
+        """
         if type(self._MeasurementTime) is type(AbsentDataset):
             return None
         if type(self._MeasurementTime) is type(PresentDataset):
@@ -919,6 +1274,16 @@ class MetaDataTags(Group):
 
     @property
     def LengthUnit(self):
+        """    
+        
+        This record stores the **case-sensitive** SI length unit used in this 
+        measurement. Sample length units include "mm", "cm", and "m". A value of 
+        "um" is the same as "mm", i.e. micrometer.
+
+        
+        If dynamic_loading=True, the data is loaded from the SNIRF file only
+        when accessed through the getter
+        """
         if type(self._LengthUnit) is type(AbsentDataset):
             return None
         if type(self._LengthUnit) is type(PresentDataset):
@@ -938,6 +1303,16 @@ class MetaDataTags(Group):
 
     @property
     def TimeUnit(self):
+        """    
+        
+        This record stores the **case-sensitive** SI time unit used in this 
+        measurement. Sample time units include "s", and "ms". A value of "us" 
+        is the same as "ms", i.e. microsecond.
+
+        
+        If dynamic_loading=True, the data is loaded from the SNIRF file only
+        when accessed through the getter
+        """
         if type(self._TimeUnit) is type(AbsentDataset):
             return None
         if type(self._TimeUnit) is type(PresentDataset):
@@ -957,6 +1332,51 @@ class MetaDataTags(Group):
 
     @property
     def FrequencyUnit(self):
+        """    
+        
+        This record stores the **case-sensitive** SI frequency unit used in 
+        this measurement. Sample frequency units "Hz", "MHz" and "GHz". Please
+        note that "mHz" is milli-Hz while "MHz" denotes "mega-Hz" according to
+        SI unit system.
+
+        We do not limit the total number of metadata records in the `metaDataTags`. Users
+        can add additional customized metadata records; no duplicated metadata record names
+        are allowed.
+
+        Additional metadata record samples can be found in the below table.
+
+        | Metadata Key Name | Metadata value |
+        |-------------------|----------------|
+        |ManufacturerName | "Company Name" |
+        |Model | "Model Name" |
+        |SubjectName | "LastName, FirstName" |
+        |DateOfBirth | "YYYY-MM-DD" |
+        |AcquisitionStartTime | "1569465620" |
+        |StudyID | "Infant Brain Development" |
+        |StudyDescription | "In this study, we measure ...." |
+        |AccessionNumber | "##########################" |
+        |InstanceNumber  | 2 |
+        |CalibrationFileName | "phantomcal_121015.snirf" |
+        |UnixTime | "1569465667" |
+
+        The metadata records `"StudyID"` and `"AccessionNumber"` are unique strings that 
+        can be used to link the current dataset to a particular study and a particular 
+        procedure, respectively. The `"StudyID"` tag is similar to the DICOM tag "Study 
+        ID" (0020,0010) and `"AccessionNumber"` is similar to the DICOM tag "Accession 
+        Number"(0008,0050), as defined in the DICOM standard (ISO 12052).
+
+        The metadata record `"InstanceNumber"` is defined similarly to the DICOM tag 
+        "Instance Number" (0020,0013), and can be used as the sequence number to group 
+        multiple datasets into a larger dataset - for example, concatenating streamed 
+        data segments during a long measurement session.
+
+        The metadata record `"UnixTime"` defines the Unix Epoch Time, i.e. the total elapse
+        time in seconds since 1970-01-01T00:00:00Z (UTC) minus the leap seconds.
+
+        
+        If dynamic_loading=True, the data is loaded from the SNIRF file only
+        when accessed through the getter
+        """
         if type(self._FrequencyUnit) is type(AbsentDataset):
             return None
         if type(self._FrequencyUnit) is type(PresentDataset):
@@ -1147,7 +1567,12 @@ class MetaDataTags(Group):
 
 
 class Probe(Group):
+    """
+    
+    This is a structured variable that describes the probe (source-detector) 
+    geometry.  This variable has a number of required fields.
 
+    """
     def __init__(self, var, cfg: SnirfConfig):
         super().__init__(var, cfg)
         self._wavelengths = AbsentDataset  # [<f>,...]*
@@ -1301,6 +1726,32 @@ class Probe(Group):
 
     @property
     def wavelengths(self):
+        """    
+        
+        This field describes the "nominal" wavelengths used (in `nm` unit).  This is indexed by the 
+        `wavelengthIndex` of the measurementList variable. For example, `probe.wavelengths` = [690, 
+        780, 830]; implies that the measurements were taken at three wavelengths (690 nm, 
+        780 nm, and 830 nm).  The wavelength index of 
+        `measurementList(k).wavelengthIndex` variable refers to this field.
+        `measurementList(k).wavelengthIndex` = 2 means the k<sup>th</sup> measurement 
+        was at 780 nm.
+
+        Please note that this field stores the "nominal" wavelengths. If the precise 
+        (measured) wavelengths differ from the nominal wavelengths, one can store those
+        in the `measurementList.wavelengthActual` field in a per-channel fashion.
+
+        The number of wavelengths is not limited (except that at least two are needed 
+        to calculate the two forms of hemoglobin).  Each source-detector pair would 
+        generally have measurements at all wavelengths.
+
+        This field must present, but can be empty, for example, in the case that the stored
+        data are processed data (`dataType=99999`, see Appendix).
+
+
+        
+        If dynamic_loading=True, the data is loaded from the SNIRF file only
+        when accessed through the getter
+        """
         if type(self._wavelengths) is type(AbsentDataset):
             return None
         if type(self._wavelengths) is type(PresentDataset):
@@ -1320,6 +1771,22 @@ class Probe(Group):
 
     @property
     def wavelengthsEmission(self):
+        """    
+        
+        This field is required only for fluorescence data types, and describes the 
+        "nominal" emission wavelengths used (in `nm` unit).  The indexing of this variable is the same 
+        wavelength index in measurementList used for `probe.wavelengths` such that the 
+        excitation wavelength is paired with this emission wavelength for a given measurement.
+
+        Please note that this field stores the "nominal" emission wavelengths. If the precise 
+        (measured) emission wavelengths differ from the nominal ones, one can store those
+        in the `measurementList.wavelengthEmissionActual` field in a per-channel fashion.
+
+
+        
+        If dynamic_loading=True, the data is loaded from the SNIRF file only
+        when accessed through the getter
+        """
         if type(self._wavelengthsEmission) is type(AbsentDataset):
             return None
         if type(self._wavelengthsEmission) is type(PresentDataset):
@@ -1339,6 +1806,19 @@ class Probe(Group):
 
     @property
     def sourcePos2D(self):
+        """    
+        
+        This field describes the position (in `LengthUnit` units) of each source 
+        optode. The positions are coordinates in a flattened 2D probe layout. 
+        This field has size `<number of sources> x 2`. For example, 
+        `probe.sourcePos2D(1,:) = [1.4 1]`, and `LengthUnit='cm'` places source 
+        number 1 at x=1.4 cm and y=1 cm.
+
+
+        
+        If dynamic_loading=True, the data is loaded from the SNIRF file only
+        when accessed through the getter
+        """
         if type(self._sourcePos2D) is type(AbsentDataset):
             return None
         if type(self._sourcePos2D) is type(PresentDataset):
@@ -1358,6 +1838,16 @@ class Probe(Group):
 
     @property
     def sourcePos3D(self):
+        """    
+        
+        This field describes the position (in `LengthUnit` units) of each source 
+        optode in 3D. This field has size `<number of sources> x 3`.
+
+
+        
+        If dynamic_loading=True, the data is loaded from the SNIRF file only
+        when accessed through the getter
+        """
         if type(self._sourcePos3D) is type(AbsentDataset):
             return None
         if type(self._sourcePos3D) is type(PresentDataset):
@@ -1377,6 +1867,16 @@ class Probe(Group):
 
     @property
     def detectorPos2D(self):
+        """    
+        
+        Same as `probe.sourcePos2D`, but describing the detector positions in a 
+        flattened 2D probe layout.
+
+
+        
+        If dynamic_loading=True, the data is loaded from the SNIRF file only
+        when accessed through the getter
+        """
         if type(self._detectorPos2D) is type(AbsentDataset):
             return None
         if type(self._detectorPos2D) is type(PresentDataset):
@@ -1396,6 +1896,16 @@ class Probe(Group):
 
     @property
     def detectorPos3D(self):
+        """    
+        
+        This field describes the position (in `LengthUnit` units) of each detector 
+        optode in 3D, defined similarly to `sourcePos3D`.
+
+
+        
+        If dynamic_loading=True, the data is loaded from the SNIRF file only
+        when accessed through the getter
+        """
         if type(self._detectorPos3D) is type(AbsentDataset):
             return None
         if type(self._detectorPos3D) is type(PresentDataset):
@@ -1415,6 +1925,17 @@ class Probe(Group):
 
     @property
     def frequencies(self):
+        """    
+        
+        This field describes the frequencies used (in `FrequencyUnit` units)  for 
+        frequency domain measurements. This field is only required for frequency 
+        domain data types, and is indexed by `measurementList(k).dataTypeIndex`.
+
+
+        
+        If dynamic_loading=True, the data is loaded from the SNIRF file only
+        when accessed through the getter
+        """
         if type(self._frequencies) is type(AbsentDataset):
             return None
         if type(self._frequencies) is type(PresentDataset):
@@ -1434,6 +1955,18 @@ class Probe(Group):
 
     @property
     def timeDelays(self):
+        """    
+        
+        This field describes the time delays (in `TimeUnit` units) used for gated time domain measurements. 
+        This field is only required for gated time domain data types, and is indexed by 
+        `measurementList(k).dataTypeIndex`. The indexing of this field is paired with 
+        the indexing of `probe.timeDelayWidths`. 
+
+
+        
+        If dynamic_loading=True, the data is loaded from the SNIRF file only
+        when accessed through the getter
+        """
         if type(self._timeDelays) is type(AbsentDataset):
             return None
         if type(self._timeDelays) is type(PresentDataset):
@@ -1453,6 +1986,18 @@ class Probe(Group):
 
     @property
     def timeDelayWidths(self):
+        """    
+        
+        This field describes the time delay widths (in `TimeUnit` units) used for gated time domain 
+        measurements. This field is only required for gated time domain data types, and 
+        is indexed by `measurementList(k).dataTypeIndex`.  The indexing of this field 
+        is paired with the indexing of `probe.timeDelays`.
+
+
+        
+        If dynamic_loading=True, the data is loaded from the SNIRF file only
+        when accessed through the getter
+        """
         if type(self._timeDelayWidths) is type(AbsentDataset):
             return None
         if type(self._timeDelayWidths) is type(PresentDataset):
@@ -1472,6 +2017,23 @@ class Probe(Group):
 
     @property
     def momentOrders(self):
+        """    
+        
+        This field describes the moment orders of the temporal point spread function (TPSF) or the distribution of time-of-flight (DTOF)
+        for moment time domain measurements. This field is only required for moment time domain data types, and is indexed by `measurementList(k).dataTypeIndex`.  
+        Note that the numeric value in this array is the exponent in the integral used for calculating the moments. For detailed/specific definitions of moments, see [Wabnitz et al, 2020](https://doi.org/10.1364/BOE.396585); for general definitions of moments see [here](https://en.wikipedia.org/wiki/Moment_(mathematics) ).
+
+        In brief, given a TPSF or DTOF N(t) (photon counts vs. photon arrival time at the detector): \
+        momentOrder = 0: total counts: `N_total = \intergral N(t)dt` \
+        momentOrder = 1: mean time of flight: `m = <t> = (1/N_total) \integral t N(t) dt` \
+        momentOrder = 2: variance/second central moment: `V = (1/N_total) \integral (t - <t>)^2 N(t) dt` \
+        Please note that all moments (for orders >=1) are expected to be normalized by the total counts (i.e. n=0); Additionally all moments (for orders >= 2) are expected to be centralized.
+
+
+        
+        If dynamic_loading=True, the data is loaded from the SNIRF file only
+        when accessed through the getter
+        """
         if type(self._momentOrders) is type(AbsentDataset):
             return None
         if type(self._momentOrders) is type(PresentDataset):
@@ -1491,6 +2053,18 @@ class Probe(Group):
 
     @property
     def correlationTimeDelays(self):
+        """    
+        
+        This field describes the time delays (in `TimeUnit` units) used for diffuse correlation spectroscopy 
+        measurements. This field is only required for diffuse correlation spectroscopy 
+        data types, and is indexed by `measurementList(k).dataTypeIndex`.  The indexing 
+        of this field is paired with the indexing of `probe.correlationTimeDelayWidths`.
+
+
+        
+        If dynamic_loading=True, the data is loaded from the SNIRF file only
+        when accessed through the getter
+        """
         if type(self._correlationTimeDelays) is type(AbsentDataset):
             return None
         if type(self._correlationTimeDelays) is type(PresentDataset):
@@ -1510,6 +2084,18 @@ class Probe(Group):
 
     @property
     def correlationTimeDelayWidths(self):
+        """    
+        
+        This field describes the time delay widths (in `TimeUnit` units) used for diffuse correlation 
+        spectroscopy measurements. This field is only required for gated time domain 
+        data types, and is indexed by `measurementList(k).dataTypeIndex`. The indexing 
+        of this field is paired with the indexing of `probe.correlationTimeDelays`.  
+
+
+        
+        If dynamic_loading=True, the data is loaded from the SNIRF file only
+        when accessed through the getter
+        """
         if type(self._correlationTimeDelayWidths) is type(AbsentDataset):
             return None
         if type(self._correlationTimeDelayWidths) is type(PresentDataset):
@@ -1529,6 +2115,20 @@ class Probe(Group):
 
     @property
     def sourceLabels(self):
+        """    
+        
+        This is a string array providing user friendly or instrument specific labels 
+        for each source. Each element of the array must be a unique string among both 
+        `probe.sourceLabels` and `probe.detectorLabels`.This can be of size `<number 
+        of sources>x 1` or `<number of sources> x <number of 
+        wavelengths>`. This is indexed by `measurementList(k).sourceIndex` and 
+        `measurementList(k).wavelengthIndex`.
+
+
+        
+        If dynamic_loading=True, the data is loaded from the SNIRF file only
+        when accessed through the getter
+        """
         if type(self._sourceLabels) is type(AbsentDataset):
             return None
         if type(self._sourceLabels) is type(PresentDataset):
@@ -1548,6 +2148,18 @@ class Probe(Group):
 
     @property
     def detectorLabels(self):
+        """    
+        
+        This is a string array providing user friendly or instrument specific labels 
+        for each detector. Each element of the array must be a unique string among both 
+        `probe.sourceLabels` and `probe.detectorLabels`. This is indexed by 
+        `measurementList(k).detectorIndex`.
+
+
+        
+        If dynamic_loading=True, the data is loaded from the SNIRF file only
+        when accessed through the getter
+        """
         if type(self._detectorLabels) is type(AbsentDataset):
             return None
         if type(self._detectorLabels) is type(PresentDataset):
@@ -1567,6 +2179,21 @@ class Probe(Group):
 
     @property
     def landmarkPos2D(self):
+        """    
+        
+        This is a 2-D array storing the neurological landmark positions projected
+        along the 2-D (flattened) probe plane in order to map optical data from the
+        flattened optode positions to brain anatomy. This array should contain a minimum 
+        of 2 columns, representing the x and y coordinates (in `LengthUnit` units)
+        of the 2-D projected landmark positions. If a 3rd column presents, it stores 
+        the index to the labels of the given landmark. Label names are stored in the 
+        `probe.landmarkLabels` subfield. An label index of 0 refers to an undefined landmark. 
+
+
+        
+        If dynamic_loading=True, the data is loaded from the SNIRF file only
+        when accessed through the getter
+        """
         if type(self._landmarkPos2D) is type(AbsentDataset):
             return None
         if type(self._landmarkPos2D) is type(PresentDataset):
@@ -1586,6 +2213,21 @@ class Probe(Group):
 
     @property
     def landmarkPos3D(self):
+        """    
+        
+        This is a 2-D array storing the neurological landmark positions measurement 
+        from 3-D digitization and tracking systems to facilitate the registration and 
+        mapping of optical data to brain anatomy. This array should contain a minimum 
+        of 3 columns, representing the x, y and z coordinates (in `LengthUnit` units) 
+        of the digitized landmark positions. If a 4th column presents, it stores the 
+        index to the labels of the given landmark. Label names are stored in the 
+        `probe.landmarkLabels` subfield. An label index of 0 refers to an undefined landmark. 
+
+
+        
+        If dynamic_loading=True, the data is loaded from the SNIRF file only
+        when accessed through the getter
+        """
         if type(self._landmarkPos3D) is type(AbsentDataset):
             return None
         if type(self._landmarkPos3D) is type(PresentDataset):
@@ -1605,6 +2247,22 @@ class Probe(Group):
 
     @property
     def landmarkLabels(self):
+        """    
+        
+        This string array stores the names of the landmarks. The first string denotes 
+        the name of the landmarks with an index of 1 in the 4th column of 
+        `probe.landmark`, and so on. One can adopt the commonly used 10-20 landmark 
+        names, such as "Nasion", "Inion", "Cz" etc, or use user-defined landmark 
+        labels. The landmark label can also use the unique source and detector labels 
+        defined in `probe.sourceLabels` and `probe.detectorLabels`, respectively, to 
+        associate the given landmark to a specific source or detector. All strings are 
+        ASCII encoded char arrays.
+
+
+        
+        If dynamic_loading=True, the data is loaded from the SNIRF file only
+        when accessed through the getter
+        """
         if type(self._landmarkLabels) is type(AbsentDataset):
             return None
         if type(self._landmarkLabels) is type(PresentDataset):
@@ -1624,6 +2282,21 @@ class Probe(Group):
 
     @property
     def useLocalIndex(self):
+        """    
+        
+        For modular NIRS systems, setting this flag to a non-zero integer indicates 
+        that `measurementList(k).sourceIndex` and `measurementList(k).detectorIndex` 
+        are module-specific local-indices. One must also include 
+        `measurementList(k).moduleIndex`, or when cross-module channels present, both 
+        `measurementList(k).sourceModuleIndex` and `measurementList(k).detectorModuleIndex` 
+        in the `measurementList` structure in order to restore the global indices 
+        of the sources/detectors.
+
+
+        
+        If dynamic_loading=True, the data is loaded from the SNIRF file only
+        when accessed through the getter
+        """
         if type(self._useLocalIndex) is type(AbsentDataset):
             return None
         if type(self._useLocalIndex) is type(PresentDataset):
@@ -2091,7 +2764,9 @@ class Probe(Group):
 
 
 class NirsElement(Group):
-
+    """    
+    An element of indexed group `Nirs`.
+    """
     def __init__(self, gid: h5py.h5g.GroupID, cfg: SnirfConfig):
         super().__init__(gid, cfg)
         self._metaDataTags = AbsentGroup  # {.}*
@@ -2120,6 +2795,20 @@ class NirsElement(Group):
 
     @property
     def metaDataTags(self):
+        """    
+        
+        The `metaDataTags` group contains the metadata associated with the measurements.
+        Each metadata record is represented as a dataset under this group - with the name of
+        the record, i.e. the key, as the dataset's name, and the value of the record as the 
+        actual data stored in the dataset. Each metadata record can potentially have different 
+        data types.
+
+        The below five metadata records are minimally required in a SNIRF file
+
+        
+        If dynamic_loading=True, the data is loaded from the SNIRF file only
+        when accessed through the getter
+        """
         if type(self._metaDataTags) is type(AbsentGroup):
             return None
         return self._metaDataTags
@@ -2136,6 +2825,20 @@ class NirsElement(Group):
 
     @property
     def data(self):
+        """    
+        
+        This group stores one block of NIRS data.  This can be extended adding the 
+        count number (e.g. `data1`, `data2`,...) to the group name.  This is intended to 
+        allow the storage of 1 or more blocks of NIRS data from within the same `/nirs` 
+        entry
+        * `/nirs/data1` =  data block 1
+        * `/nirs/data2` =  data block 2	
+
+        	
+        
+        If dynamic_loading=True, the data is loaded from the SNIRF file only
+        when accessed through the getter
+        """
         return self._data
 
     @data.setter
@@ -2150,6 +2853,16 @@ class NirsElement(Group):
 
     @property
     def stim(self):
+        """    
+        
+        This is an array describing any stimulus conditions. Each element of the array 
+        has the following required fields.
+
+
+        
+        If dynamic_loading=True, the data is loaded from the SNIRF file only
+        when accessed through the getter
+        """
         return self._stim
 
     @stim.setter
@@ -2164,6 +2877,15 @@ class NirsElement(Group):
 
     @property
     def probe(self):
+        """    
+        
+        This is a structured variable that describes the probe (source-detector) 
+        geometry.  This variable has a number of required fields.
+
+        
+        If dynamic_loading=True, the data is loaded from the SNIRF file only
+        when accessed through the getter
+        """
         if type(self._probe) is type(AbsentGroup):
             return None
         return self._probe
@@ -2180,6 +2902,15 @@ class NirsElement(Group):
 
     @property
     def aux(self):
+        """    
+        
+        This optional array specifies any recorded auxiliary data. Each element of 
+        `aux` has the following required fields:
+
+        
+        If dynamic_loading=True, the data is loaded from the SNIRF file only
+        when accessed through the getter
+        """
         return self._aux
 
     @aux.setter
@@ -2261,7 +2992,19 @@ class NirsElement(Group):
 
 
 class Nirs(IndexedGroup):
+    """
+    
+    This group stores one set of NIRS data.  This can be extended by adding the count 
+    number (e.g. `/nirs1`, `/nirs2`,...) to the group name. This is intended to 
+    allow the storage of 1 or more complete NIRS datasets inside a single SNIRF 
+    document.  For example, a two-subject hyperscanning can be stored using the notation
+    * `/nirs1` =  first subject's data
+    * `/nirs2` =  second subject's data
+    The use of a non-indexed (e.g. `/nirs`) entry is allowed when only one entry 
+    is present and is assumed to be entry 1.
 
+
+    """
     _name: str = 'nirs'
     _element: Group = NirsElement
 
@@ -2270,7 +3013,9 @@ class Nirs(IndexedGroup):
 
 
 class DataElement(Group):
-
+    """    
+    An element of indexed group `Data`.
+    """
     def __init__(self, gid: h5py.h5g.GroupID, cfg: SnirfConfig):
         super().__init__(gid, cfg)
         self._dataTimeSeries = AbsentDataset  # [[<f>,...]]*
@@ -2299,6 +3044,23 @@ class DataElement(Group):
 
     @property
     def dataTimeSeries(self):
+        """    
+        
+        This is the actual raw or processed data variable. This variable has dimensions 
+        of `<number of time points> x <number of channels>`. Columns in 
+        `dataTimeSeries` are mapped to the measurement list (`measurementList` variable 
+        described below).
+
+        `dataTimeSeries` can be compressed using the HDF5 filter (using the built-in 
+        [`deflate`](https://portal.hdfgroup.org/display/HDF5/H5P_SET_DEFLATE)
+        filter or [3rd party filters such as `305-LZO` or `307-bzip2`](https://portal.hdfgroup.org/display/support/Registered+Filter+Plugins)
+
+        Chunked data is allowed to support real-time streaming of data in this array. 
+
+        
+        If dynamic_loading=True, the data is loaded from the SNIRF file only
+        when accessed through the getter
+        """
         if type(self._dataTimeSeries) is type(AbsentDataset):
             return None
         if type(self._dataTimeSeries) is type(PresentDataset):
@@ -2318,6 +3080,28 @@ class DataElement(Group):
 
     @property
     def time(self):
+        """    
+        
+        The `time` variable. This provides the acquisition time of the measurement 
+        relative to the time origin.  This will usually be a straight line with slope 
+        equal to the acquisition frequency, but does not need to be equal spacing.  For 
+        the special case of equal sample spacing a shorthand `<2x1>` array is allowed 
+        where the first entry is the start time and the 
+        second entry is the sample time spacing in `TimeUnit` specified in the 
+        `metaDataTags`. The default time unit is in second ("s"). For example, 
+        a time spacing of 0.2 (s) indicates a sampling rate of 5 Hz.
+        		
+        * **Option 1** - The size of this variable is `<number of time points x 1>` and 
+                     corresponds to the sample time of every data point
+        * **Option 2**-  The size of this variable is `<2x1>` and corresponds to the start
+        	     time and sample spacing.
+
+        Chunked data is allowed to support real-time streaming of data in this array.
+
+        
+        If dynamic_loading=True, the data is loaded from the SNIRF file only
+        when accessed through the getter
+        """
         if type(self._time) is type(AbsentDataset):
             return None
         if type(self._time) is type(PresentDataset):
@@ -2337,6 +3121,23 @@ class DataElement(Group):
 
     @property
     def measurementList(self):
+        """    
+        
+        The measurement list. This variable serves to map the data array onto the probe 
+        geometry (sources and detectors), data type, and wavelength. This variable is 
+        an array structure that has the size `<number of channels>` that 
+        describes the corresponding column in the data matrix. For example, the 
+        `measurementList3` describes the third column of the data matrix (i.e. 
+        `dataTimeSeries(:,3)`).
+
+        Each element of the array is a structure which describes the measurement 
+        conditions for this data with the following fields:
+
+
+        
+        If dynamic_loading=True, the data is loaded from the SNIRF file only
+        when accessed through the getter
+        """
         return self._measurementList
 
     @measurementList.setter
@@ -2430,7 +3231,17 @@ class DataElement(Group):
 
 
 class Data(IndexedGroup):
+    """
+    
+    This group stores one block of NIRS data.  This can be extended adding the 
+    count number (e.g. `data1`, `data2`,...) to the group name.  This is intended to 
+    allow the storage of 1 or more blocks of NIRS data from within the same `/nirs` 
+    entry
+    * `/nirs/data1` =  data block 1
+    * `/nirs/data2` =  data block 2	
 
+    	
+    """
     _name: str = 'data'
     _element: Group = DataElement
 
@@ -2439,7 +3250,9 @@ class Data(IndexedGroup):
 
 
 class MeasurementListElement(Group):
-
+    """    
+    An element of indexed group `MeasurementList`.
+    """
     def __init__(self, gid: h5py.h5g.GroupID, cfg: SnirfConfig):
         super().__init__(gid, cfg)
         self._sourceIndex = AbsentDataset  # <i>*
@@ -2561,6 +3374,14 @@ class MeasurementListElement(Group):
 
     @property
     def sourceIndex(self):
+        """    
+        
+        Index of the source.
+        	
+        
+        If dynamic_loading=True, the data is loaded from the SNIRF file only
+        when accessed through the getter
+        """
         if type(self._sourceIndex) is type(AbsentDataset):
             return None
         if type(self._sourceIndex) is type(PresentDataset):
@@ -2580,6 +3401,14 @@ class MeasurementListElement(Group):
 
     @property
     def detectorIndex(self):
+        """    
+        
+        Index of the detector.
+
+        
+        If dynamic_loading=True, the data is loaded from the SNIRF file only
+        when accessed through the getter
+        """
         if type(self._detectorIndex) is type(AbsentDataset):
             return None
         if type(self._detectorIndex) is type(PresentDataset):
@@ -2599,6 +3428,14 @@ class MeasurementListElement(Group):
 
     @property
     def wavelengthIndex(self):
+        """    
+        
+        Index of the "nominal" wavelength (in `probe.wavelengths`).
+
+        
+        If dynamic_loading=True, the data is loaded from the SNIRF file only
+        when accessed through the getter
+        """
         if type(self._wavelengthIndex) is type(AbsentDataset):
             return None
         if type(self._wavelengthIndex) is type(PresentDataset):
@@ -2618,6 +3455,14 @@ class MeasurementListElement(Group):
 
     @property
     def wavelengthActual(self):
+        """    
+        
+        Actual (measured) wavelength in nm, if available, for the source in a given channel.
+
+        
+        If dynamic_loading=True, the data is loaded from the SNIRF file only
+        when accessed through the getter
+        """
         if type(self._wavelengthActual) is type(AbsentDataset):
             return None
         if type(self._wavelengthActual) is type(PresentDataset):
@@ -2637,6 +3482,14 @@ class MeasurementListElement(Group):
 
     @property
     def wavelengthEmissionActual(self):
+        """    
+        
+        Actual (measured) emission wavelength in nm, if available, for the source in a given channel.
+        	
+        
+        If dynamic_loading=True, the data is loaded from the SNIRF file only
+        when accessed through the getter
+        """
         if type(self._wavelengthEmissionActual) is type(AbsentDataset):
             return None
         if type(self._wavelengthEmissionActual) is type(PresentDataset):
@@ -2656,6 +3509,14 @@ class MeasurementListElement(Group):
 
     @property
     def dataType(self):
+        """    
+        
+        Data-type identifier. See Appendix for list possible values.
+
+        
+        If dynamic_loading=True, the data is loaded from the SNIRF file only
+        when accessed through the getter
+        """
         if type(self._dataType) is type(AbsentDataset):
             return None
         if type(self._dataType) is type(PresentDataset):
@@ -2675,6 +3536,14 @@ class MeasurementListElement(Group):
 
     @property
     def dataUnit(self):
+        """    
+        
+        International System of Units (SI units) identifier for the given channel. Encoding should follow the [CMIXF-12 standard](https://people.csail.mit.edu/jaffer/MIXF/CMIXF-12), avoiding special unicode symbols like U+03BC (m) or U+00B5 (u) and using '/' rather than 'per' for units such as `V/us`. The recommended export format is in unscaled units such as V, s, Mole.
+
+        
+        If dynamic_loading=True, the data is loaded from the SNIRF file only
+        when accessed through the getter
+        """
         if type(self._dataUnit) is type(AbsentDataset):
             return None
         if type(self._dataUnit) is type(PresentDataset):
@@ -2694,6 +3563,15 @@ class MeasurementListElement(Group):
 
     @property
     def dataTypeLabel(self):
+        """    
+        
+        Data-type label. Only required if dataType is "processed" (`99999`). See Appendix 
+        for list of possible values.
+
+        
+        If dynamic_loading=True, the data is loaded from the SNIRF file only
+        when accessed through the getter
+        """
         if type(self._dataTypeLabel) is type(AbsentDataset):
             return None
         if type(self._dataTypeLabel) is type(PresentDataset):
@@ -2713,6 +3591,16 @@ class MeasurementListElement(Group):
 
     @property
     def dataTypeIndex(self):
+        """    
+        
+        Data-type specific parameter indices. The data type index specifies additional data type specific parameters that are further elaborated by other fields in the probe structure, as detailed below. Note that the Time Domain and Diffuse Correlation Spectroscopy data types have two additional parameters and so the data type index must be a vector with 2 elements that index the additional parameters. One use of this parameter is as a 
+        stimulus condition index when `measurementList(k).dataType = 99999` (i.e, `processed` and 
+        `measurementList(k).dataTypeLabel = 'HRF ...'` .
+
+        
+        If dynamic_loading=True, the data is loaded from the SNIRF file only
+        when accessed through the getter
+        """
         if type(self._dataTypeIndex) is type(AbsentDataset):
             return None
         if type(self._dataTypeIndex) is type(PresentDataset):
@@ -2732,6 +3620,14 @@ class MeasurementListElement(Group):
 
     @property
     def sourcePower(self):
+        """    
+        
+        Source power in milliwatt (mW). 
+
+        
+        If dynamic_loading=True, the data is loaded from the SNIRF file only
+        when accessed through the getter
+        """
         if type(self._sourcePower) is type(AbsentDataset):
             return None
         if type(self._sourcePower) is type(PresentDataset):
@@ -2751,6 +3647,14 @@ class MeasurementListElement(Group):
 
     @property
     def detectorGain(self):
+        """    
+        
+        Detector gain
+
+        
+        If dynamic_loading=True, the data is loaded from the SNIRF file only
+        when accessed through the getter
+        """
         if type(self._detectorGain) is type(AbsentDataset):
             return None
         if type(self._detectorGain) is type(PresentDataset):
@@ -2770,6 +3674,21 @@ class MeasurementListElement(Group):
 
     @property
     def moduleIndex(self):
+        """    
+        
+        Index of a repeating module. If `moduleIndex` is provided while `useLocalIndex`
+        is set to `true`, then, both `measurementList(k).sourceIndex` and 
+        `measurementList(k).detectorIndex` are assumed to be the local indices
+        of the same module specified by `moduleIndex`. If the source and
+        detector are located on different modules, one must use `sourceModuleIndex`
+        and `detectorModuleIndex` instead to specify separate parent module 
+        indices. See below.
+
+
+        
+        If dynamic_loading=True, the data is loaded from the SNIRF file only
+        when accessed through the getter
+        """
         if type(self._moduleIndex) is type(AbsentDataset):
             return None
         if type(self._moduleIndex) is type(PresentDataset):
@@ -2789,6 +3708,16 @@ class MeasurementListElement(Group):
 
     @property
     def sourceModuleIndex(self):
+        """    
+        
+        Index of the module that contains the source of the channel. 
+        This index must be used together with `detectorModuleIndex`, and 
+        can not be used when `moduleIndex` presents.
+
+        
+        If dynamic_loading=True, the data is loaded from the SNIRF file only
+        when accessed through the getter
+        """
         if type(self._sourceModuleIndex) is type(AbsentDataset):
             return None
         if type(self._sourceModuleIndex) is type(PresentDataset):
@@ -2808,6 +3737,50 @@ class MeasurementListElement(Group):
 
     @property
     def detectorModuleIndex(self):
+        """    
+        
+        Index of the module that contains the detector of the channel. 
+        This index must be used together with `sourceModuleIndex`, and 
+        can not be used when `moduleIndex` presents.
+
+
+        For example, if `measurementList5` is a structure with `sourceIndex=2`, 
+        `detectorIndex=3`, `wavelengthIndex=1`, `dataType=1`, `dataTypeIndex=1` would 
+        imply that the data in the 5th column of the `dataTimeSeries` variable was 
+        measured with source #2 and detector #3 at wavelength #1.  Wavelengths (in 
+        nanometers) are described in the `probe.wavelengths` variable  (described 
+        later). The data type in this case is 1, implying that it was a continuous wave 
+        measurement.  The complete list of currently supported data types is found in 
+        the Appendix. The data type index specifies additional data type specific 
+        parameters that are further elaborated by other fields in the `probe` 
+        structure, as detailed below. Note that the Time Domain and Diffuse Correlation 
+        Spectroscopy data types have two additional parameters and so the data type 
+        index must be a vector with 2 elements that index the additional parameters.
+
+        `sourcePower` provides the option for information about the source power for 
+        that channel to be saved along with the data. The units are not defined, unless 
+        the user takes the option of using a `metaDataTag` described below to define, 
+        for instance, `sourcePowerUnit`. `detectorGain` provides the option for 
+        information about the detector gain for that channel to be saved along with the 
+        data.
+
+        Note:  The source indices generally refer to the optode naming (probe 
+        positions) and not necessarily the physical laser numbers on the instrument. 
+        The same is true for the detector indices.  Each source optode would generally, 
+        but not necessarily, have 2 or more wavelengths (hence lasers) plugged into it 
+        in order to calculate deoxy- and oxy-hemoglobin concentrations. The data from 
+        these two wavelengths will be indexed by the same source, detector, and data 
+        type values, but have different wavelength indices. Using the same source index 
+        for lasers at the same location but with different wavelengths simplifies the 
+        bookkeeping for converting intensity measurements into concentration changes. 
+        As described below, optional variables `probe.sourceLabels` and 
+        `probe.detectorLabels` are provided for indicating the instrument specific 
+        label for sources and detectors.
+
+        
+        If dynamic_loading=True, the data is loaded from the SNIRF file only
+        when accessed through the getter
+        """
         if type(self._detectorModuleIndex) is type(AbsentDataset):
             return None
         if type(self._detectorModuleIndex) is type(PresentDataset):
@@ -3218,7 +4191,20 @@ class MeasurementListElement(Group):
 
 
 class MeasurementList(IndexedGroup):
+    """
+    
+    The measurement list. This variable serves to map the data array onto the probe 
+    geometry (sources and detectors), data type, and wavelength. This variable is 
+    an array structure that has the size `<number of channels>` that 
+    describes the corresponding column in the data matrix. For example, the 
+    `measurementList3` describes the third column of the data matrix (i.e. 
+    `dataTimeSeries(:,3)`).
 
+    Each element of the array is a structure which describes the measurement 
+    conditions for this data with the following fields:
+
+
+    """
     _name: str = 'measurementList'
     _element: Group = MeasurementListElement
 
@@ -3227,7 +4213,9 @@ class MeasurementList(IndexedGroup):
 
 
 class StimElement(Group):
-
+    """    
+    An element of indexed group `Stim`.
+    """
     def __init__(self, gid: h5py.h5g.GroupID, cfg: SnirfConfig):
         super().__init__(gid, cfg)
         self._name = AbsentDataset  # "s"+
@@ -3261,6 +4249,15 @@ class StimElement(Group):
 
     @property
     def name(self):
+        """    
+        
+        This is a string describing the j<sup>th</sup> stimulus condition.
+
+
+        
+        If dynamic_loading=True, the data is loaded from the SNIRF file only
+        when accessed through the getter
+        """
         if type(self._name) is type(AbsentDataset):
             return None
         if type(self._name) is type(PresentDataset):
@@ -3280,6 +4277,25 @@ class StimElement(Group):
 
     @property
     def data(self):
+        """    
+        * **Allowed attribute**: `names`
+
+        This is a numeric 2-D array with at least 3 columns, specifying the stimulus 
+        time course for the j<sup>th</sup> condition. Each row corresponds to a 
+        specific stimulus trial. The first three columns indicate `[starttime duration value]`.  
+        The starttime, in seconds, is the time relative to the time origin when the 
+        stimulus takes on a value; the duration is the time in seconds that the stimulus 
+        value continues, and value is the stimulus amplitude.  The number of rows is 
+        not constrained. (see examples in the appendix).
+
+        Additional columns can be used to store user-specified data associated with 
+        each stimulus trial. An optional record `/nirs(i)/stim(j)/dataLabels` can be 
+        used to annotate the meanings of each data column. 
+
+        
+        If dynamic_loading=True, the data is loaded from the SNIRF file only
+        when accessed through the getter
+        """
         if type(self._data) is type(AbsentDataset):
             return None
         if type(self._data) is type(PresentDataset):
@@ -3299,6 +4315,17 @@ class StimElement(Group):
 
     @property
     def dataLabels(self):
+        """    
+        
+        This is a string array providing annotations for each data column in 
+        `/nirs(i)/stim(j)/data`. Each element of the array must be a string;
+        the total length of this array must be the same as the column number
+        of `/nirs(i)/stim(j)/data`, including the first 3 required columns.
+
+        
+        If dynamic_loading=True, the data is loaded from the SNIRF file only
+        when accessed through the getter
+        """
         if type(self._dataLabels) is type(AbsentDataset):
             return None
         if type(self._dataLabels) is type(PresentDataset):
@@ -3414,7 +4441,13 @@ class StimElement(Group):
 
 
 class Stim(IndexedGroup):
+    """
+    
+    This is an array describing any stimulus conditions. Each element of the array 
+    has the following required fields.
 
+
+    """
     _name: str = 'stim'
     _element: Group = StimElement
 
@@ -3423,7 +4456,9 @@ class Stim(IndexedGroup):
 
 
 class AuxElement(Group):
-
+    """    
+    An element of indexed group `Aux`.
+    """
     def __init__(self, gid: h5py.h5g.GroupID, cfg: SnirfConfig):
         super().__init__(gid, cfg)
         self._name = AbsentDataset  # "s"+
@@ -3473,6 +4508,14 @@ class AuxElement(Group):
 
     @property
     def name(self):
+        """    
+        
+        This is string describing the j<sup>th</sup> auxiliary data timecourse.
+
+        
+        If dynamic_loading=True, the data is loaded from the SNIRF file only
+        when accessed through the getter
+        """
         if type(self._name) is type(AbsentDataset):
             return None
         if type(self._name) is type(PresentDataset):
@@ -3492,6 +4535,17 @@ class AuxElement(Group):
 
     @property
     def dataTimeSeries(self):
+        """    
+        
+        This is the aux data variable. This variable has dimensions of `<number of 
+        time points> x 1`.
+
+        Chunked data is allowed to support real-time data streaming
+
+        
+        If dynamic_loading=True, the data is loaded from the SNIRF file only
+        when accessed through the getter
+        """
         if type(self._dataTimeSeries) is type(AbsentDataset):
             return None
         if type(self._dataTimeSeries) is type(PresentDataset):
@@ -3511,6 +4565,14 @@ class AuxElement(Group):
 
     @property
     def dataUnit(self):
+        """    
+        
+        International System of Units (SI units) identifier for the given channel. Encoding should follow the [CMIXF-12 standard](https://people.csail.mit.edu/jaffer/MIXF/CMIXF-12), avoiding special unicode symbols like U+03BC (m) or U+00B5 (u) and using '/' rather than 'per' for units such as `V/us`. The recommended export format is in unscaled units such as V, s, Mole.
+
+        
+        If dynamic_loading=True, the data is loaded from the SNIRF file only
+        when accessed through the getter
+        """
         if type(self._dataUnit) is type(AbsentDataset):
             return None
         if type(self._dataUnit) is type(PresentDataset):
@@ -3530,6 +4592,21 @@ class AuxElement(Group):
 
     @property
     def time(self):
+        """    
+        
+        The time variable. This provides the acquisition time (in `TimeUnit` units) 
+        of the aux measurement relative to the time origin.  This will usually be 
+        a straight line with slope equal to the acquisition frequency, but does 
+        not need to be equal spacing. The size of this variable is 
+        `<number of time points> x 1` or `<2x1>` similar  to definition of the 
+        `/nirs(i)/data(j)/time` field.
+
+        Chunked data is allowed to support real-time data streaming
+
+        
+        If dynamic_loading=True, the data is loaded from the SNIRF file only
+        when accessed through the getter
+        """
         if type(self._time) is type(AbsentDataset):
             return None
         if type(self._time) is type(PresentDataset):
@@ -3549,6 +4626,17 @@ class AuxElement(Group):
 
     @property
     def timeOffset(self):
+        """    
+        
+        This variable specifies the offset of the file time origin relative to absolute
+        (clock) time in `TimeUnit` units.
+
+
+
+        
+        If dynamic_loading=True, the data is loaded from the SNIRF file only
+        when accessed through the getter
+        """
         if type(self._timeOffset) is type(AbsentDataset):
             return None
         if type(self._timeOffset) is type(PresentDataset):
@@ -3710,7 +4798,12 @@ class AuxElement(Group):
 
 
 class Aux(IndexedGroup):
+    """
+    
+    This optional array specifies any recorded auxiliary data. Each element of 
+    `aux` has the following required fields:
 
+    """
     _name: str = 'aux'
     _element: Group = AuxElement
 
@@ -3766,6 +4859,15 @@ class Snirf(Group):
 
     @property
     def formatVersion(self):
+        """    
+        
+        This is a string that specifies the version of the file format.  This document 
+        describes format version "1.0"
+        	
+        
+        If dynamic_loading=True, the data is loaded from the SNIRF file only
+        when accessed through the getter
+        """
         if type(self._formatVersion) is type(AbsentDataset):
             return None
         if type(self._formatVersion) is type(PresentDataset):
@@ -3785,6 +4887,22 @@ class Snirf(Group):
 
     @property
     def nirs(self):
+        """    
+        
+        This group stores one set of NIRS data.  This can be extended by adding the count 
+        number (e.g. `/nirs1`, `/nirs2`,...) to the group name. This is intended to 
+        allow the storage of 1 or more complete NIRS datasets inside a single SNIRF 
+        document.  For example, a two-subject hyperscanning can be stored using the notation
+        * `/nirs1` =  first subject's data
+        * `/nirs2` =  second subject's data
+        The use of a non-indexed (e.g. `/nirs`) entry is allowed when only one entry 
+        is present and is assumed to be entry 1.
+
+
+        
+        If dynamic_loading=True, the data is loaded from the SNIRF file only
+        when accessed through the getter
+        """
         return self._nirs
 
     @nirs.setter
@@ -3856,10 +4974,18 @@ class Snirf(Group):
 
     # overload
     def save(self, *args):
-        '''
-        Save changes you have made to the Snirf object to disk. If a filepath is supplied, the changes will be
-        'saved as' in a new file.
-        '''
+        """Save a SNIRF file to disk.
+        
+        Args:
+            args (str or h5py.File): A path to a closed or nonexistant SNIRF file on disk or an open `h5py.File` instance
+    
+        Examples:
+            save can overwrite the current contents of a Snirf file:
+            >>> mysnirf.save()
+            
+            or take a new filename to write the file there:
+            >>> mysnirf.save(<new destination>)
+        """
         if len(args) > 0 and type(args[0]) is str:
             path = args[0]
             if not path.endswith('.snirf'):
@@ -3872,15 +4998,30 @@ class Snirf(Group):
             self._save(self._h.file)
 
     def validate(self) -> Tuple[bool, ValidationResult]:
-        '''
-        Returns a bool representing the validity of the Snirf object and the
-        detailed output structure ValidationResult instance
-        '''
+        """Validate a Snirf object.
+
+        Returns the validity of the current state of a `Snirf` object, including
+        modifications made in memory to a loaded SNIRF file.
+
+        Returns a bool representing the validity of the `Snirf` object and the
+        detailed output structure `ValidationResult` instance
+
+        Returns:
+            bool: True if the file is valid
+            ValidationResult: structure containing detailed validation results
+        """
         result = ValidationResult()
         self._validate(result)
         return (result.is_valid(), result)
 
     def close(self):
+        """Close a Snirf file.
+
+        After closing, the underlying SNIRF file cannot be accessed from this interface again.
+        Use `close` if you need to open a new interface on the same HDF5 file.
+
+        `close` is called automatically by the destructor.
+        """
         self._cfg.logger.info('Closing Snirf file %s', self.filename)
         self._h.close()
 
