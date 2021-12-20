@@ -6,10 +6,20 @@ from datetime import date, datetime
 import getpass
 import os
 import sys
+import warnings
 
 from gen.data import *
-from pysnirf2 import __version__ as __version__
 
+dst = os.path.abspath(os.getcwd())
+output_path = dst + '/pysnirf2/' + 'pysnirf2.py'
+
+try:
+    os.remove(output_path)
+except FileNotFoundError:
+    pass
+open(output_path, 'w')
+
+from pysnirf2 import __version__ as __version__
 """
 Generates SNIRF interface and validator from the summary table of the specification
 hosted at SPEC_SRC.
@@ -75,8 +85,6 @@ if __name__ == '__main__':
     # Parse headings in spec for complete HDF style locations with which to build tree
     definitions = unidecode(text).split(DEFINITIONS_DELIM_START)[1].split(DEFINITIONS_DELIM_END)[0]
     definitions_lines = definitions.split('\n')
-    # while '' in definitions_lines:
-    #     definitions_lines.remove('')
         
     # Create list of hdf5 names ("locations") by assuming each follows a '####' header character in the definitions section
     locations = []
@@ -128,7 +136,7 @@ if __name__ == '__main__':
             type_code = type_codes[i]
             name = location.split('/')[-1].split('(')[0]  # Remove (i), (j)
             parent = location.split('/')[-2].split('(')[0]  # Remove (i), (j)
-            print('Importing', location, 'with type', type_code)
+            print('Found', location, 'with type', type_code)
             if type_code is not None:
                 required = TYPELUT['REQUIRED'] in type_code
             else:
@@ -184,8 +192,6 @@ if __name__ == '__main__':
     template = env.get_template(TEMPLATE)
     
     # Generate the complete Snirf interface from base.py and the template + data
-    dst = os.path.abspath(os.getcwd())
-    output_path = dst + '/pysnirf2/' + 'pysnirf2.py'
     with open(HEADER, 'r') as f_header:
         with open(FOOTER, 'r') as f_footer:
             print('Loading base class definitions and file header from', HEADER)
