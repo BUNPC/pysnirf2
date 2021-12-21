@@ -233,7 +233,7 @@
         {% endif %}
         else:
             try:
-                if type(self._{{ CHILD.name }}) is type(PresentDataset):
+                if type(self._{{ CHILD.name }}) is type(PresentDataset) or '{{ CHILD.name }}' in self._h:
                     dataset = self._h['{{ CHILD.name }}']
                 else:
         {% if TYPES.ARRAY_2D in CHILD.type %}
