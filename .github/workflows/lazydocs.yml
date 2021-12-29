@@ -24,8 +24,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install lazydocs
+          pip install pydocstyle
       - name: Generate documentation
-        run: lazydocs ./pysnirf2/pysnirf2.py ./docs
+        run: lazydocs --overview-file="README.md" pysnirf2 docs
       - name: Commit
         run: |
           echo ${{ github.ref }}

@@ -9,18 +9,16 @@ from tempfile import TemporaryFile
 import logging
 import termcolor
 import colorama
-from pysnirf2.__version__ import __version__ as __version__
 from typing import Tuple
 
 # Colored prints for validator
 if os.name == 'nt':
     colorama.init()
 
-printr = lambda x: termcolor.cprint(x, 'red')
-printg = lambda x: termcolor.cprint(x, 'green')
-printb = lambda x: termcolor.cprint(x, 'blue')
-printm = lambda x: termcolor.cprint(x, 'magenta')
-
+_printr = lambda x: termcolor.cprint(x, 'red')
+_printg = lambda x: termcolor.cprint(x, 'green')
+_printb = lambda x: termcolor.cprint(x, 'blue')
+_printm = lambda x: termcolor.cprint(x, 'magenta')
 
 
 _loggers = {}
@@ -32,7 +30,7 @@ def _create_logger(name, log_file, level=logging.INFO):
     logger = logging.getLogger(name)
     logger.setLevel(level)
     logger.addHandler(handler)
-    logger = logging.LoggerAdapter(logger, {'version': __version__})
+#    logger = logging.LoggerAdapter(logger, {'version': __version__})
     _loggers[name] = logger
     return logger
 
@@ -349,11 +347,11 @@ class ValidationResult:
                 s += issue.location.ljust(longest_key) + ' ' + _SEVERITY_LEVELS[sev] + ' ' + issue.name.ljust(longest_code) + '\n'
         print(s)
         for i in range(0, severity):
-            [printg, printb, printm, printr][i]('Found ' + str(printed[i]) + ' ' + termcolor.colored(_SEVERITY_LEVELS[i], _SEVERITY_COLORS[i]) + ' (hidden)')            
+            [_printg, _printb, _printm, _printr][i]('Found ' + str(printed[i]) + ' ' + termcolor.colored(_SEVERITY_LEVELS[i], _SEVERITY_COLORS[i]) + ' (hidden)')            
         for i in range(severity, 4):
-            [printg, printb, printm, printr][i]('Found ' + str(printed[i]) + ' ' + termcolor.colored(_SEVERITY_LEVELS[i], _SEVERITY_COLORS[i]))
+            [_printg, _printb, _printm, _printr][i]('Found ' + str(printed[i]) + ' ' + termcolor.colored(_SEVERITY_LEVELS[i], _SEVERITY_COLORS[i]))
         i = int(self.is_valid())
-        [printr, printg][i]('\nFile is ' +['INVALID', 'VALID'][i])
+        [_printr, _printg][i]('\nFile is ' +['INVALID', 'VALID'][i])
 
     def _add(self, location, key):
         if key not in _CODES.keys():
