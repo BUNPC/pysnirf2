@@ -19,7 +19,6 @@ from tempfile import TemporaryFile
 import logging
 import termcolor
 import colorama
-from pysnirf2.__version__ import __version__ as __version__
 from typing import Tuple
 
 
@@ -46,7 +45,7 @@ def _create_logger(name, log_file, level=logging.INFO):
     logger = logging.getLogger(name)
     logger.setLevel(level)
     logger.addHandler(handler)
-    logger = logging.LoggerAdapter(logger, {'version': __version__})
+#    logger = logging.LoggerAdapter(logger, {'version': __version__})
     _loggers[name] = logger
     return logger
 
