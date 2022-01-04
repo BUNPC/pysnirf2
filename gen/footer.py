@@ -98,7 +98,7 @@ class Snirf(Snirf):
     def _validate(self, result: ValidationResult):
         super()._validate(result)
         
-        # TODO invalid filename, file
+        # TODO INVALID_FILENAME, INVALID_FILE detection
             
         for nirs in self.nirs:
             if type(nirs.probe) not in [type(None), type(AbsentGroup)]:
@@ -127,7 +127,7 @@ class Snirf(Snirf):
                                 result._add(ml.location + '/wavelengthIndex', 'INVALID_WAVELENGTH_INDEX')
 
 
-# -- convenience functions ----------------------------------------------------
+# -- Interface functions ----------------------------------------------------
             
         
 def loadSnirf(path: str, dynamic_loading: bool=False, logfile: bool=False) -> Snirf:

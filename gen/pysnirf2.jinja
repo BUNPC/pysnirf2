@@ -216,7 +216,8 @@
         else:
             self.{{ CHILD.name }}._validate(result)
     {% elif TYPES.GROUP in CHILD.type %}
-        if type(self._{{ CHILD.name }}) in [type(AbsentGroup), type(None)]:
+        # If Group is not present in file and empty in the wrapper, it is missing
+        if type(self._{{ CHILD.name }}) in [type(AbsentGroup), type(None)] or ('{{ CHILD.name }}' not in self._h and self._{{ CHILD.name }}.is_empty()):
         {% if TYPES.REQUIRED in CHILD.type %}
             result._add(name, 'REQUIRED_GROUP_MISSING')
         {% else %}
