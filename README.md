@@ -1,5 +1,5 @@
 ![testing](https://github.com/BUNPC/pysnirf2/actions/workflows/test.yml/badge.svg)
-[![pypi](https://img.shields.io/badge/-pip%20install%20pysnirf2==0.3.0-yellow)](https://pypi.org/project/pysnirf2/)
+[![pypi](https://img.shields.io/badge/-pip%20install%20pysnirf2==0.3.1-yellow)](https://pypi.org/project/pysnirf2/)
 
 # pysnirf2 v0.3.1
 
