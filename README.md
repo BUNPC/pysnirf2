@@ -1,7 +1,7 @@
 ![testing](https://github.com/BUNPC/pysnirf2/actions/workflows/test.yml/badge.svg)
 [![PyPI version](https://badge.fury.io/py/pysnirf2.svg)](https://badge.fury.io/py/pysnirf2)
 
-# pysnirf2 v0.3.1
+# pysnirf2
 
 Dynamically generated Python library for reading, writing, and validating [Shared Near Infrared Spectroscopy Format (SNIRF) files](https://github.com/fNIRS/snirf).
 
