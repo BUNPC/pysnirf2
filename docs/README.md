@@ -15,14 +15,14 @@
 - [`pysnirf2.Group`](./pysnirf2.md#class-group)
 - [`pysnirf2.IndexedGroup`](./pysnirf2.md#class-indexedgroup)
 - [`pysnirf2.MeasurementList`](./pysnirf2.md#class-measurementlist): Interface for indexed group `MeasurementList`.
-- [`pysnirf2.MeasurementListElement`](./pysnirf2.md#class-measurementlistelement): Wrapper for An element of indexed group `MeasurementList`.
+- [`pysnirf2.MeasurementListElement`](./pysnirf2.md#class-measurementlistelement): Wrapper for an element of indexed group `MeasurementList`.
 - [`pysnirf2.MetaDataTags`](./pysnirf2.md#class-metadatatags)
 - [`pysnirf2.Nirs`](./pysnirf2.md#class-nirs): Interface for indexed group `Nirs`.
-- [`pysnirf2.NirsElement`](./pysnirf2.md#class-nirselement): Wrapper for An element of indexed group `Nirs`.
+- [`pysnirf2.NirsElement`](./pysnirf2.md#class-nirselement): Wrapper for an element of indexed group `Nirs`.
 - [`pysnirf2.Probe`](./pysnirf2.md#class-probe)
 - [`pysnirf2.Snirf`](./pysnirf2.md#class-snirf)
 - [`pysnirf2.SnirfConfig`](./pysnirf2.md#class-snirfconfig): Structure containing Snirf-wide data and settings.
-- [`pysnirf2.SnirfFormatError`](./pysnirf2.md#class-snirfformaterror)
+- [`pysnirf2.SnirfFormatError`](./pysnirf2.md#class-snirfformaterror): Raised when SNIRF-specific error prevents file from loading properly.
 - [`pysnirf2.Stim`](./pysnirf2.md#class-stim)
 - [`pysnirf2.StimElement`](./pysnirf2.md#class-stimelement)
 - [`pysnirf2.ValidationIssue`](./pysnirf2.md#class-validationissue): Information about the validity of a given SNIRF file location.
