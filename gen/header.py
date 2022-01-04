@@ -41,7 +41,7 @@ if sys.version_info[0] < 3:
 
 
 class SnirfFormatError(Exception):
-    """"Raised when SNIRF-specific error prevents file from loading properly."""
+    """Raised when SNIRF-specific error prevents file from loading properly."""
     pass
 
 
