@@ -101,7 +101,7 @@ class Snirf(Snirf):
         # TODO INVALID_FILENAME, INVALID_FILE detection
             
         for nirs in self.nirs:
-            if type(nirs.probe) not in [type(None), type(AbsentGroup)]:
+            if type(nirs.probe) not in [type(None), type(_AbsentGroup)]:
                 if nirs.probe.sourceLabels is not None:
                     lenSourceLabels = len(nirs.probe.sourceLabels)
                 else:

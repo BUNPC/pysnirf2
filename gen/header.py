@@ -1,11 +1,19 @@
 # -*- coding: utf-8 -*-
-"""pysnirf2
+"""Module for reading, writing and validating SNIRF files.
 
-Module for reading, writing and validating SNIRF files.
+SNIRF files are HDF5 files designed to facilitate the sharing of near-infrared
+spectrocopy data. Their specification is defined at https://github.com/fNIRS/snirf.
 
-Attributes:
-    __version__ (str): Library version
+This library wraps each HDF5 Group and offers a Pythonic interface on lists
+of like-Groups which the SNIRF speicification calls "indexed Groups".
 
+Example:
+    Load a file::
+
+        >>> from pysnirf2 import Snirf
+        >>> s = Snirf(<filename>)
+
+Maintained by the Boston University Neurophotonics Center
 """
 
 from abc import ABC, abstractmethod
@@ -697,9 +705,9 @@ class _PresentDatasetType():
 
 
 # Instantiate faux singletons
-AbsentDataset = _AbsentDatasetType()
-AbsentGroup = _AbsentGroupType()
-PresentDataset = _PresentDatasetType()
+_AbsentDataset = _AbsentDatasetType()
+_AbsentGroup = _AbsentGroupType()
+_PresentDataset = _PresentDatasetType()
 
 
 class Group(ABC):
@@ -794,7 +802,7 @@ class Group(ABC):
                 if not attr.is_empty():
                     return False
             else:
-                if not any([attr is a for a in [None, AbsentGroup, AbsentDataset]]):
+                if not any([attr is a for a in [None, _AbsentGroup, _AbsentDataset]]):
                     return False
         return True
 
