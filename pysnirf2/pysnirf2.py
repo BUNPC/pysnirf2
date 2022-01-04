@@ -27,8 +27,13 @@ from tempfile import TemporaryFile
 import logging
 import termcolor
 import colorama
-from pysnirf2.__version__ import __version__ as __version__
 from typing import Tuple
+
+try:
+    from pysnirf2.__version__ import __version__ as __version__
+except Exception:
+    warn('Failed to load pysnirf2 library version')
+    __version__ = '0.0.0'
 
 
 if sys.version_info[0] < 3:
