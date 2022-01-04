@@ -50,7 +50,7 @@ detectorPos2D: [[30.  0.]
 detectorPos3D: [[30.  0.  0.]
  [ 0. 30.  0.]]
 filename: 
-C:\Users\sstucker\OneDrive\Desktop\master\Homer3\SubjDataSample\test.snirf
+C:\Users\you\some\path\subj1_run01.snirf
 frequencies: [1.]
 landmarkLabels: None
 landmarkPos2D: None
