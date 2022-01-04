@@ -41,7 +41,7 @@ if sys.version_info[0] < 3:
 
 
 class SnirfFormatError(Exception):
-    """"Raised when SNIRF-specific error prevents file from loading properly."""
+    """Raised when SNIRF-specific error prevents file from loading properly."""
     pass
 
 
@@ -2750,7 +2750,7 @@ class Probe(Group):
 
 
 class NirsElement(Group):
-    """Wrapper for An element of indexed group `Nirs`."""
+    """Wrapper for an element of indexed group `Nirs`."""
     def __init__(self, gid: h5py.h5g.GroupID, cfg: SnirfConfig):
         super().__init__(gid, cfg)
         self._metaDataTags = _AbsentGroup  # {.}*
@@ -3003,7 +3003,7 @@ class Nirs(IndexedGroup):
 
 
 class DataElement(Group):
-    """Wrapper for An element of indexed group `Data`."""
+    """Wrapper for an element of indexed group `Data`."""
     def __init__(self, gid: h5py.h5g.GroupID, cfg: SnirfConfig):
         super().__init__(gid, cfg)
         self._dataTimeSeries = _AbsentDataset  # [[<f>,...]]*
@@ -3242,7 +3242,7 @@ class Data(IndexedGroup):
 
 
 class MeasurementListElement(Group):
-    """Wrapper for An element of indexed group `MeasurementList`."""
+    """Wrapper for an element of indexed group `MeasurementList`."""
     def __init__(self, gid: h5py.h5g.GroupID, cfg: SnirfConfig):
         super().__init__(gid, cfg)
         self._sourceIndex = _AbsentDataset  # <i>*
@@ -4207,7 +4207,7 @@ class MeasurementList(IndexedGroup):
 
 
 class StimElement(Group):
-    """Wrapper for An element of indexed group `Stim`."""
+    """Wrapper for an element of indexed group `Stim`."""
     def __init__(self, gid: h5py.h5g.GroupID, cfg: SnirfConfig):
         super().__init__(gid, cfg)
         self._name = _AbsentDataset  # "s"+
@@ -4453,7 +4453,7 @@ class Stim(IndexedGroup):
 
 
 class AuxElement(Group):
-    """Wrapper for An element of indexed group `Aux`."""
+    """Wrapper for an element of indexed group `Aux`."""
     def __init__(self, gid: h5py.h5g.GroupID, cfg: SnirfConfig):
         super().__init__(gid, cfg)
         self._name = _AbsentDataset  # "s"+

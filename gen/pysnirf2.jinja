@@ -325,7 +325,7 @@ class {{ sentencecase(GROUP.name) -}}(Group):
 {% endfor %}
 {% for INDEXED_GROUP in INDEXED_GROUPS %}
 class {{ sentencecase(INDEXED_GROUP.name) -}}Element(Group):
-    """Wrapper for An element of indexed group `{{ sentencecase(INDEXED_GROUP.name) }}`."""
+    """Wrapper for an element of indexed group `{{ sentencecase(INDEXED_GROUP.name) }}`."""
     def __init__(self, gid: h5py.h5g.GroupID, cfg: SnirfConfig):
         super().__init__(gid, cfg)
     {{ declare_members(INDEXED_GROUP) | indent }}
