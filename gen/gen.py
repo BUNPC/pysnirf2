@@ -107,6 +107,9 @@ if __name__ == '__main__':
                     break
             descriptions.append('\n'.join(description_lines))
                 
+    # Format descriptions
+    descriptions = [description.replace('\\', '/').replace('\t', ' ').lstrip() for description in descriptions]
+            
     # Create flat list of all nodes
     flat = []
 

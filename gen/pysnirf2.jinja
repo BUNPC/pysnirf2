@@ -66,11 +66,12 @@
 {% for CHILD in NODE.children %}
     @property
     def {{ CHILD.name }}(self):
-        """    
-        {{ CHILD.description | indent(8) }}
-        
+        """SNIRF field `{{ CHILD.name }}`.
+            
         If dynamic_loading=True, the data is loaded from the SNIRF file only
         when accessed through the getter
+            
+        {{ CHILD.description | indent(8) }}
         """
     {% if TYPES.INDEXED_GROUP in CHILD.type %}
         return self._{{ CHILD.name }}
@@ -308,7 +309,8 @@
 
 {% for GROUP in GROUPS %}
 class {{ sentencecase(GROUP.name) -}}(Group):
-    """
+    """Wrapper for Group of type `{{ GROUP.name }}`.
+    
     {{ GROUP.description | indent }}
     """
     def __init__(self, var, cfg: SnirfConfig):
@@ -323,9 +325,7 @@ class {{ sentencecase(GROUP.name) -}}(Group):
 {% endfor %}
 {% for INDEXED_GROUP in INDEXED_GROUPS %}
 class {{ sentencecase(INDEXED_GROUP.name) -}}Element(Group):
-    """    
-    An element of indexed group `{{ sentencecase(INDEXED_GROUP.name) }}`.
-    """
+    """Wrapper for An element of indexed group `{{ sentencecase(INDEXED_GROUP.name) }}`."""
     def __init__(self, gid: h5py.h5g.GroupID, cfg: SnirfConfig):
         super().__init__(gid, cfg)
     {{ declare_members(INDEXED_GROUP) | indent }}
@@ -335,7 +335,12 @@ class {{ sentencecase(INDEXED_GROUP.name) -}}Element(Group):
 {{ gen_validator(INDEXED_GROUP) }}
 
 class {{ sentencecase(INDEXED_GROUP.name) -}}(IndexedGroup):
-    """
+    """Interface for indexed group `{{ sentencecase(INDEXED_GROUP.name) }}`.
+    
+    Can be indexed like a list to retrieve `{{ sentencecase(INDEXED_GROUP.name) }}` elements.
+    
+    To add or remove an element from the list, use the `appendGroup` method and the `del` operator, respectively.
+    
     {{ INDEXED_GROUP.description | indent }}
     """
     _name: str = '{{ INDEXED_GROUP.name }}'
@@ -408,7 +413,7 @@ class Snirf(Group):
             self._save(self._h.file)
 
     def validate(self) -> Tuple[bool, ValidationResult]:
-        """Validate a Snirf object.
+        """Validate a `Snirf` instance.
 
         Returns the validity of the current state of a `Snirf` object, including
         modifications made in memory to a loaded SNIRF file.
@@ -425,7 +430,7 @@ class Snirf(Group):
         return (result.is_valid(), result)
 
     def close(self):
-        """Close a Snirf file.
+        """Close the file underlying a `Snirf` instance.
 
         After closing, the underlying SNIRF file cannot be accessed from this interface again.
         Use `close` if you need to open a new interface on the same HDF5 file.
