@@ -8,18 +8,6 @@ import os
 import sys
 import warnings
 
-from gen.data import *
-
-dst = os.path.abspath(os.getcwd())
-output_path = dst + '/pysnirf2/' + 'pysnirf2.py'
-
-try:
-    os.remove(output_path)
-except FileNotFoundError:
-    pass
-open(output_path, 'w')
-
-from pysnirf2 import __version__ as __version__
 """
 Generates SNIRF interface and validator from the summary table of the specification
 hosted at SPEC_SRC.
@@ -27,8 +15,25 @@ hosted at SPEC_SRC.
 
 if __name__ == '__main__':
     
+    cwd = os.path.abspath(os.getcwd())
+    if not cwd.endswith('pysnirf2'):
+        sys.exit('The gen script must be run from the pysnirf2 project root, not ' + cwd)    
+    
+    output_path = cwd + '/pysnirf2/' + 'pysnirf2.py'
+    
+    try:
+        os.remove(output_path)
+    except FileNotFoundError:
+        pass
+    open(output_path, 'w')
+    
+    from data import *
+    
+    sys.path.append(cwd)
+    from pysnirf2.__version__ import __version__ as VERSION
+    
     print('-------------------------------------')
-    print('pysnirf2 generation script v' + __version__)
+    print('pysnirf2 generation script v' + VERSION)
     print('-------------------------------------')
     
     local_spec = SPEC_SRC.split('/')[-1].split('.')[0] + '_retrieved_' + datetime.now().strftime('%d_%m_%y') + '.txt'
@@ -115,7 +120,6 @@ if __name__ == '__main__':
         for location in locations:
             f.write(location.replace('(i)', '').replace('(j)', '').replace('(k)', '') + '\n')
     print('Wrote to locations.txt')
-    
     
     if len(locations) != len(type_codes) or len(locations) != len(descriptions):
         sys.exit('Parsed ' + str(len(type_codes)) + ' type codes from the summary table but '
