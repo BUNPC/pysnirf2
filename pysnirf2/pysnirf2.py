@@ -40,6 +40,11 @@ if sys.version_info[0] < 3:
     raise ImportError('pysnirf2 requires Python > 3')
 
 
+class SnirfFormatError(Exception):
+    """"Raised when SNIRF-specific error prevents file from loading properly."""
+    pass
+
+
 # Colored prints for validation output to console
 if os.name == 'nt':
     colorama.init()
@@ -665,10 +670,6 @@ def _validate_float_array(dataset: h5py.Dataset, ndims=[1]) -> str:
 
 
 # -----------------------------------------
-
-
-class SnirfFormatError(Exception):
-    pass
 
 
 class SnirfConfig:
