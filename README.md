@@ -1,4 +1,5 @@
 ![testing](https://github.com/BUNPC/pysnirf2/actions/workflows/test.yml/badge.svg)
+![docs](https://github.com/BUNPC/pysnirf2/actions/workflows/lazydocs.yml/badge.svg)
 [![PyPI version](https://badge.fury.io/py/pysnirf2.svg)](https://badge.fury.io/py/pysnirf2)
 
 # pysnirf2
