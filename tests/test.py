@@ -162,20 +162,32 @@ class PySnirf2_Test(unittest.TestCase):
                 valid, result = s.validate()
                 if VERBOSE:
                     result.display(severity=3)
-                self.assertFalse(result[probloc + '/sourcePos2D'].name is 'REQUIRED_DATASET_MISSING', msg='REQUIRED_DATASET_MISSING not expected')
-                self.assertFalse(result[probloc + '/detectorPos2D'].name is 'REQUIRED_DATASET_MISSING', msg='REQUIRED_DATASET_MISSING not expected')
-                self.assertTrue(result[probloc + '/sourcePos2D'].name is 'OPTIONAL_DATASET_MISSING', msg='OPTIONAL_DATASET_MISSING expected')
-                self.assertTrue(result[probloc + '/detectorPos2D'].name is 'OPTIONAL_DATASET_MISSING', msg='OPTIONAL_DATASET_MISSING expected')
-                newname = file.split('.')[0] + '_required_pos_missing'
+                self.assertFalse(result[probloc + '/sourcePos2D'].name == 'REQUIRED_DATASET_MISSING', msg='REQUIRED_DATASET_MISSING not expected')
+                self.assertFalse(result[probloc + '/detectorPos2D'].name == 'REQUIRED_DATASET_MISSING', msg='REQUIRED_DATASET_MISSING not expected')
+                self.assertTrue(result[probloc + '/sourcePos2D'].name == 'OPTIONAL_DATASET_MISSING', msg='OPTIONAL_DATASET_MISSING expected')
+                self.assertTrue(result[probloc + '/detectorPos2D'].name == 'OPTIONAL_DATASET_MISSING', msg='OPTIONAL_DATASET_MISSING expected')
+                newname = file.split('.')[0] + '_optional_pos_missing'
+                newname2 = file.split('.')[0] + '_required_pos_missing'
                 s.save(newname)
+                del s.nirs[0].probe.sourcePos3D
+                del s.nirs[0].probe.detectorPos3D
+                s.save(newname2)
                 s.close()
                 valid, result = validateSnirf(newname)
                 if VERBOSE:
                     result.display(severity=3)
-                self.assertFalse(result[probloc + '/sourcePos2D'].name is 'REQUIRED_DATASET_MISSING', msg='REQUIRED_DATASET_MISSING not expected')
-                self.assertFalse(result[probloc + '/detectorPos2D'].name is 'REQUIRED_DATASET_MISSING', msg='REQUIRED_DATASET_MISSING not expected')
-                self.assertTrue(result[probloc + '/sourcePos2D'].name is 'OPTIONAL_DATASET_MISSING', msg='OPTIONAL_DATASET_MISSING expected')
-                self.assertTrue(result[probloc + '/detectorPos2D'].name is 'OPTIONAL_DATASET_MISSING', msg='OPTIONAL_DATASET_MISSING expected')
+                self.assertFalse(result[probloc + '/sourcePos2D'].name == 'REQUIRED_DATASET_MISSING', msg='REQUIRED_DATASET_MISSING not expected')
+                self.assertFalse(result[probloc + '/detectorPos2D'].name == 'REQUIRED_DATASET_MISSING', msg='REQUIRED_DATASET_MISSING not expected')
+                self.assertTrue(result[probloc + '/sourcePos2D'].name == 'OPTIONAL_DATASET_MISSING', msg='OPTIONAL_DATASET_MISSING expected')
+                self.assertTrue(result[probloc + '/detectorPos2D'].name == 'OPTIONAL_DATASET_MISSING', msg='OPTIONAL_DATASET_MISSING expected')
+                valid, result = validateSnirf(newname2)
+                if VERBOSE:
+                    print('Deleted source and detector 2D and 3D positions from probe:')
+                    result.display(severity=3)
+                self.assertTrue(result[probloc + '/sourcePos2D'].name == 'REQUIRED_DATASET_MISSING', msg='REQUIRED_DATASET_MISSING expected')
+                self.assertTrue(result[probloc + '/detectorPos2D'].name == 'REQUIRED_DATASET_MISSING', msg='REQUIRED_DATASET_MISSING expected')
+                self.assertTrue(result[probloc + '/sourcePos3D'].name == 'REQUIRED_DATASET_MISSING', msg='REQUIRED_DATASET_MISSING expected')
+                self.assertTrue(result[probloc + '/detectorPos3D'].name == 'REQUIRED_DATASET_MISSING', msg='REQUIRED_DATASET_MISSING expected')
     
     def test_validator_required_group_missing(self):
         for i, mode in enumerate([False, True]):

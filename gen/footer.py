@@ -3,8 +3,11 @@
 class MetaDataTags(MetaDataTags):
     
     def add(self, name, value):
-        """
-        Add a new tag to the list.
+        """Add a new tag to the list.
+        
+        Args:
+            name (str): The name of the tag to add (will be added as an attribute of this `MetaDataTags` instance)
+            value: The value of the new tag
         """
         if type(name) is not str:
             raise ValueError('name must be str, not ' + str(type(name)))
@@ -98,10 +101,10 @@ class Snirf(Snirf):
     def _validate(self, result: ValidationResult):
         super()._validate(result)
         
-        # TODO invalid filename, file
+        # TODO INVALID_FILENAME, INVALID_FILE detection
             
         for nirs in self.nirs:
-            if type(nirs.probe) not in [type(None), type(AbsentGroup)]:
+            if type(nirs.probe) not in [type(None), type(_AbsentGroup)]:
                 if nirs.probe.sourceLabels is not None:
                     lenSourceLabels = len(nirs.probe.sourceLabels)
                 else:
@@ -127,13 +130,26 @@ class Snirf(Snirf):
                                 result._add(ml.location + '/wavelengthIndex', 'INVALID_WAVELENGTH_INDEX')
 
 
-# -- convenience functions ----------------------------------------------------
+# -- Interface functions ----------------------------------------------------
             
         
 def loadSnirf(path: str, dynamic_loading: bool=False, logfile: bool=False) -> Snirf:
-    """
-    Returns a Snirf object loaded from path if a Snirf file exists there. Takes
+    """Load a SNIRF file from disk.
+    
+    Returns a `Snirf` object loaded from path if a SNIRF file exists there. Takes
     the same kwargs as the Snirf object constructor
+    
+    Args:
+        path (str): Path to a SNIRF file on disk.
+        dynamic_loading (bool): If True, Datasets will not be read from the SNIRF file
+            unless accessed with a property, conserving memory and loading time with larger datasets. Default False.
+        logfile (bool): If True, the `Snirf` instance will write to a log file which shares its name. Default False.
+    
+    Returns:
+        `Snirf`: a `Snirf` instance loaded from the SNIRF file.   
+    
+    Raises:
+        FileNotFoundError: `path` was not found on disk.
     """
     if not path.endswith('.snirf'):
         path += '.snirf'
@@ -143,9 +159,12 @@ def loadSnirf(path: str, dynamic_loading: bool=False, logfile: bool=False) -> Sn
         raise FileNotFoundError('No SNIRF file at ' + path)
                     
         
-def saveSnirf(path: str, snirfobj: Snirf):
-    """
-    Saves a SNIRF file snirfobj to disk at path
+def saveSnirf(path: str, snirf: Snirf):
+    """Saves a SNIRF file to disk.
+    
+    Args:
+        path (str): Path to save the file.
+        snirf (Snirf): `Snirf` instance to write to disk.
     """
     if type(path) is not str:
         raise TypeError('path must be str, not '+ type(path))
@@ -155,9 +174,10 @@ def saveSnirf(path: str, snirfobj: Snirf):
 
 
 def validateSnirf(path: str) -> Tuple[bool, ValidationResult]:
-    """
+    """Validate a SNIRF file on disk.
+    
     Returns a bool representing the validity of the Snirf object on disk at
-    path along with the detailed output structure ValidationResult instance
+    path along with the detailed output structure ValidationResult instance.
     """
     if type(path) is not str:
         raise TypeError('path must be str, not '+ type(path))
