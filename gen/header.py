@@ -239,7 +239,7 @@ def _read_dataset(dataset: h5py.Dataset):
     if type(dataset) is not h5py.Dataset:
         raise TypeError("'dataset' must be type h5py.Dataset")
     if dataset.size > 1:
-        if _DTYPE_FIXED_LEN_STR in dataset.dtype or _DTYPE_VAR_LEN_STR in dataset.dtype.str:
+        if _DTYPE_FIXED_LEN_STR in dataset.dtype.str or _DTYPE_VAR_LEN_STR in dataset.dtype.str:
             return _read_string_array(dataset)
         elif _DTYPE_INT32 in dataset.dtype.str or _DTYPE_INT64 in dataset.dtype.str:
             return _read_int_array(dataset)
