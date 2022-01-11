@@ -18,6 +18,18 @@ class MetaDataTags(MetaDataTags):
         if name not in self._unspecified_names:
             self._unspecified_names.append(name)
 
+    def remove(self, name):
+        """Remove a tag from the list. You cannot remove a required tag.
+        
+        Args:
+            name (str): The name of the tag to remove.
+        """
+        if type(name) is not str:
+            raise ValueError('name must be str, not ' + str(type(name)))
+        if name not in self._unspecified_names:
+            raise AttributeError("no unspecified tag '" + name + "'")
+        delattr(self, name)
+
 
 # -- Manually extend _validate to provide detailed error codes ----------------
 
