@@ -82,6 +82,9 @@ _DTYPE_INT64 = 'i8'
 _DTYPE_FIXED_LEN_STR = 'S'  # Not sure how robust this is, but fixed length strings will always at least contain S
 _DTYPE_VAR_LEN_STR = 'O'  # Variable length string
 
+_INT_DTYPES = [int, np.int32, np.int64]
+_FLOAT_DTYPES = [float, np.float, np.float64]
+_STR_DTYPES = [str, np.string_]
 
 # -- Dataset creators  ---------------------------------------
 
@@ -106,25 +109,24 @@ def _create_dataset(file: h5py.File, name: str, data):
         TypeError: The data could not be mapped to a SNIRF compliant h5py format.
     """
     data = np.array(data)  # Cast to numpy type to identify
-    try:
-        if len(data) > 1:
-            dtype = data[0].dtype
-            if any([dtype is t for t in [int, np.int32, np.int64]]):  # int
-                return _create_dataset_int_array(file, name, data)
-            elif any([dtype is t for t in [float, np.float, np.float64]]):  # float
-                return _create_dataset_float_array(file, name, data)
-            elif any([dtype is t for t in [str, np.string_]]) or any([t in dtype.str for t in ['U', 'S']]):  # string
-                return _create_dataset_string_array(file, name, data)
-    except (TypeError, IndexError):  # data has no len() or a string was passed
-        dtype = data.dtype
-        if any([dtype is t for t in [int, np.int32, np.int64]]):  # int
-            return _create_dataset_int(file, name, data)
-        elif any([dtype is t for t in [float, np.float, np.float64]]):  # float
-            return _create_dataset_float(file, name, data)
-        elif any([dtype is t for t in [str, np.string_]]) or any([t in dtype.str for t in ['U', 'S']]):  # string
-            return _create_dataset_string(file, name, data)
-    raise TypeError('Unrecognized data type' + str(dtype)
-                    + '. Please provide an int, float, or str, or an iterable of these.')
+    if data.size > 1:
+        dtype = data[0].dtype
+        print(dtype)
+        if any([dtype == t for t in _INT_DTYPES]):  # int
+            return _create_dataset_int_array(file, name, data)
+        elif any([dtype == t for t in _FLOAT_DTYPES]):  # float
+            return _create_dataset_float_array(file, name, data)
+        elif any([dtype == t for t in _STR_DTYPES]) or any([t in dtype.str for t in ['U', 'S']]):  # string
+            return _create_dataset_string_array(file, name, data)
+    dtype = data.dtype
+    if any([dtype == t for t in _INT_DTYPES]):  # int
+        return _create_dataset_int(file, name, data)
+    elif any([dtype == t for t in _FLOAT_DTYPES]):  # float
+        return _create_dataset_float(file, name, data)
+    elif any([dtype == t for t in _STR_DTYPES]) or any([t in dtype.str for t in ['U', 'S']]):  # string
+        return _create_dataset_string(file, name, data)
+    raise TypeError("Unrecognized data type '" + str(dtype)
+                    + "'. Please provide an int, float, or str, or an iterable of these.")
 
 
 def _create_dataset_string(file: h5py.File, name: str, data: str):
