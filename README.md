@@ -162,7 +162,6 @@ To validate a SNIRF file on disk
 ## Validation results
 The validation functions return a `bool` reflecting the validity of the file and a detailed `ValidationResult` structure.
 ```python
->> from pysnirf2 import validateSnirf
 >> assert valid
 ```
 To view the validation result:
