@@ -810,7 +810,7 @@ class Group(ABC):
         raise NotImplementedError('_validate is an abstract method')
 
     def __repr__(self):
-        props = [p for p in dir(self) if ('_' not in p and not callable(getattr(self, p)))]
+        props = [p for p in dir(self) if (not p.startswith('_') and not callable(getattr(self, p)))]
         out = str(self.__class__.__name__) + ' at ' + str(self.location) + '\n'
         for prop in props:
             attr = getattr(self, prop)
