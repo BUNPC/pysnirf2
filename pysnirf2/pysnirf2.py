@@ -239,7 +239,7 @@ def _read_dataset(dataset: h5py.Dataset):
     if type(dataset) is not h5py.Dataset:
         raise TypeError("'dataset' must be type h5py.Dataset")
     if dataset.size > 1:
-        if _DTYPE_FIXED_LEN_STR in dataset.dtype or _DTYPE_VAR_LEN_STR in dataset.dtype.str:
+        if _DTYPE_FIXED_LEN_STR in dataset.dtype.str or _DTYPE_VAR_LEN_STR in dataset.dtype.str:
             return _read_string_array(dataset)
         elif _DTYPE_INT32 in dataset.dtype.str or _DTYPE_INT64 in dataset.dtype.str:
             return _read_int_array(dataset)
@@ -441,6 +441,9 @@ class ValidationResult:
         """`ValidationResult` should only be created by a `Snirf` instance's `validate` method."""
         self._issues = []
         self._locations = []
+
+    def __bool__(self):
+        return self.is_valid()
 
     def is_valid(self) -> bool:
         """Returns True if no `FATAL` issues were catalogued during validation."""
@@ -5058,6 +5061,18 @@ class MetaDataTags(MetaDataTags):
             raise AttributeError("can't set attribute. You cannot set the required metaDataTags fields using add() or use protected attributes of MetaDataTags such as 'location' or 'filename'")
         if name not in self._unspecified_names:
             self._unspecified_names.append(name)
+
+    def remove(self, name):
+        """Remove a tag from the list. You cannot remove a required tag.
+        
+        Args:
+            name (str): The name of the tag to remove.
+        """
+        if type(name) is not str:
+            raise ValueError('name must be str, not ' + str(type(name)))
+        if name not in self._unspecified_names:
+            raise AttributeError("no unspecified tag '" + name + "'")
+        delattr(self, name)
 
 
 # -- Manually extend _validate to provide detailed error codes ----------------
