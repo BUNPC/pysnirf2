@@ -177,7 +177,7 @@ class PySnirf2_Test(unittest.TestCase):
                 s.nirs[0].metaDataTags.remove('_array_of_strings')
                 s.save()
                 s.close()
-                dataset_equal_test(self, file, newname + '.snirf', msg='Failed to remove the unspecified tags from the file on disk')
+                dataset_equal_test(self, file, newname + '.snirf')
     
     def test_validator_required_probe_dataset_missing(self):
         for i, mode in enumerate([False, True]):
