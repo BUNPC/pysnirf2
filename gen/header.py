@@ -442,6 +442,9 @@ class ValidationResult:
         self._issues = []
         self._locations = []
 
+    def __bool__(self):
+        return self.is_valid()
+
     def is_valid(self) -> bool:
         """Returns True if no `FATAL` issues were catalogued during validation."""
         for issue in self._issues:
