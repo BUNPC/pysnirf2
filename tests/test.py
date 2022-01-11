@@ -147,6 +147,38 @@ def _print_keys(group):
 
 class PySnirf2_Test(unittest.TestCase):
     
+    
+    def test_unspecified_metadatatags(self):
+        for i, mode in enumerate([False, True]):
+            for file in self._test_files:
+                if VERBOSE:
+                    print('Loading', file, 'with dynamic_loading=' + str(mode))
+                s = Snirf(file, dynamic_loading=mode)
+                if VERBOSE:    
+                    print("Adding metaDataTags 'foo', 'bar', and 'array_of_strings'")
+                s.nirs[0].metaDataTags.add('foo', 'Hello')
+                s.nirs[0].metaDataTags.add('Bar', 'World')
+                s.nirs[0].metaDataTags.add('_array_of_strings', ['foo', 'bar'])
+                self.assertTrue(s.validate()[0], msg='adding the unspecified metaDataTags resulted in an INVALID file...')
+                self.assertTrue(s.nirs[0].metaDataTags.foo == 'Hello', msg='Failed to set the unspecified metadatatags')
+                self.assertTrue(s.nirs[0].metaDataTags.Bar == 'World', msg='Failed to set the unspecified metadatatags')
+                self.assertTrue(s.nirs[0].metaDataTags._array_of_strings[0] == 'foo', msg='Failed to set the unspecified metadatatags')
+                newname = file.split('.')[0] + '_unspecified_tags'
+                s.save(newname)
+                s.close()
+                if VERBOSE:
+                    print('Loading', newname, 'with dynamic_loading=' + str(mode))
+                s = Snirf(newname, dynamic_loading=mode)
+                self.assertTrue(s.nirs[0].metaDataTags.foo == 'Hello', msg='Failed to save the unspecified metadatatags to disk')
+                self.assertTrue(s.nirs[0].metaDataTags.Bar == 'World', msg='Failed to save the unspecified metadatatags to disk')
+                self.assertTrue(s.nirs[0].metaDataTags._array_of_strings[0] == 'foo', msg='Failed to save the unspecified metadatatags to disk')
+                s.nirs[0].metaDataTags.remove('foo')
+                s.nirs[0].metaDataTags.remove('Bar')
+                s.nirs[0].metaDataTags.remove('_array_of_strings')
+                s.save()
+                s.close()
+                dataset_equal_test(self, file, newname + '.snirf')
+    
     def test_validator_required_probe_dataset_missing(self):
         for i, mode in enumerate([False, True]):
             for file in self._test_files:
