@@ -156,6 +156,7 @@ pysnirf2 features functions for validating SNIRF files against the specification
 ## Validate a SNIRF file on disk
 To validate a SNIRF file on disk
 ```python
+>> from pysnirf2 import validateSnirf
 >> valid, result = validateSnirf(r'some\path\subj1_run01.snirf')
 ```
 ## Validation results
