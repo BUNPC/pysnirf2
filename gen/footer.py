@@ -12,9 +12,9 @@ class MetaDataTags(MetaDataTags):
         if type(name) is not str:
             raise ValueError('name must be str, not ' + str(type(name)))
         try:
-            setattr(self, name, value)
+            self.__dict__[name] = value
         except AttributeError as e:
-            raise AttributeError("can't set attribute. You cannot set the required metaDataTags fields using add() or use protected attributes of MetaDataTags such as 'location' or 'filename'")
+            raise AttributeError("can't set tag. You cannot set the required metaDataTags fields using add() or use protected attributes of MetaDataTags such as 'location' or 'filename'")
         if name not in self._unspecified_names:
             self._unspecified_names.append(name)
 
@@ -28,7 +28,7 @@ class MetaDataTags(MetaDataTags):
             raise ValueError('name must be str, not ' + str(type(name)))
         if name not in self._unspecified_names:
             raise AttributeError("no unspecified tag '" + name + "'")
-        delattr(self, name)
+        del self.__dict__[name]
 
 
 # -- Manually extend _validate to provide detailed error codes ----------------

@@ -797,12 +797,12 @@ class Group(ABC):
             bool: True if empty, False if not
         """
         for name in self._snirf_names:
-            attr = getattr(self, '_' + name)
-            if isinstance(attr, Group) or isinstance(attr, IndexedGroup):
-                if not attr.is_empty():
+            val = getattr(self, '_' + name)
+            if isinstance(val, Group) or isinstance(val, IndexedGroup):
+                if not val.is_empty():
                     return False
             else:
-                if not any([attr is a for a in [None, _AbsentGroup, _AbsentDataset]]):
+                if not any([val is a for a in [None, _AbsentGroup, _AbsentDataset]]):
                     return False
         return True
 
@@ -818,15 +818,15 @@ class Group(ABC):
         props = [p for p in dir(self) if (not p.startswith('_') and not callable(getattr(self, p)))]
         out = str(self.__class__.__name__) + ' at ' + str(self.location) + '\n'
         for prop in props:
-            attr = getattr(self, prop)
+            val = getattr(self, prop)
             out += prop + ': '
-            if type(attr) is np.ndarray or type(attr) is list:
-                if np.size(attr) > 32:
-                    out += '<' + str(np.shape(attr)) + ' array of ' + str(attr.dtype) + '>'
+            if type(val) is np.ndarray or type(val) is list:
+                if np.size(val) > 32:
+                    out += '<' + str(np.shape(val)) + ' array of ' + str(val.dtype) + '>'
                 else:
-                    out += str(attr)
+                    out += str(val)
             else:
-                prepr = str(attr)
+                prepr = str(val)
                 if len(prepr) < 64:
                     out += prepr
                 else:
