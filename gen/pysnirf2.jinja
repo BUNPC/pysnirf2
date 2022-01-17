@@ -58,7 +58,7 @@
     for key in self._h.keys():
         # If the name isn't specified 
         if key not in self._snirf_names and not any([key in indexed_group for indexed_group in self._indexed_groups]):
-            setattr(self, key, _read_dataset(self._h[key]))
+            self.__dict__[key] = _read_dataset(self._h[key])
             self._unspecified_names.append(key)
     {% endif %}            
 {% endmacro %}
