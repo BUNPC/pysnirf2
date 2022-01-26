@@ -110,6 +110,67 @@ class Probe(Probe):
     
 class Snirf(Snirf):
     
+    # overload
+    def save(self, *args):
+        """Save a SNIRF file to disk.
+
+        Args:
+            args (str or h5py.File): A path to a closed or nonexistant SNIRF file on disk or an open `h5py.File` instance
+
+        Examples:
+            save can overwrite the current contents of a Snirf file:
+            >>> mysnirf.save()
+
+            or take a new filename to write the file there:
+            >>> mysnirf.save(<new destination>)
+        """
+        if len(args) > 0 and type(args[0]) is str:
+            path = args[0]
+            if not path.endswith('.snirf'):
+                path += '.snirf'
+            with h5py.File(path, 'w') as new_file:
+                self._save(new_file)
+                self._cfg.logger.info('Saved Snirf file at %s to copy at %s', self.filename, path)
+        else:
+            self._save(self._h.file)
+
+    def validate(self) -> ValidationResult:
+        """Validate a `Snirf` instance.
+
+        Returns the validity of the current state of a `Snirf` object, including
+        modifications made in memory to a loaded SNIRF file.
+
+        Returns:
+            ValidationResult: truthy structure containing detailed validation results
+        """
+        result = ValidationResult()
+        self._validate(result)
+        return result
+
+    def close(self):
+        """Close the file underlying a `Snirf` instance.
+
+        After closing, the underlying SNIRF file cannot be accessed from this interface again.
+        Use `close` if you need to open a new interface on the same HDF5 file.
+
+        `close` is called automatically by the destructor.
+        """
+        self._cfg.logger.info('Closing Snirf file %s', self.filename)
+        self._h.close()
+
+    def __enter__(self):
+        return self
+
+    def __del__(self):
+        self.close()
+
+    def __getitem__(self, key):
+        if self._h != {}:
+            if key in self._h:
+                return self._h[key]
+        else:
+            return None
+
     def _validate(self, result: ValidationResult):
         super()._validate(result)
         
@@ -185,20 +246,17 @@ def saveSnirf(path: str, snirf: Snirf):
     snirfobj.save(path)
 
 
-def validateSnirf(path: str) -> Tuple[bool, ValidationResult]:
+def validateSnirf(path: str) -> ValidationResult:
     """Validate a SNIRF file on disk.
     
-    Returns a bool representing the validity of the Snirf object on disk at
-    path along with the detailed output structure ValidationResult instance.
+    Returns truthy ValidationResult instance which holds detailed results of validation
     """
     if type(path) is not str:
         raise TypeError('path must be str, not '+ type(path))
     if not path.endswith('.snirf'):
         path += '.snirf'
     if os.path.exists(path):
-        s = Snirf(path)
-        valid, result = s.validate()
-        s.close()
-        return (valid, result)
+        with snirf as Snirf(path):
+            return snirf.validate()
     else:
         raise FileNotFoundError('No SNIRF file at ' + path)

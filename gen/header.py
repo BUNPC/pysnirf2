@@ -432,8 +432,8 @@ class ValidationResult:
     to retrieve and display them.
 
     ```
-    (<ValidationResult>.is_valid(), <ValidationResult>) = <Snirf instance>.validate()
-    (<ValidationResult>.is_valid(), <ValidationResult>) = validateSnirf(<path>)
+    <ValidationResult> = <Snirf instance>.validate()
+     <ValidationResult> = validateSnirf(<path>)
     ```
     """
 
