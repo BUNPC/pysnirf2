@@ -83,7 +83,7 @@ _DTYPE_FIXED_LEN_STR = 'S'  # Not sure how robust this is, but fixed length stri
 _DTYPE_VAR_LEN_STR = 'O'  # Variable length string
 
 _INT_DTYPES = [int, np.int32, np.int64]
-_FLOAT_DTYPES = [float, np.float32, np.float64]
+_FLOAT_DTYPES = [float, np.float64]
 _STR_DTYPES = [str, np.string_]
 
 # -- Dataset creators  ---------------------------------------
