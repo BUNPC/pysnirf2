@@ -109,7 +109,7 @@ Raised when SNIRF-specific error prevents file from loading properly.
 ## <kbd>class</kbd> `ValidationIssue`
 Information about the validity of a given SNIRF file location. 
 
-Properties:  location: A relative HDF5 name corresponding to the location of the issue  name: A string describing the issue. Must be predefined in `_CODES`  id: An integer corresponding to the predefined error type  severity: An integer ranking the serverity level of the issue.   0 OK, Nothing remarkable  1 Potentially useful `INFO`  2 `WARNING`, the file is valid but exhibits undefined behavior or features marked deprecation  3 `FATAL`, The file is invalid.  message: A string containing a more verbose description of the issue 
+Properties:  location: A relative HDF5 name corresponding to the location of the issue  name: A string describing the issue. Must be predefined in `_CODES`  id: An integer corresponding to the predefined error type  severity: An integer ranking the serverity level of the issue.  0 OK, Nothing remarkable  1 Potentially useful `INFO`  2 `WARNING`, the file is valid but exhibits undefined behavior or features marked deprecation  3 `FATAL`, The file is invalid.  message: A string containing a more verbose description of the issue 
 
 <a href="../pysnirf2/pysnirf2.py#L411"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
@@ -281,7 +281,7 @@ Base class for an HDF5 Group element defined by SNIRF. Must be created with a Gr
 
 The filename the Snirf object was loaded from and will save to. 
 
-None if not associated with a Group on disk.         
+None if not associated with a Group on disk. 
 
 ---
 
@@ -333,7 +333,7 @@ Group level save to a SNIRF file on disk.
 
 **Examples:**
  save can be called on a Group already on disk to overwrite the current contents: ``` mysnirf.nirs[0].probe.save()```
-    
+
     or using a new filename to write the Group there:
     >>> mysnirf.nirs[0].probe.save(<new destination>)
 
@@ -410,7 +410,7 @@ appendGroup()
 
 Insert a new Group at the end of the Indexed Group. 
 
-Creates an empty Group with the appropriate name at the end of the  list of Groups managed by the IndexedGroup. 
+Creates an empty Group with the appropriate name at the end of the list of Groups managed by the IndexedGroup. 
 
 ---
 
@@ -493,7 +493,7 @@ When saving, the naming convention defined by the SNIRF spec is enforced: groups
 
 **Examples:**
  save can be called on an Indexed Group already on disk to overwrite the current contents: ``` mysnirf.nirs[0].stim.save()```
-    
+
     or using a new filename to write the Indexed Group there:
     >>> mysnirf.nirs[0].stim.save(<new destination>)
 
@@ -607,7 +607,7 @@ This record stores the **case-sensitive** SI time unit used in this  measurement
 
 The filename the Snirf object was loaded from and will save to. 
 
-None if not associated with a Group on disk.         
+None if not associated with a Group on disk. 
 
 ---
 
@@ -696,7 +696,7 @@ Group level save to a SNIRF file on disk.
 
 **Examples:**
  save can be called on a Group already on disk to overwrite the current contents: ``` mysnirf.nirs[0].probe.save()```
-    
+
     or using a new filename to write the Group there:
     >>> mysnirf.nirs[0].probe.save(<new destination>)
 
@@ -780,7 +780,7 @@ This field describes the position (in `LengthUnit` units) of each detector  opto
 
 The filename the Snirf object was loaded from and will save to. 
 
-None if not associated with a Group on disk.         
+None if not associated with a Group on disk. 
 
 ---
 
@@ -972,7 +972,7 @@ Group level save to a SNIRF file on disk.
 
 **Examples:**
  save can be called on a Group already on disk to overwrite the current contents: ``` mysnirf.nirs[0].probe.save()```
-    
+
     or using a new filename to write the Group there:
     >>> mysnirf.nirs[0].probe.save(<new destination>)
 
@@ -1028,7 +1028,7 @@ This group stores one block of NIRS data.  This can be extended adding the  coun
 
 The filename the Snirf object was loaded from and will save to. 
 
-None if not associated with a Group on disk.         
+None if not associated with a Group on disk. 
 
 ---
 
@@ -1112,7 +1112,7 @@ Group level save to a SNIRF file on disk.
 
 **Examples:**
  save can be called on a Group already on disk to overwrite the current contents: ``` mysnirf.nirs[0].probe.save()```
-    
+
     or using a new filename to write the Group there:
     >>> mysnirf.nirs[0].probe.save(<new destination>)
 
@@ -1182,7 +1182,7 @@ appendGroup()
 
 Insert a new Group at the end of the Indexed Group. 
 
-Creates an empty Group with the appropriate name at the end of the  list of Groups managed by the IndexedGroup. 
+Creates an empty Group with the appropriate name at the end of the list of Groups managed by the IndexedGroup. 
 
 ---
 
@@ -1265,7 +1265,7 @@ When saving, the naming convention defined by the SNIRF spec is enforced: groups
 
 **Examples:**
  save can be called on an Indexed Group already on disk to overwrite the current contents: ``` mysnirf.nirs[0].stim.save()```
-    
+
     or using a new filename to write the Indexed Group there:
     >>> mysnirf.nirs[0].stim.save(<new destination>)
 
@@ -1313,7 +1313,7 @@ Chunked data is allowed to support real-time streaming of data in this array.
 
 The filename the Snirf object was loaded from and will save to. 
 
-None if not associated with a Group on disk.         
+None if not associated with a Group on disk. 
 
 ---
 
@@ -1391,7 +1391,7 @@ Group level save to a SNIRF file on disk.
 
 **Examples:**
  save can be called on a Group already on disk to overwrite the current contents: ``` mysnirf.nirs[0].probe.save()```
-    
+
     or using a new filename to write the Group there:
     >>> mysnirf.nirs[0].probe.save(<new destination>)
 
@@ -1457,7 +1457,7 @@ appendGroup()
 
 Insert a new Group at the end of the Indexed Group. 
 
-Creates an empty Group with the appropriate name at the end of the  list of Groups managed by the IndexedGroup. 
+Creates an empty Group with the appropriate name at the end of the list of Groups managed by the IndexedGroup. 
 
 ---
 
@@ -1540,7 +1540,7 @@ When saving, the naming convention defined by the SNIRF spec is enforced: groups
 
 **Examples:**
  save can be called on an Indexed Group already on disk to overwrite the current contents: ``` mysnirf.nirs[0].stim.save()```
-    
+
     or using a new filename to write the Indexed Group there:
     >>> mysnirf.nirs[0].stim.save(<new destination>)
 
@@ -1650,7 +1650,7 @@ Note:  The source indices generally refer to the optode naming (probe  positions
 
 The filename the Snirf object was loaded from and will save to. 
 
-None if not associated with a Group on disk.         
+None if not associated with a Group on disk. 
 
 ---
 
@@ -1776,7 +1776,7 @@ Group level save to a SNIRF file on disk.
 
 **Examples:**
  save can be called on a Group already on disk to overwrite the current contents: ``` mysnirf.nirs[0].probe.save()```
-    
+
     or using a new filename to write the Group there:
     >>> mysnirf.nirs[0].probe.save(<new destination>)
 
@@ -1848,7 +1848,7 @@ appendGroup()
 
 Insert a new Group at the end of the Indexed Group. 
 
-Creates an empty Group with the appropriate name at the end of the  list of Groups managed by the IndexedGroup. 
+Creates an empty Group with the appropriate name at the end of the list of Groups managed by the IndexedGroup. 
 
 ---
 
@@ -1931,7 +1931,7 @@ When saving, the naming convention defined by the SNIRF spec is enforced: groups
 
 **Examples:**
  save can be called on an Indexed Group already on disk to overwrite the current contents: ``` mysnirf.nirs[0].stim.save()```
-    
+
     or using a new filename to write the Indexed Group there:
     >>> mysnirf.nirs[0].stim.save(<new destination>)
 
@@ -1989,7 +1989,7 @@ This is a string array providing annotations for each data column in  `/nirs(i)/
 
 The filename the Snirf object was loaded from and will save to. 
 
-None if not associated with a Group on disk.         
+None if not associated with a Group on disk. 
 
 ---
 
@@ -2051,7 +2051,7 @@ Group level save to a SNIRF file on disk.
 
 **Examples:**
  save can be called on a Group already on disk to overwrite the current contents: ``` mysnirf.nirs[0].probe.save()```
-    
+
     or using a new filename to write the Group there:
     >>> mysnirf.nirs[0].probe.save(<new destination>)
 
@@ -2117,7 +2117,7 @@ appendGroup()
 
 Insert a new Group at the end of the Indexed Group. 
 
-Creates an empty Group with the appropriate name at the end of the  list of Groups managed by the IndexedGroup. 
+Creates an empty Group with the appropriate name at the end of the list of Groups managed by the IndexedGroup. 
 
 ---
 
@@ -2200,7 +2200,7 @@ When saving, the naming convention defined by the SNIRF spec is enforced: groups
 
 **Examples:**
  save can be called on an Indexed Group already on disk to overwrite the current contents: ``` mysnirf.nirs[0].stim.save()```
-    
+
     or using a new filename to write the Indexed Group there:
     >>> mysnirf.nirs[0].stim.save(<new destination>)
 
@@ -2256,7 +2256,7 @@ International System of Units (SI units) identifier for the given channel. Encod
 
 The filename the Snirf object was loaded from and will save to. 
 
-None if not associated with a Group on disk.         
+None if not associated with a Group on disk. 
 
 ---
 
@@ -2340,7 +2340,7 @@ Group level save to a SNIRF file on disk.
 
 **Examples:**
  save can be called on a Group already on disk to overwrite the current contents: ``` mysnirf.nirs[0].probe.save()```
-    
+
     or using a new filename to write the Group there:
     >>> mysnirf.nirs[0].probe.save(<new destination>)
 
@@ -2406,7 +2406,7 @@ appendGroup()
 
 Insert a new Group at the end of the Indexed Group. 
 
-Creates an empty Group with the appropriate name at the end of the  list of Groups managed by the IndexedGroup. 
+Creates an empty Group with the appropriate name at the end of the list of Groups managed by the IndexedGroup. 
 
 ---
 
@@ -2489,7 +2489,7 @@ When saving, the naming convention defined by the SNIRF spec is enforced: groups
 
 **Examples:**
  save can be called on an Indexed Group already on disk to overwrite the current contents: ``` mysnirf.nirs[0].stim.save()```
-    
+
     or using a new filename to write the Indexed Group there:
     >>> mysnirf.nirs[0].stim.save(<new destination>)
 
@@ -2523,7 +2523,7 @@ __init__(*args, dynamic_loading:bool=False, logfile:bool=False)
 
 The filename the Snirf object was loaded from and will save to. 
 
-None if not associated with a Group on disk.         
+None if not associated with a Group on disk. 
 
 ---
 
