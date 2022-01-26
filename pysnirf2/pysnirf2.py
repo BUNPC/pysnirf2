@@ -5219,15 +5219,14 @@ def saveSnirf(path: str, snirf: Snirf):
 def validateSnirf(path: str) -> ValidationResult:
     """Validate a SNIRF file on disk.
     
-    Returns a bool representing the validity of the Snirf object on disk at
-    path along with the detailed output structure ValidationResult instance.
+    Returns truthy ValidationResult instance which holds detailed results of validation
     """
     if type(path) is not str:
         raise TypeError('path must be str, not '+ type(path))
     if not path.endswith('.snirf'):
         path += '.snirf'
     if os.path.exists(path):
-        with snirf as Snirf(path):
+        with Snirf(path) as snirf:
             return snirf.validate()
     else:
         raise FileNotFoundError('No SNIRF file at ' + path)

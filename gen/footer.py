@@ -256,7 +256,7 @@ def validateSnirf(path: str) -> ValidationResult:
     if not path.endswith('.snirf'):
         path += '.snirf'
     if os.path.exists(path):
-        with snirf as Snirf(path):
+        with Snirf(path) as snirf:
             return snirf.validate()
     else:
         raise FileNotFoundError('No SNIRF file at ' + path)
