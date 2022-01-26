@@ -23,7 +23,7 @@ Maintained by the Boston University Neurophotonics Center
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L5192"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L5183"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `loadSnirf`
 
@@ -58,7 +58,7 @@ Returns a `Snirf` object loaded from path if a SNIRF file exists there. Takes th
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L5218"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L5209"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `saveSnirf`
 
@@ -78,7 +78,7 @@ Saves a SNIRF file to disk.
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L5232"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L5223"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `validateSnirf`
 
@@ -525,9 +525,9 @@ __init__(var, cfg:SnirfConfig)
 
 #### <kbd>property</kbd> FrequencyUnit
 
-SNIRF field `FrequencyUnit`.  
+SNIRF field `FrequencyUnit`. 
 
-If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter  
+If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter 
 
 This record stores the **case-sensitive** SI frequency unit used in  this measurement. Sample frequency units "Hz", "MHz" and "GHz". Please note that "mHz" is milli-Hz while "MHz" denotes "mega-Hz" according to SI unit system. 
 
@@ -547,9 +547,9 @@ The metadata record `"UnixTime"` defines the Unix Epoch Time, i.e. the total ela
 
 #### <kbd>property</kbd> LengthUnit
 
-SNIRF field `LengthUnit`.  
+SNIRF field `LengthUnit`. 
 
-If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter  
+If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter 
 
 This record stores the **case-sensitive** SI length unit used in this  measurement. Sample length units include "mm", "cm", and "m". A value of  "um" is the same as "mm", i.e. micrometer. 
 
@@ -557,9 +557,9 @@ This record stores the **case-sensitive** SI length unit used in this  measureme
 
 #### <kbd>property</kbd> MeasurementDate
 
-SNIRF field `MeasurementDate`.  
+SNIRF field `MeasurementDate`. 
 
-If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter  
+If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter 
 
 This record stores the date of the measurement as a string. The format of the date string must either be `"unknown"`, or follow the ISO 8601 date string format `YYYY-MM-DD`, where 
 - `YYYY` is the 4-digit year 
@@ -570,9 +570,9 @@ This record stores the date of the measurement as a string. The format of the da
 
 #### <kbd>property</kbd> MeasurementTime
 
-SNIRF field `MeasurementTime`.  
+SNIRF field `MeasurementTime`. 
 
-If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter  
+If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter 
 
 This record stores the time of the measurement as a string. The format of the time string must either be `"unknown"` or follow the ISO 8601 time string format `hh:mm:ss.sTZD`, where 
 - `hh` is the 2-digit hour 
@@ -585,9 +585,9 @@ This record stores the time of the measurement as a string. The format of the ti
 
 #### <kbd>property</kbd> SubjectID
 
-SNIRF field `SubjectID`.  
+SNIRF field `SubjectID`. 
 
-If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter  
+If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter 
 
 This record stores the string-valued ID of the study subject or experiment. 
 
@@ -595,9 +595,9 @@ This record stores the string-valued ID of the study subject or experiment.
 
 #### <kbd>property</kbd> TimeUnit
 
-SNIRF field `TimeUnit`.  
+SNIRF field `TimeUnit`. 
 
-If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter  
+If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter 
 
 This record stores the **case-sensitive** SI time unit used in this  measurement. Sample time units include "s", and "ms". A value of "us"  is the same as "ms", i.e. microsecond. 
 
@@ -621,7 +621,7 @@ None if not associataed with a Group on disk.
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L5049"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L5040"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `add`
 
@@ -658,7 +658,7 @@ If the Group has no member Groups or Datasets.
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L5065"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L5056"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `remove`
 
@@ -704,14 +704,14 @@ Group level save to a SNIRF file on disk.
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L1560"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L1559"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `Probe`
 
 
 
 
-<a href="../pysnirf2/pysnirf2.py#L1567"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L1566"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -728,9 +728,9 @@ __init__(var, cfg:SnirfConfig)
 
 #### <kbd>property</kbd> correlationTimeDelayWidths
 
-SNIRF field `correlationTimeDelayWidths`.  
+SNIRF field `correlationTimeDelayWidths`. 
 
-If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter  
+If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter 
 
 This field describes the time delay widths (in `TimeUnit` units) used for diffuse correlation  spectroscopy measurements. This field is only required for gated time domain  data types, and is indexed by `measurementList(k).dataTypeIndex`. The indexing  of this field is paired with the indexing of `probe.correlationTimeDelays`.   
 
@@ -738,9 +738,9 @@ This field describes the time delay widths (in `TimeUnit` units) used for diffus
 
 #### <kbd>property</kbd> correlationTimeDelays
 
-SNIRF field `correlationTimeDelays`.  
+SNIRF field `correlationTimeDelays`. 
 
-If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter  
+If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter 
 
 This field describes the time delays (in `TimeUnit` units) used for diffuse correlation spectroscopy  measurements. This field is only required for diffuse correlation spectroscopy  data types, and is indexed by `measurementList(k).dataTypeIndex`.  The indexing  of this field is paired with the indexing of `probe.correlationTimeDelayWidths`. 
 
@@ -748,9 +748,9 @@ This field describes the time delays (in `TimeUnit` units) used for diffuse corr
 
 #### <kbd>property</kbd> detectorLabels
 
-SNIRF field `detectorLabels`.  
+SNIRF field `detectorLabels`. 
 
-If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter  
+If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter 
 
 This is a string array providing user friendly or instrument specific labels  for each detector. Each element of the array must be a unique string among both  `probe.sourceLabels` and `probe.detectorLabels`. This is indexed by  `measurementList(k).detectorIndex`. 
 
@@ -758,9 +758,9 @@ This is a string array providing user friendly or instrument specific labels  fo
 
 #### <kbd>property</kbd> detectorPos2D
 
-SNIRF field `detectorPos2D`.  
+SNIRF field `detectorPos2D`. 
 
-If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter  
+If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter 
 
 Same as `probe.sourcePos2D`, but describing the detector positions in a  flattened 2D probe layout. 
 
@@ -768,9 +768,9 @@ Same as `probe.sourcePos2D`, but describing the detector positions in a  flatten
 
 #### <kbd>property</kbd> detectorPos3D
 
-SNIRF field `detectorPos3D`.  
+SNIRF field `detectorPos3D`. 
 
-If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter  
+If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter 
 
 This field describes the position (in `LengthUnit` units) of each detector  optode in 3D, defined similarly to `sourcePos3D`. 
 
@@ -786,9 +786,9 @@ None if not associated with a Group on disk.
 
 #### <kbd>property</kbd> frequencies
 
-SNIRF field `frequencies`.  
+SNIRF field `frequencies`. 
 
-If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter  
+If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter 
 
 This field describes the frequencies used (in `FrequencyUnit` units)  for  frequency domain measurements. This field is only required for frequency  domain data types, and is indexed by `measurementList(k).dataTypeIndex`. 
 
@@ -796,9 +796,9 @@ This field describes the frequencies used (in `FrequencyUnit` units)  for  frequ
 
 #### <kbd>property</kbd> landmarkLabels
 
-SNIRF field `landmarkLabels`.  
+SNIRF field `landmarkLabels`. 
 
-If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter  
+If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter 
 
 This string array stores the names of the landmarks. The first string denotes  the name of the landmarks with an index of 1 in the 4th column of  `probe.landmark`, and so on. One can adopt the commonly used 10-20 landmark  names, such as "Nasion", "Inion", "Cz" etc, or use user-defined landmark  labels. The landmark label can also use the unique source and detector labels  defined in `probe.sourceLabels` and `probe.detectorLabels`, respectively, to  associate the given landmark to a specific source or detector. All strings are  ASCII encoded char arrays. 
 
@@ -806,9 +806,9 @@ This string array stores the names of the landmarks. The first string denotes  t
 
 #### <kbd>property</kbd> landmarkPos2D
 
-SNIRF field `landmarkPos2D`.  
+SNIRF field `landmarkPos2D`. 
 
-If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter  
+If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter 
 
 This is a 2-D array storing the neurological landmark positions projected along the 2-D (flattened) probe plane in order to map optical data from the flattened optode positions to brain anatomy. This array should contain a minimum  of 2 columns, representing the x and y coordinates (in `LengthUnit` units) of the 2-D projected landmark positions. If a 3rd column presents, it stores  the index to the labels of the given landmark. Label names are stored in the  `probe.landmarkLabels` subfield. An label index of 0 refers to an undefined landmark.  
 
@@ -816,9 +816,9 @@ This is a 2-D array storing the neurological landmark positions projected along 
 
 #### <kbd>property</kbd> landmarkPos3D
 
-SNIRF field `landmarkPos3D`.  
+SNIRF field `landmarkPos3D`. 
 
-If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter  
+If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter 
 
 This is a 2-D array storing the neurological landmark positions measurement  from 3-D digitization and tracking systems to facilitate the registration and  mapping of optical data to brain anatomy. This array should contain a minimum  of 3 columns, representing the x, y and z coordinates (in `LengthUnit` units)  of the digitized landmark positions. If a 4th column presents, it stores the  index to the labels of the given landmark. Label names are stored in the  `probe.landmarkLabels` subfield. An label index of 0 refers to an undefined landmark.  
 
@@ -834,9 +834,9 @@ None if not associataed with a Group on disk.
 
 #### <kbd>property</kbd> momentOrders
 
-SNIRF field `momentOrders`.  
+SNIRF field `momentOrders`. 
 
-If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter  
+If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter 
 
 This field describes the moment orders of the temporal point spread function (TPSF) or the distribution of time-of-flight (DTOF) for moment time domain measurements. This field is only required for moment time domain data types, and is indexed by `measurementList(k).dataTypeIndex`.   Note that the numeric value in this array is the exponent in the integral used for calculating the moments. For detailed/specific definitions of moments, see [Wabnitz et al, 2020](https://doi.org/10.1364/BOE.396585); for general definitions of moments see [here](https://en.wikipedia.org/wiki/Moment_(mathematics) ). 
 
@@ -846,9 +846,9 @@ In brief, given a TPSF or DTOF N(t) (photon counts vs. photon arrival time at th
 
 #### <kbd>property</kbd> sourceLabels
 
-SNIRF field `sourceLabels`.  
+SNIRF field `sourceLabels`. 
 
-If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter  
+If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter 
 
 This is a string array providing user friendly or instrument specific labels  for each source. Each element of the array must be a unique string among both  `probe.sourceLabels` and `probe.detectorLabels`.This can be of size `<number  of sources>x 1` or `<number of sources> x <number of  wavelengths>`. This is indexed by `measurementList(k).sourceIndex` and  `measurementList(k).wavelengthIndex`. 
 
@@ -856,9 +856,9 @@ This is a string array providing user friendly or instrument specific labels  fo
 
 #### <kbd>property</kbd> sourcePos2D
 
-SNIRF field `sourcePos2D`.  
+SNIRF field `sourcePos2D`. 
 
-If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter  
+If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter 
 
 This field describes the position (in `LengthUnit` units) of each source  optode. The positions are coordinates in a flattened 2D probe layout.  This field has size `<number of sources> x 2`. For example,  `probe.sourcePos2D(1,:) = [1.4 1]`, and `LengthUnit='cm'` places source  number 1 at x=1.4 cm and y=1 cm. 
 
@@ -866,9 +866,9 @@ This field describes the position (in `LengthUnit` units) of each source  optode
 
 #### <kbd>property</kbd> sourcePos3D
 
-SNIRF field `sourcePos3D`.  
+SNIRF field `sourcePos3D`. 
 
-If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter  
+If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter 
 
 This field describes the position (in `LengthUnit` units) of each source  optode in 3D. This field has size `<number of sources> x 3`. 
 
@@ -876,9 +876,9 @@ This field describes the position (in `LengthUnit` units) of each source  optode
 
 #### <kbd>property</kbd> timeDelayWidths
 
-SNIRF field `timeDelayWidths`.  
+SNIRF field `timeDelayWidths`. 
 
-If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter  
+If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter 
 
 This field describes the time delay widths (in `TimeUnit` units) used for gated time domain  measurements. This field is only required for gated time domain data types, and  is indexed by `measurementList(k).dataTypeIndex`.  The indexing of this field  is paired with the indexing of `probe.timeDelays`. 
 
@@ -886,9 +886,9 @@ This field describes the time delay widths (in `TimeUnit` units) used for gated 
 
 #### <kbd>property</kbd> timeDelays
 
-SNIRF field `timeDelays`.  
+SNIRF field `timeDelays`. 
 
-If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter  
+If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter 
 
 This field describes the time delays (in `TimeUnit` units) used for gated time domain measurements.  This field is only required for gated time domain data types, and is indexed by  `measurementList(k).dataTypeIndex`. The indexing of this field is paired with  the indexing of `probe.timeDelayWidths`.  
 
@@ -896,9 +896,9 @@ This field describes the time delays (in `TimeUnit` units) used for gated time d
 
 #### <kbd>property</kbd> useLocalIndex
 
-SNIRF field `useLocalIndex`.  
+SNIRF field `useLocalIndex`. 
 
-If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter  
+If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter 
 
 For modular NIRS systems, setting this flag to a non-zero integer indicates  that `measurementList(k).sourceIndex` and `measurementList(k).detectorIndex`  are module-specific local-indices. One must also include  `measurementList(k).moduleIndex`, or when cross-module channels present, both  `measurementList(k).sourceModuleIndex` and `measurementList(k).detectorModuleIndex`  in the `measurementList` structure in order to restore the global indices  of the sources/detectors. 
 
@@ -906,9 +906,9 @@ For modular NIRS systems, setting this flag to a non-zero integer indicates  tha
 
 #### <kbd>property</kbd> wavelengths
 
-SNIRF field `wavelengths`.  
+SNIRF field `wavelengths`. 
 
-If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter  
+If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter 
 
 This field describes the "nominal" wavelengths used (in `nm` unit).  This is indexed by the  `wavelengthIndex` of the measurementList variable. For example, `probe.wavelengths` = [690,  780, 830]; implies that the measurements were taken at three wavelengths (690 nm,  780 nm, and 830 nm).  The wavelength index of  `measurementList(k).wavelengthIndex` variable refers to this field. `measurementList(k).wavelengthIndex` = 2 means the k<sup>th</sup> measurement  was at 780 nm. 
 
@@ -922,9 +922,9 @@ This field must present, but can be empty, for example, in the case that the sto
 
 #### <kbd>property</kbd> wavelengthsEmission
 
-SNIRF field `wavelengthsEmission`.  
+SNIRF field `wavelengthsEmission`. 
 
-If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter  
+If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter 
 
 This field is required only for fluorescence data types, and describes the  "nominal" emission wavelengths used (in `nm` unit).  The indexing of this variable is the same  wavelength index in measurementList used for `probe.wavelengths` such that the  excitation wavelength is paired with this emission wavelength for a given measurement. 
 
@@ -980,12 +980,12 @@ Group level save to a SNIRF file on disk.
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L2757"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L2755"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `NirsElement`
 Wrapper for an element of indexed group `Nirs`. 
 
-<a href="../pysnirf2/pysnirf2.py#L2759"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L2757"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -1002,9 +1002,9 @@ __init__(gid:GroupID, cfg:SnirfConfig)
 
 #### <kbd>property</kbd> aux
 
-SNIRF field `aux`.  
+SNIRF field `aux`. 
 
-If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter  
+If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter 
 
 This optional array specifies any recorded auxiliary data. Each element of  `aux` has the following required fields: 
 
@@ -1012,9 +1012,9 @@ This optional array specifies any recorded auxiliary data. Each element of  `aux
 
 #### <kbd>property</kbd> data
 
-SNIRF field `data`.  
+SNIRF field `data`. 
 
-If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter  
+If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter 
 
 This group stores one block of NIRS data.  This can be extended adding the  count number (e.g. `data1`, `data2`,...) to the group name.  This is intended to  allow the storage of 1 or more blocks of NIRS data from within the same `/nirs`  entry * `/nirs/data1` =  data block 1 * `/nirs/data2` =  data block 2  
 
@@ -1042,9 +1042,9 @@ None if not associataed with a Group on disk.
 
 #### <kbd>property</kbd> metaDataTags
 
-SNIRF field `metaDataTags`.  
+SNIRF field `metaDataTags`. 
 
-If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter  
+If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter 
 
 The `metaDataTags` group contains the metadata associated with the measurements. Each metadata record is represented as a dataset under this group - with the name of the record, i.e. the key, as the dataset's name, and the value of the record as the  actual data stored in the dataset. Each metadata record can potentially have different  data types. 
 
@@ -1054,9 +1054,9 @@ The below five metadata records are minimally required in a SNIRF file
 
 #### <kbd>property</kbd> probe
 
-SNIRF field `probe`.  
+SNIRF field `probe`. 
 
-If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter  
+If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter 
 
 This is a structured variable that describes the probe (source-detector)  geometry.  This variable has a number of required fields. 
 
@@ -1064,9 +1064,9 @@ This is a structured variable that describes the probe (source-detector)  geomet
 
 #### <kbd>property</kbd> stim
 
-SNIRF field `stim`.  
+SNIRF field `stim`. 
 
-If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter  
+If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter 
 
 This is an array describing any stimulus conditions. Each element of the array  has the following required fields. 
 
@@ -1120,7 +1120,7 @@ Group level save to a SNIRF file on disk.
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L2985"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L2982"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `Nirs`
 Interface for indexed group `Nirs`. 
@@ -1131,7 +1131,7 @@ To add or remove an element from the list, use the `appendGroup` method and the 
 
 This group stores one set of NIRS data.  This can be extended by adding the count  number (e.g. `/nirs1`, `/nirs2`,...) to the group name. This is intended to  allow the storage of 1 or more complete NIRS datasets inside a single SNIRF  document.  For example, a two-subject hyperscanning can be stored using the notation * `/nirs1` =  first subject's data * `/nirs2` =  second subject's data The use of a non-indexed (e.g. `/nirs`) entry is allowed when only one entry  is present and is assumed to be entry 1. 
 
-<a href="../pysnirf2/pysnirf2.py#L3006"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L3003"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -1273,14 +1273,14 @@ When saving, the naming convention defined by the SNIRF spec is enforced: groups
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L3010"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L3007"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `DataElement`
 
 
 
 
-<a href="../pysnirf2/pysnirf2.py#L3012"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L3009"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -1297,9 +1297,9 @@ __init__(gid:GroupID, cfg:SnirfConfig)
 
 #### <kbd>property</kbd> dataTimeSeries
 
-SNIRF field `dataTimeSeries`.  
+SNIRF field `dataTimeSeries`. 
 
-If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter  
+If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter 
 
 This is the actual raw or processed data variable. This variable has dimensions  of `<number of time points> x <number of channels>`. Columns in  `dataTimeSeries` are mapped to the measurement list (`measurementList` variable  described below). 
 
@@ -1327,9 +1327,9 @@ None if not associataed with a Group on disk.
 
 #### <kbd>property</kbd> measurementList
 
-SNIRF field `measurementList`.  
+SNIRF field `measurementList`. 
 
-If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter  
+If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter 
 
 The measurement list. This variable serves to map the data array onto the probe  geometry (sources and detectors), data type, and wavelength. This variable is  an array structure that has the size `<number of channels>` that  describes the corresponding column in the data matrix. For example, the  `measurementList3` describes the third column of the data matrix (i.e.  `dataTimeSeries(:,3)`). 
 
@@ -1339,9 +1339,9 @@ Each element of the array is a structure which describes the measurement  condit
 
 #### <kbd>property</kbd> time
 
-SNIRF field `time`.  
+SNIRF field `time`. 
 
-If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter  
+If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter 
 
 The `time` variable. This provides the acquisition time of the measurement  relative to the time origin.  This will usually be a straight line with slope  equal to the acquisition frequency, but does not need to be equal spacing.  For  the special case of equal sample spacing a shorthand `<2x1>` array is allowed  where the first entry is the start time and the  second entry is the sample time spacing in `TimeUnit` specified in the  `metaDataTags`. The default time unit is in second ("s"). For example,  a time spacing of 0.2 (s) indicates a sampling rate of 5 Hz.  
 
@@ -1399,14 +1399,14 @@ Group level save to a SNIRF file on disk.
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L3226"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L3222"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `Data`
 
 
 
 
-<a href="../pysnirf2/pysnirf2.py#L3245"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L3241"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -1548,12 +1548,12 @@ When saving, the naming convention defined by the SNIRF spec is enforced: groups
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L3249"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L3245"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `MeasurementListElement`
 Wrapper for an element of indexed group `MeasurementList`. 
 
-<a href="../pysnirf2/pysnirf2.py#L3251"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L3247"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -1570,9 +1570,9 @@ __init__(gid:GroupID, cfg:SnirfConfig)
 
 #### <kbd>property</kbd> dataType
 
-SNIRF field `dataType`.  
+SNIRF field `dataType`. 
 
-If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter  
+If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter 
 
 Data-type identifier. See Appendix for list possible values. 
 
@@ -1580,9 +1580,9 @@ Data-type identifier. See Appendix for list possible values.
 
 #### <kbd>property</kbd> dataTypeIndex
 
-SNIRF field `dataTypeIndex`.  
+SNIRF field `dataTypeIndex`. 
 
-If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter  
+If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter 
 
 Data-type specific parameter indices. The data type index specifies additional data type specific parameters that are further elaborated by other fields in the probe structure, as detailed below. Note that the Time Domain and Diffuse Correlation Spectroscopy data types have two additional parameters and so the data type index must be a vector with 2 elements that index the additional parameters. One use of this parameter is as a  stimulus condition index when `measurementList(k).dataType = 99999` (i.e, `processed` and  `measurementList(k).dataTypeLabel = 'HRF ...'` . 
 
@@ -1590,9 +1590,9 @@ Data-type specific parameter indices. The data type index specifies additional d
 
 #### <kbd>property</kbd> dataTypeLabel
 
-SNIRF field `dataTypeLabel`.  
+SNIRF field `dataTypeLabel`. 
 
-If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter  
+If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter 
 
 Data-type label. Only required if dataType is "processed" (`99999`). See Appendix  for list of possible values. 
 
@@ -1600,9 +1600,9 @@ Data-type label. Only required if dataType is "processed" (`99999`). See Appendi
 
 #### <kbd>property</kbd> dataUnit
 
-SNIRF field `dataUnit`.  
+SNIRF field `dataUnit`. 
 
-If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter  
+If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter 
 
 International System of Units (SI units) identifier for the given channel. Encoding should follow the [CMIXF-12 standard](https://people.csail.mit.edu/jaffer/MIXF/CMIXF-12), avoiding special unicode symbols like U+03BC (m) or U+00B5 (u) and using '/' rather than 'per' for units such as `V/us`. The recommended export format is in unscaled units such as V, s, Mole. 
 
@@ -1610,9 +1610,9 @@ International System of Units (SI units) identifier for the given channel. Encod
 
 #### <kbd>property</kbd> detectorGain
 
-SNIRF field `detectorGain`.  
+SNIRF field `detectorGain`. 
 
-If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter  
+If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter 
 
 Detector gain 
 
@@ -1620,9 +1620,9 @@ Detector gain
 
 #### <kbd>property</kbd> detectorIndex
 
-SNIRF field `detectorIndex`.  
+SNIRF field `detectorIndex`. 
 
-If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter  
+If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter 
 
 Index of the detector. 
 
@@ -1630,9 +1630,9 @@ Index of the detector.
 
 #### <kbd>property</kbd> detectorModuleIndex
 
-SNIRF field `detectorModuleIndex`.  
+SNIRF field `detectorModuleIndex`. 
 
-If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter  
+If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter 
 
 Index of the module that contains the detector of the channel.  This index must be used together with `sourceModuleIndex`, and  can not be used when `moduleIndex` presents. 
 
@@ -1664,9 +1664,9 @@ None if not associataed with a Group on disk.
 
 #### <kbd>property</kbd> moduleIndex
 
-SNIRF field `moduleIndex`.  
+SNIRF field `moduleIndex`. 
 
-If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter  
+If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter 
 
 Index of a repeating module. If `moduleIndex` is provided while `useLocalIndex` is set to `true`, then, both `measurementList(k).sourceIndex` and  `measurementList(k).detectorIndex` are assumed to be the local indices of the same module specified by `moduleIndex`. If the source and detector are located on different modules, one must use `sourceModuleIndex` and `detectorModuleIndex` instead to specify separate parent module  indices. See below. 
 
@@ -1674,9 +1674,9 @@ Index of a repeating module. If `moduleIndex` is provided while `useLocalIndex` 
 
 #### <kbd>property</kbd> sourceIndex
 
-SNIRF field `sourceIndex`.  
+SNIRF field `sourceIndex`. 
 
-If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter  
+If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter 
 
 Index of the source. 
 
@@ -1686,9 +1686,9 @@ Index of the source.
 
 #### <kbd>property</kbd> sourceModuleIndex
 
-SNIRF field `sourceModuleIndex`.  
+SNIRF field `sourceModuleIndex`. 
 
-If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter  
+If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter 
 
 Index of the module that contains the source of the channel.  This index must be used together with `detectorModuleIndex`, and  can not be used when `moduleIndex` presents. 
 
@@ -1696,9 +1696,9 @@ Index of the module that contains the source of the channel.  This index must be
 
 #### <kbd>property</kbd> sourcePower
 
-SNIRF field `sourcePower`.  
+SNIRF field `sourcePower`. 
 
-If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter  
+If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter 
 
 Source power in milliwatt (mW).  
 
@@ -1706,9 +1706,9 @@ Source power in milliwatt (mW).
 
 #### <kbd>property</kbd> wavelengthActual
 
-SNIRF field `wavelengthActual`.  
+SNIRF field `wavelengthActual`. 
 
-If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter  
+If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter 
 
 Actual (measured) wavelength in nm, if available, for the source in a given channel. 
 
@@ -1716,9 +1716,9 @@ Actual (measured) wavelength in nm, if available, for the source in a given chan
 
 #### <kbd>property</kbd> wavelengthEmissionActual
 
-SNIRF field `wavelengthEmissionActual`.  
+SNIRF field `wavelengthEmissionActual`. 
 
-If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter  
+If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter 
 
 Actual (measured) emission wavelength in nm, if available, for the source in a given channel. 
 
@@ -1728,9 +1728,9 @@ Actual (measured) emission wavelength in nm, if available, for the source in a g
 
 #### <kbd>property</kbd> wavelengthIndex
 
-SNIRF field `wavelengthIndex`.  
+SNIRF field `wavelengthIndex`. 
 
-If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter  
+If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter 
 
 Index of the "nominal" wavelength (in `probe.wavelengths`). 
 
@@ -1784,7 +1784,7 @@ Group level save to a SNIRF file on disk.
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L4188"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L4183"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `MeasurementList`
 Interface for indexed group `MeasurementList`. 
@@ -1797,7 +1797,7 @@ The measurement list. This variable serves to map the data array onto the probe 
 
 Each element of the array is a structure which describes the measurement  conditions for this data with the following fields: 
 
-<a href="../pysnirf2/pysnirf2.py#L4210"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L4205"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -1939,14 +1939,14 @@ When saving, the naming convention defined by the SNIRF spec is enforced: groups
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L4214"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L4209"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `StimElement`
 
 
 
 
-<a href="../pysnirf2/pysnirf2.py#L4216"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L4211"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -1963,9 +1963,9 @@ __init__(gid:GroupID, cfg:SnirfConfig)
 
 #### <kbd>property</kbd> data
 
-SNIRF field `data`.  
+SNIRF field `data`. 
 
-If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter  
+If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter 
 
 * **Allowed attribute**: `names` 
 
@@ -1977,9 +1977,9 @@ Additional columns can be used to store user-specified data associated with  eac
 
 #### <kbd>property</kbd> dataLabels
 
-SNIRF field `dataLabels`.  
+SNIRF field `dataLabels`. 
 
-If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter  
+If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter 
 
 This is a string array providing annotations for each data column in  `/nirs(i)/stim(j)/data`. Each element of the array must be a string; the total length of this array must be the same as the column number of `/nirs(i)/stim(j)/data`, including the first 3 required columns. 
 
@@ -2003,9 +2003,9 @@ None if not associataed with a Group on disk.
 
 #### <kbd>property</kbd> name
 
-SNIRF field `name`.  
+SNIRF field `name`. 
 
-If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter  
+If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter 
 
 This is a string describing the j<sup>th</sup> stimulus condition. 
 
@@ -2059,14 +2059,14 @@ Group level save to a SNIRF file on disk.
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L4441"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L4435"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `Stim`
 
 
 
 
-<a href="../pysnirf2/pysnirf2.py#L4456"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L4450"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -2208,14 +2208,14 @@ When saving, the naming convention defined by the SNIRF spec is enforced: groups
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L4460"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L4454"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `AuxElement`
 
 
 
 
-<a href="../pysnirf2/pysnirf2.py#L4462"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L4456"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -2232,9 +2232,9 @@ __init__(gid:GroupID, cfg:SnirfConfig)
 
 #### <kbd>property</kbd> dataTimeSeries
 
-SNIRF field `dataTimeSeries`.  
+SNIRF field `dataTimeSeries`. 
 
-If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter  
+If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter 
 
 This is the aux data variable. This variable has dimensions of `<number of  time points> x 1`. 
 
@@ -2244,9 +2244,9 @@ Chunked data is allowed to support real-time data streaming
 
 #### <kbd>property</kbd> dataUnit
 
-SNIRF field `dataUnit`.  
+SNIRF field `dataUnit`. 
 
-If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter  
+If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter 
 
 International System of Units (SI units) identifier for the given channel. Encoding should follow the [CMIXF-12 standard](https://people.csail.mit.edu/jaffer/MIXF/CMIXF-12), avoiding special unicode symbols like U+03BC (m) or U+00B5 (u) and using '/' rather than 'per' for units such as `V/us`. The recommended export format is in unscaled units such as V, s, Mole. 
 
@@ -2270,9 +2270,9 @@ None if not associataed with a Group on disk.
 
 #### <kbd>property</kbd> name
 
-SNIRF field `name`.  
+SNIRF field `name`. 
 
-If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter  
+If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter 
 
 This is string describing the j<sup>th</sup> auxiliary data timecourse. 
 
@@ -2280,9 +2280,9 @@ This is string describing the j<sup>th</sup> auxiliary data timecourse.
 
 #### <kbd>property</kbd> time
 
-SNIRF field `time`.  
+SNIRF field `time`. 
 
-If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter  
+If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter 
 
 The time variable. This provides the acquisition time (in `TimeUnit` units)  of the aux measurement relative to the time origin.  This will usually be  a straight line with slope equal to the acquisition frequency, but does  not need to be equal spacing. The size of this variable is  `<number of time points> x 1` or `<2x1>` similar  to definition of the  `/nirs(i)/data(j)/time` field. 
 
@@ -2292,9 +2292,9 @@ Chunked data is allowed to support real-time data streaming
 
 #### <kbd>property</kbd> timeOffset
 
-SNIRF field `timeOffset`.  
+SNIRF field `timeOffset`. 
 
-If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter  
+If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter 
 
 This variable specifies the offset of the file time origin relative to absolute (clock) time in `TimeUnit` units. 
 
@@ -2348,14 +2348,14 @@ Group level save to a SNIRF file on disk.
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L4800"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L4793"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `Aux`
 
 
 
 
-<a href="../pysnirf2/pysnirf2.py#L4814"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L4807"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -2497,14 +2497,14 @@ When saving, the naming convention defined by the SNIRF spec is enforced: groups
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L4818"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L4811"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `Snirf`
 
 
 
 
-<a href="../pysnirf2/pysnirf2.py#L4823"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L4816"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -2529,9 +2529,9 @@ None if not associated with a Group on disk.
 
 #### <kbd>property</kbd> formatVersion
 
-SNIRF field `formatVersion`.  
+SNIRF field `formatVersion`. 
 
-If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter  
+If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter 
 
 This is a string that specifies the version of the file format.  This document  describes format version "1.0" 
 
@@ -2549,9 +2549,9 @@ None if not associataed with a Group on disk.
 
 #### <kbd>property</kbd> nirs
 
-SNIRF field `nirs`.  
+SNIRF field `nirs`. 
 
-If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter  
+If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter 
 
 This group stores one set of NIRS data.  This can be extended by adding the count  number (e.g. `/nirs1`, `/nirs2`,...) to the group name. This is intended to  allow the storage of 1 or more complete NIRS datasets inside a single SNIRF  document.  For example, a two-subject hyperscanning can be stored using the notation * `/nirs1` =  first subject's data * `/nirs2` =  second subject's data The use of a non-indexed (e.g. `/nirs`) entry is allowed when only one entry  is present and is assumed to be entry 1. 
 
@@ -2559,7 +2559,7 @@ This group stores one set of NIRS data.  This can be extended by adding the coun
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L5021"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L5012"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `close`
 
@@ -2593,7 +2593,7 @@ If the Group has no member Groups or Datasets.
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L4980"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L4972"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `save`
 
@@ -2613,14 +2613,14 @@ Save a SNIRF file to disk.
 
 **Examples:**
  save can overwrite the current contents of a Snirf file: ``` mysnirf.save()```
-    
+
     or take a new filename to write the file there:
     >>> mysnirf.save(<new destination>)
 
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L5004"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L4995"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `validate`
 
