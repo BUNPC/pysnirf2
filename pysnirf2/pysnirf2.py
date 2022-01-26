@@ -1100,7 +1100,7 @@ class IndexedGroup(MutableSequence, ABC):
 
 class MetaDataTags(Group):
     """Wrapper for Group of type `metaDataTags`.
-    
+
     The `metaDataTags` group contains the metadata associated with the measurements.
     Each metadata record is represented as a dataset under this group - with the name of
     the record, i.e. the key, as the dataset's name, and the value of the record as the 
@@ -1166,19 +1166,18 @@ class MetaDataTags(Group):
         self._unspecified_names = []
         # Unspecified datasets are not properties and unaffected by dynamic_loading
         for key in self._h.keys():
-            # If the name isn't specified 
+            # If the name isn't specified
             if key not in self._snirf_names and not any([key in indexed_group for indexed_group in self._indexed_groups]):
                 self.__dict__[key] = _read_dataset(self._h[key])
                 self._unspecified_names.append(key)
-                
 
     @property
     def SubjectID(self):
         """SNIRF field `SubjectID`.
-            
+
         If dynamic_loading=True, the data is loaded from the SNIRF file only
         when accessed through the getter
-            
+
         This record stores the string-valued ID of the study subject or experiment.
 
         """
@@ -1202,10 +1201,10 @@ class MetaDataTags(Group):
     @property
     def MeasurementDate(self):
         """SNIRF field `MeasurementDate`.
-            
+
         If dynamic_loading=True, the data is loaded from the SNIRF file only
         when accessed through the getter
-            
+
         This record stores the date of the measurement as a string. The format of the date
         string must either be `"unknown"`, or follow the ISO 8601 date string format `YYYY-MM-DD`, where
         - `YYYY` is the 4-digit year
@@ -1233,10 +1232,10 @@ class MetaDataTags(Group):
     @property
     def MeasurementTime(self):
         """SNIRF field `MeasurementTime`.
-            
+
         If dynamic_loading=True, the data is loaded from the SNIRF file only
         when accessed through the getter
-            
+
         This record stores the time of the measurement as a string. The format of the time
         string must either be `"unknown"` or follow the ISO 8601 time string format `hh:mm:ss.sTZD`, where
         - `hh` is the 2-digit hour
@@ -1266,10 +1265,10 @@ class MetaDataTags(Group):
     @property
     def LengthUnit(self):
         """SNIRF field `LengthUnit`.
-            
+
         If dynamic_loading=True, the data is loaded from the SNIRF file only
         when accessed through the getter
-            
+
         This record stores the **case-sensitive** SI length unit used in this 
         measurement. Sample length units include "mm", "cm", and "m". A value of 
         "um" is the same as "mm", i.e. micrometer.
@@ -1295,10 +1294,10 @@ class MetaDataTags(Group):
     @property
     def TimeUnit(self):
         """SNIRF field `TimeUnit`.
-            
+
         If dynamic_loading=True, the data is loaded from the SNIRF file only
         when accessed through the getter
-            
+
         This record stores the **case-sensitive** SI time unit used in this 
         measurement. Sample time units include "s", and "ms". A value of "us" 
         is the same as "ms", i.e. microsecond.
@@ -1324,10 +1323,10 @@ class MetaDataTags(Group):
     @property
     def FrequencyUnit(self):
         """SNIRF field `FrequencyUnit`.
-            
+
         If dynamic_loading=True, the data is loaded from the SNIRF file only
         when accessed through the getter
-            
+
         This record stores the **case-sensitive** SI frequency unit used in 
         this measurement. Sample frequency units "Hz", "MHz" and "GHz". Please
         note that "mHz" is milli-Hz while "MHz" denotes "mega-Hz" according to
@@ -1408,7 +1407,7 @@ class MetaDataTags(Group):
                 del file[name]
             _create_dataset_string(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
-        else:   
+        else:
             if name in file:
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
@@ -1419,7 +1418,7 @@ class MetaDataTags(Group):
                 del file[name]
             _create_dataset_string(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
-        else:   
+        else:
             if name in file:
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
@@ -1430,7 +1429,7 @@ class MetaDataTags(Group):
                 del file[name]
             _create_dataset_string(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
-        else:   
+        else:
             if name in file:
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
@@ -1441,7 +1440,7 @@ class MetaDataTags(Group):
                 del file[name]
             _create_dataset_string(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
-        else:   
+        else:
             if name in file:
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
@@ -1452,7 +1451,7 @@ class MetaDataTags(Group):
                 del file[name]
             _create_dataset_string(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
-        else:   
+        else:
             if name in file:
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
@@ -1463,7 +1462,7 @@ class MetaDataTags(Group):
                 del file[name]
             _create_dataset_string(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
-        else:   
+        else:
             if name in file:
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
@@ -1477,89 +1476,89 @@ class MetaDataTags(Group):
             except AttributeError:  # Dataset was deleted
                 continue
             _create_dataset(file, name, data)
-            
+
 
     def _validate(self, result: ValidationResult):
         # Validate unwritten datasets after writing them to this tempfile
-        tmp = h5py.File(TemporaryFile(), 'w')
-        name = self.location + '/SubjectID'
-        if type(self._SubjectID) in [type(_AbsentDataset), type(None)]:
-            result._add(name, 'REQUIRED_DATASET_MISSING')
-        else:
-            try:
-                if type(self._SubjectID) is type(_PresentDataset) or 'SubjectID' in self._h:
-                    dataset = self._h['SubjectID']
-                else:
-                    dataset = _create_dataset_string(tmp, 'SubjectID', self._SubjectID)
-                result._add(name, _validate_string(dataset))
-            except ValueError:  # If the _create_dataset function can't convert the data
-                result._add(name, 'INVALID_DATASET_TYPE')
-        name = self.location + '/MeasurementDate'
-        if type(self._MeasurementDate) in [type(_AbsentDataset), type(None)]:
-            result._add(name, 'REQUIRED_DATASET_MISSING')
-        else:
-            try:
-                if type(self._MeasurementDate) is type(_PresentDataset) or 'MeasurementDate' in self._h:
-                    dataset = self._h['MeasurementDate']
-                else:
-                    dataset = _create_dataset_string(tmp, 'MeasurementDate', self._MeasurementDate)
-                result._add(name, _validate_string(dataset))
-            except ValueError:  # If the _create_dataset function can't convert the data
-                result._add(name, 'INVALID_DATASET_TYPE')
-        name = self.location + '/MeasurementTime'
-        if type(self._MeasurementTime) in [type(_AbsentDataset), type(None)]:
-            result._add(name, 'REQUIRED_DATASET_MISSING')
-        else:
-            try:
-                if type(self._MeasurementTime) is type(_PresentDataset) or 'MeasurementTime' in self._h:
-                    dataset = self._h['MeasurementTime']
-                else:
-                    dataset = _create_dataset_string(tmp, 'MeasurementTime', self._MeasurementTime)
-                result._add(name, _validate_string(dataset))
-            except ValueError:  # If the _create_dataset function can't convert the data
-                result._add(name, 'INVALID_DATASET_TYPE')
-        name = self.location + '/LengthUnit'
-        if type(self._LengthUnit) in [type(_AbsentDataset), type(None)]:
-            result._add(name, 'REQUIRED_DATASET_MISSING')
-        else:
-            try:
-                if type(self._LengthUnit) is type(_PresentDataset) or 'LengthUnit' in self._h:
-                    dataset = self._h['LengthUnit']
-                else:
-                    dataset = _create_dataset_string(tmp, 'LengthUnit', self._LengthUnit)
-                result._add(name, _validate_string(dataset))
-            except ValueError:  # If the _create_dataset function can't convert the data
-                result._add(name, 'INVALID_DATASET_TYPE')
-        name = self.location + '/TimeUnit'
-        if type(self._TimeUnit) in [type(_AbsentDataset), type(None)]:
-            result._add(name, 'REQUIRED_DATASET_MISSING')
-        else:
-            try:
-                if type(self._TimeUnit) is type(_PresentDataset) or 'TimeUnit' in self._h:
-                    dataset = self._h['TimeUnit']
-                else:
-                    dataset = _create_dataset_string(tmp, 'TimeUnit', self._TimeUnit)
-                result._add(name, _validate_string(dataset))
-            except ValueError:  # If the _create_dataset function can't convert the data
-                result._add(name, 'INVALID_DATASET_TYPE')
-        name = self.location + '/FrequencyUnit'
-        if type(self._FrequencyUnit) in [type(_AbsentDataset), type(None)]:
-            result._add(name, 'REQUIRED_DATASET_MISSING')
-        else:
-            try:
-                if type(self._FrequencyUnit) is type(_PresentDataset) or 'FrequencyUnit' in self._h:
-                    dataset = self._h['FrequencyUnit']
-                else:
-                    dataset = _create_dataset_string(tmp, 'FrequencyUnit', self._FrequencyUnit)
-                result._add(name, _validate_string(dataset))
-            except ValueError:  # If the _create_dataset function can't convert the data
-                result._add(name, 'INVALID_DATASET_TYPE')
+        with h5py.File(TemporaryFile(), 'w') as tmp:
+            name = self.location + '/SubjectID'
+            if type(self._SubjectID) in [type(_AbsentDataset), type(None)]:
+                result._add(name, 'REQUIRED_DATASET_MISSING')
+            else:
+                try:
+                    if type(self._SubjectID) is type(_PresentDataset) or 'SubjectID' in self._h:
+                        dataset = self._h['SubjectID']
+                    else:
+                        dataset = _create_dataset_string(tmp, 'SubjectID', self._SubjectID)
+                    result._add(name, _validate_string(dataset))
+                except ValueError:  # If the _create_dataset function can't convert the data
+                    result._add(name, 'INVALID_DATASET_TYPE')
+            name = self.location + '/MeasurementDate'
+            if type(self._MeasurementDate) in [type(_AbsentDataset), type(None)]:
+                result._add(name, 'REQUIRED_DATASET_MISSING')
+            else:
+                try:
+                    if type(self._MeasurementDate) is type(_PresentDataset) or 'MeasurementDate' in self._h:
+                        dataset = self._h['MeasurementDate']
+                    else:
+                        dataset = _create_dataset_string(tmp, 'MeasurementDate', self._MeasurementDate)
+                    result._add(name, _validate_string(dataset))
+                except ValueError:  # If the _create_dataset function can't convert the data
+                    result._add(name, 'INVALID_DATASET_TYPE')
+            name = self.location + '/MeasurementTime'
+            if type(self._MeasurementTime) in [type(_AbsentDataset), type(None)]:
+                result._add(name, 'REQUIRED_DATASET_MISSING')
+            else:
+                try:
+                    if type(self._MeasurementTime) is type(_PresentDataset) or 'MeasurementTime' in self._h:
+                        dataset = self._h['MeasurementTime']
+                    else:
+                        dataset = _create_dataset_string(tmp, 'MeasurementTime', self._MeasurementTime)
+                    result._add(name, _validate_string(dataset))
+                except ValueError:  # If the _create_dataset function can't convert the data
+                    result._add(name, 'INVALID_DATASET_TYPE')
+            name = self.location + '/LengthUnit'
+            if type(self._LengthUnit) in [type(_AbsentDataset), type(None)]:
+                result._add(name, 'REQUIRED_DATASET_MISSING')
+            else:
+                try:
+                    if type(self._LengthUnit) is type(_PresentDataset) or 'LengthUnit' in self._h:
+                        dataset = self._h['LengthUnit']
+                    else:
+                        dataset = _create_dataset_string(tmp, 'LengthUnit', self._LengthUnit)
+                    result._add(name, _validate_string(dataset))
+                except ValueError:  # If the _create_dataset function can't convert the data
+                    result._add(name, 'INVALID_DATASET_TYPE')
+            name = self.location + '/TimeUnit'
+            if type(self._TimeUnit) in [type(_AbsentDataset), type(None)]:
+                result._add(name, 'REQUIRED_DATASET_MISSING')
+            else:
+                try:
+                    if type(self._TimeUnit) is type(_PresentDataset) or 'TimeUnit' in self._h:
+                        dataset = self._h['TimeUnit']
+                    else:
+                        dataset = _create_dataset_string(tmp, 'TimeUnit', self._TimeUnit)
+                    result._add(name, _validate_string(dataset))
+                except ValueError:  # If the _create_dataset function can't convert the data
+                    result._add(name, 'INVALID_DATASET_TYPE')
+            name = self.location + '/FrequencyUnit'
+            if type(self._FrequencyUnit) in [type(_AbsentDataset), type(None)]:
+                result._add(name, 'REQUIRED_DATASET_MISSING')
+            else:
+                try:
+                    if type(self._FrequencyUnit) is type(_PresentDataset) or 'FrequencyUnit' in self._h:
+                        dataset = self._h['FrequencyUnit']
+                    else:
+                        dataset = _create_dataset_string(tmp, 'FrequencyUnit', self._FrequencyUnit)
+                    result._add(name, _validate_string(dataset))
+                except ValueError:  # If the _create_dataset function can't convert the data
+                    result._add(name, 'INVALID_DATASET_TYPE')
 
 
 
 class Probe(Group):
     """Wrapper for Group of type `probe`.
-    
+
     This is a structured variable that describes the probe (source-detector) 
     geometry.  This variable has a number of required fields.
 
@@ -1713,15 +1712,14 @@ class Probe(Group):
                 self._useLocalIndex = _PresentDataset
         else:  # if the dataset is not found on disk
             self._useLocalIndex = _AbsentDataset
-                
 
     @property
     def wavelengths(self):
         """SNIRF field `wavelengths`.
-            
+
         If dynamic_loading=True, the data is loaded from the SNIRF file only
         when accessed through the getter
-            
+
         This field describes the "nominal" wavelengths used (in `nm` unit).  This is indexed by the 
         `wavelengthIndex` of the measurementList variable. For example, `probe.wavelengths` = [690, 
         780, 830]; implies that the measurements were taken at three wavelengths (690 nm, 
@@ -1763,10 +1761,10 @@ class Probe(Group):
     @property
     def wavelengthsEmission(self):
         """SNIRF field `wavelengthsEmission`.
-            
+
         If dynamic_loading=True, the data is loaded from the SNIRF file only
         when accessed through the getter
-            
+
         This field is required only for fluorescence data types, and describes the 
         "nominal" emission wavelengths used (in `nm` unit).  The indexing of this variable is the same 
         wavelength index in measurementList used for `probe.wavelengths` such that the 
@@ -1798,10 +1796,10 @@ class Probe(Group):
     @property
     def sourcePos2D(self):
         """SNIRF field `sourcePos2D`.
-            
+
         If dynamic_loading=True, the data is loaded from the SNIRF file only
         when accessed through the getter
-            
+
         This field describes the position (in `LengthUnit` units) of each source 
         optode. The positions are coordinates in a flattened 2D probe layout. 
         This field has size `<number of sources> x 2`. For example, 
@@ -1830,10 +1828,10 @@ class Probe(Group):
     @property
     def sourcePos3D(self):
         """SNIRF field `sourcePos3D`.
-            
+
         If dynamic_loading=True, the data is loaded from the SNIRF file only
         when accessed through the getter
-            
+
         This field describes the position (in `LengthUnit` units) of each source 
         optode in 3D. This field has size `<number of sources> x 3`.
 
@@ -1859,10 +1857,10 @@ class Probe(Group):
     @property
     def detectorPos2D(self):
         """SNIRF field `detectorPos2D`.
-            
+
         If dynamic_loading=True, the data is loaded from the SNIRF file only
         when accessed through the getter
-            
+
         Same as `probe.sourcePos2D`, but describing the detector positions in a 
         flattened 2D probe layout.
 
@@ -1888,10 +1886,10 @@ class Probe(Group):
     @property
     def detectorPos3D(self):
         """SNIRF field `detectorPos3D`.
-            
+
         If dynamic_loading=True, the data is loaded from the SNIRF file only
         when accessed through the getter
-            
+
         This field describes the position (in `LengthUnit` units) of each detector 
         optode in 3D, defined similarly to `sourcePos3D`.
 
@@ -1917,10 +1915,10 @@ class Probe(Group):
     @property
     def frequencies(self):
         """SNIRF field `frequencies`.
-            
+
         If dynamic_loading=True, the data is loaded from the SNIRF file only
         when accessed through the getter
-            
+
         This field describes the frequencies used (in `FrequencyUnit` units)  for 
         frequency domain measurements. This field is only required for frequency 
         domain data types, and is indexed by `measurementList(k).dataTypeIndex`.
@@ -1947,10 +1945,10 @@ class Probe(Group):
     @property
     def timeDelays(self):
         """SNIRF field `timeDelays`.
-            
+
         If dynamic_loading=True, the data is loaded from the SNIRF file only
         when accessed through the getter
-            
+
         This field describes the time delays (in `TimeUnit` units) used for gated time domain measurements. 
         This field is only required for gated time domain data types, and is indexed by 
         `measurementList(k).dataTypeIndex`. The indexing of this field is paired with 
@@ -1978,10 +1976,10 @@ class Probe(Group):
     @property
     def timeDelayWidths(self):
         """SNIRF field `timeDelayWidths`.
-            
+
         If dynamic_loading=True, the data is loaded from the SNIRF file only
         when accessed through the getter
-            
+
         This field describes the time delay widths (in `TimeUnit` units) used for gated time domain 
         measurements. This field is only required for gated time domain data types, and 
         is indexed by `measurementList(k).dataTypeIndex`.  The indexing of this field 
@@ -2009,10 +2007,10 @@ class Probe(Group):
     @property
     def momentOrders(self):
         """SNIRF field `momentOrders`.
-            
+
         If dynamic_loading=True, the data is loaded from the SNIRF file only
         when accessed through the getter
-            
+
         This field describes the moment orders of the temporal point spread function (TPSF) or the distribution of time-of-flight (DTOF)
         for moment time domain measurements. This field is only required for moment time domain data types, and is indexed by `measurementList(k).dataTypeIndex`.  
         Note that the numeric value in this array is the exponent in the integral used for calculating the moments. For detailed/specific definitions of moments, see [Wabnitz et al, 2020](https://doi.org/10.1364/BOE.396585); for general definitions of moments see [here](https://en.wikipedia.org/wiki/Moment_(mathematics) ).
@@ -2045,10 +2043,10 @@ class Probe(Group):
     @property
     def correlationTimeDelays(self):
         """SNIRF field `correlationTimeDelays`.
-            
+
         If dynamic_loading=True, the data is loaded from the SNIRF file only
         when accessed through the getter
-            
+
         This field describes the time delays (in `TimeUnit` units) used for diffuse correlation spectroscopy 
         measurements. This field is only required for diffuse correlation spectroscopy 
         data types, and is indexed by `measurementList(k).dataTypeIndex`.  The indexing 
@@ -2076,10 +2074,10 @@ class Probe(Group):
     @property
     def correlationTimeDelayWidths(self):
         """SNIRF field `correlationTimeDelayWidths`.
-            
+
         If dynamic_loading=True, the data is loaded from the SNIRF file only
         when accessed through the getter
-            
+
         This field describes the time delay widths (in `TimeUnit` units) used for diffuse correlation 
         spectroscopy measurements. This field is only required for gated time domain 
         data types, and is indexed by `measurementList(k).dataTypeIndex`. The indexing 
@@ -2107,10 +2105,10 @@ class Probe(Group):
     @property
     def sourceLabels(self):
         """SNIRF field `sourceLabels`.
-            
+
         If dynamic_loading=True, the data is loaded from the SNIRF file only
         when accessed through the getter
-            
+
         This is a string array providing user friendly or instrument specific labels 
         for each source. Each element of the array must be a unique string among both 
         `probe.sourceLabels` and `probe.detectorLabels`.This can be of size `<number 
@@ -2140,10 +2138,10 @@ class Probe(Group):
     @property
     def detectorLabels(self):
         """SNIRF field `detectorLabels`.
-            
+
         If dynamic_loading=True, the data is loaded from the SNIRF file only
         when accessed through the getter
-            
+
         This is a string array providing user friendly or instrument specific labels 
         for each detector. Each element of the array must be a unique string among both 
         `probe.sourceLabels` and `probe.detectorLabels`. This is indexed by 
@@ -2171,10 +2169,10 @@ class Probe(Group):
     @property
     def landmarkPos2D(self):
         """SNIRF field `landmarkPos2D`.
-            
+
         If dynamic_loading=True, the data is loaded from the SNIRF file only
         when accessed through the getter
-            
+
         This is a 2-D array storing the neurological landmark positions projected
         along the 2-D (flattened) probe plane in order to map optical data from the
         flattened optode positions to brain anatomy. This array should contain a minimum 
@@ -2205,10 +2203,10 @@ class Probe(Group):
     @property
     def landmarkPos3D(self):
         """SNIRF field `landmarkPos3D`.
-            
+
         If dynamic_loading=True, the data is loaded from the SNIRF file only
         when accessed through the getter
-            
+
         This is a 2-D array storing the neurological landmark positions measurement 
         from 3-D digitization and tracking systems to facilitate the registration and 
         mapping of optical data to brain anatomy. This array should contain a minimum 
@@ -2239,10 +2237,10 @@ class Probe(Group):
     @property
     def landmarkLabels(self):
         """SNIRF field `landmarkLabels`.
-            
+
         If dynamic_loading=True, the data is loaded from the SNIRF file only
         when accessed through the getter
-            
+
         This string array stores the names of the landmarks. The first string denotes 
         the name of the landmarks with an index of 1 in the 4th column of 
         `probe.landmark`, and so on. One can adopt the commonly used 10-20 landmark 
@@ -2274,10 +2272,10 @@ class Probe(Group):
     @property
     def useLocalIndex(self):
         """SNIRF field `useLocalIndex`.
-            
+
         If dynamic_loading=True, the data is loaded from the SNIRF file only
         when accessed through the getter
-            
+
         For modular NIRS systems, setting this flag to a non-zero integer indicates 
         that `measurementList(k).sourceIndex` and `measurementList(k).detectorIndex` 
         are module-specific local-indices. One must also include 
@@ -2328,7 +2326,7 @@ class Probe(Group):
                 del file[name]
             _create_dataset_float_array(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
-        else:   
+        else:
             if name in file:
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
@@ -2339,7 +2337,7 @@ class Probe(Group):
                 del file[name]
             _create_dataset_float_array(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
-        else:   
+        else:
             if name in file:
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
@@ -2350,7 +2348,7 @@ class Probe(Group):
                 del file[name]
             _create_dataset_float_array(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
-        else:   
+        else:
             if name in file:
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
@@ -2361,7 +2359,7 @@ class Probe(Group):
                 del file[name]
             _create_dataset_float_array(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
-        else:   
+        else:
             if name in file:
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
@@ -2372,7 +2370,7 @@ class Probe(Group):
                 del file[name]
             _create_dataset_float_array(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
-        else:   
+        else:
             if name in file:
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
@@ -2383,7 +2381,7 @@ class Probe(Group):
                 del file[name]
             _create_dataset_float_array(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
-        else:   
+        else:
             if name in file:
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
@@ -2394,7 +2392,7 @@ class Probe(Group):
                 del file[name]
             _create_dataset_float_array(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
-        else:   
+        else:
             if name in file:
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
@@ -2405,7 +2403,7 @@ class Probe(Group):
                 del file[name]
             _create_dataset_float_array(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
-        else:   
+        else:
             if name in file:
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
@@ -2416,7 +2414,7 @@ class Probe(Group):
                 del file[name]
             _create_dataset_float_array(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
-        else:   
+        else:
             if name in file:
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
@@ -2427,7 +2425,7 @@ class Probe(Group):
                 del file[name]
             _create_dataset_float_array(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
-        else:   
+        else:
             if name in file:
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
@@ -2438,7 +2436,7 @@ class Probe(Group):
                 del file[name]
             _create_dataset_float_array(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
-        else:   
+        else:
             if name in file:
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
@@ -2449,7 +2447,7 @@ class Probe(Group):
                 del file[name]
             _create_dataset_float_array(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
-        else:   
+        else:
             if name in file:
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
@@ -2460,7 +2458,7 @@ class Probe(Group):
                 del file[name]
             _create_dataset_string_array(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
-        else:   
+        else:
             if name in file:
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
@@ -2471,7 +2469,7 @@ class Probe(Group):
                 del file[name]
             _create_dataset_string_array(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
-        else:   
+        else:
             if name in file:
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
@@ -2482,7 +2480,7 @@ class Probe(Group):
                 del file[name]
             _create_dataset_float_array(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
-        else:   
+        else:
             if name in file:
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
@@ -2493,7 +2491,7 @@ class Probe(Group):
                 del file[name]
             _create_dataset_float_array(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
-        else:   
+        else:
             if name in file:
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
@@ -2504,7 +2502,7 @@ class Probe(Group):
                 del file[name]
             _create_dataset_string_array(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
-        else:   
+        else:
             if name in file:
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
@@ -2515,242 +2513,242 @@ class Probe(Group):
                 del file[name]
             _create_dataset_int(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
-        else:   
+        else:
             if name in file:
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
 
     def _validate(self, result: ValidationResult):
         # Validate unwritten datasets after writing them to this tempfile
-        tmp = h5py.File(TemporaryFile(), 'w')
-        name = self.location + '/wavelengths'
-        if type(self._wavelengths) in [type(_AbsentDataset), type(None)]:
-            result._add(name, 'REQUIRED_DATASET_MISSING')
-        else:
-            try:
-                if type(self._wavelengths) is type(_PresentDataset) or 'wavelengths' in self._h:
-                    dataset = self._h['wavelengths']
-                else:
-                    dataset = _create_dataset_float_array(tmp, 'wavelengths', self._wavelengths)
-                result._add(name, _validate_float_array(dataset, ndims=[1]))
-            except ValueError:  # If the _create_dataset function can't convert the data
-                result._add(name, 'INVALID_DATASET_TYPE')
-        name = self.location + '/wavelengthsEmission'
-        if type(self._wavelengthsEmission) in [type(_AbsentDataset), type(None)]:
-            result._add(name, 'OPTIONAL_DATASET_MISSING')
-        else:
-            try:
-                if type(self._wavelengthsEmission) is type(_PresentDataset) or 'wavelengthsEmission' in self._h:
-                    dataset = self._h['wavelengthsEmission']
-                else:
-                    dataset = _create_dataset_float_array(tmp, 'wavelengthsEmission', self._wavelengthsEmission)
-                result._add(name, _validate_float_array(dataset, ndims=[1]))
-            except ValueError:  # If the _create_dataset function can't convert the data
-                result._add(name, 'INVALID_DATASET_TYPE')
-        name = self.location + '/sourcePos2D'
-        if type(self._sourcePos2D) in [type(_AbsentDataset), type(None)]:
-            result._add(name, 'REQUIRED_DATASET_MISSING')
-        else:
-            try:
-                if type(self._sourcePos2D) is type(_PresentDataset) or 'sourcePos2D' in self._h:
-                    dataset = self._h['sourcePos2D']
-                else:
-                    dataset = _create_dataset_float_array(tmp, 'sourcePos2D', self._sourcePos2D)
-                result._add(name, _validate_float_array(dataset, ndims=[2]))
-            except ValueError:  # If the _create_dataset function can't convert the data
-                result._add(name, 'INVALID_DATASET_TYPE')
-        name = self.location + '/sourcePos3D'
-        if type(self._sourcePos3D) in [type(_AbsentDataset), type(None)]:
-            result._add(name, 'REQUIRED_DATASET_MISSING')
-        else:
-            try:
-                if type(self._sourcePos3D) is type(_PresentDataset) or 'sourcePos3D' in self._h:
-                    dataset = self._h['sourcePos3D']
-                else:
-                    dataset = _create_dataset_float_array(tmp, 'sourcePos3D', self._sourcePos3D)
-                result._add(name, _validate_float_array(dataset, ndims=[2]))
-            except ValueError:  # If the _create_dataset function can't convert the data
-                result._add(name, 'INVALID_DATASET_TYPE')
-        name = self.location + '/detectorPos2D'
-        if type(self._detectorPos2D) in [type(_AbsentDataset), type(None)]:
-            result._add(name, 'REQUIRED_DATASET_MISSING')
-        else:
-            try:
-                if type(self._detectorPos2D) is type(_PresentDataset) or 'detectorPos2D' in self._h:
-                    dataset = self._h['detectorPos2D']
-                else:
-                    dataset = _create_dataset_float_array(tmp, 'detectorPos2D', self._detectorPos2D)
-                result._add(name, _validate_float_array(dataset, ndims=[2]))
-            except ValueError:  # If the _create_dataset function can't convert the data
-                result._add(name, 'INVALID_DATASET_TYPE')
-        name = self.location + '/detectorPos3D'
-        if type(self._detectorPos3D) in [type(_AbsentDataset), type(None)]:
-            result._add(name, 'REQUIRED_DATASET_MISSING')
-        else:
-            try:
-                if type(self._detectorPos3D) is type(_PresentDataset) or 'detectorPos3D' in self._h:
-                    dataset = self._h['detectorPos3D']
-                else:
-                    dataset = _create_dataset_float_array(tmp, 'detectorPos3D', self._detectorPos3D)
-                result._add(name, _validate_float_array(dataset, ndims=[2]))
-            except ValueError:  # If the _create_dataset function can't convert the data
-                result._add(name, 'INVALID_DATASET_TYPE')
-        name = self.location + '/frequencies'
-        if type(self._frequencies) in [type(_AbsentDataset), type(None)]:
-            result._add(name, 'OPTIONAL_DATASET_MISSING')
-        else:
-            try:
-                if type(self._frequencies) is type(_PresentDataset) or 'frequencies' in self._h:
-                    dataset = self._h['frequencies']
-                else:
-                    dataset = _create_dataset_float_array(tmp, 'frequencies', self._frequencies)
-                result._add(name, _validate_float_array(dataset, ndims=[1]))
-            except ValueError:  # If the _create_dataset function can't convert the data
-                result._add(name, 'INVALID_DATASET_TYPE')
-        name = self.location + '/timeDelays'
-        if type(self._timeDelays) in [type(_AbsentDataset), type(None)]:
-            result._add(name, 'OPTIONAL_DATASET_MISSING')
-        else:
-            try:
-                if type(self._timeDelays) is type(_PresentDataset) or 'timeDelays' in self._h:
-                    dataset = self._h['timeDelays']
-                else:
-                    dataset = _create_dataset_float_array(tmp, 'timeDelays', self._timeDelays)
-                result._add(name, _validate_float_array(dataset, ndims=[1]))
-            except ValueError:  # If the _create_dataset function can't convert the data
-                result._add(name, 'INVALID_DATASET_TYPE')
-        name = self.location + '/timeDelayWidths'
-        if type(self._timeDelayWidths) in [type(_AbsentDataset), type(None)]:
-            result._add(name, 'OPTIONAL_DATASET_MISSING')
-        else:
-            try:
-                if type(self._timeDelayWidths) is type(_PresentDataset) or 'timeDelayWidths' in self._h:
-                    dataset = self._h['timeDelayWidths']
-                else:
-                    dataset = _create_dataset_float_array(tmp, 'timeDelayWidths', self._timeDelayWidths)
-                result._add(name, _validate_float_array(dataset, ndims=[1]))
-            except ValueError:  # If the _create_dataset function can't convert the data
-                result._add(name, 'INVALID_DATASET_TYPE')
-        name = self.location + '/momentOrders'
-        if type(self._momentOrders) in [type(_AbsentDataset), type(None)]:
-            result._add(name, 'OPTIONAL_DATASET_MISSING')
-        else:
-            try:
-                if type(self._momentOrders) is type(_PresentDataset) or 'momentOrders' in self._h:
-                    dataset = self._h['momentOrders']
-                else:
-                    dataset = _create_dataset_float_array(tmp, 'momentOrders', self._momentOrders)
-                result._add(name, _validate_float_array(dataset, ndims=[1]))
-            except ValueError:  # If the _create_dataset function can't convert the data
-                result._add(name, 'INVALID_DATASET_TYPE')
-        name = self.location + '/correlationTimeDelays'
-        if type(self._correlationTimeDelays) in [type(_AbsentDataset), type(None)]:
-            result._add(name, 'OPTIONAL_DATASET_MISSING')
-        else:
-            try:
-                if type(self._correlationTimeDelays) is type(_PresentDataset) or 'correlationTimeDelays' in self._h:
-                    dataset = self._h['correlationTimeDelays']
-                else:
-                    dataset = _create_dataset_float_array(tmp, 'correlationTimeDelays', self._correlationTimeDelays)
-                result._add(name, _validate_float_array(dataset, ndims=[1]))
-            except ValueError:  # If the _create_dataset function can't convert the data
-                result._add(name, 'INVALID_DATASET_TYPE')
-        name = self.location + '/correlationTimeDelayWidths'
-        if type(self._correlationTimeDelayWidths) in [type(_AbsentDataset), type(None)]:
-            result._add(name, 'OPTIONAL_DATASET_MISSING')
-        else:
-            try:
-                if type(self._correlationTimeDelayWidths) is type(_PresentDataset) or 'correlationTimeDelayWidths' in self._h:
-                    dataset = self._h['correlationTimeDelayWidths']
-                else:
-                    dataset = _create_dataset_float_array(tmp, 'correlationTimeDelayWidths', self._correlationTimeDelayWidths)
-                result._add(name, _validate_float_array(dataset, ndims=[1]))
-            except ValueError:  # If the _create_dataset function can't convert the data
-                result._add(name, 'INVALID_DATASET_TYPE')
-        name = self.location + '/sourceLabels'
-        if type(self._sourceLabels) in [type(_AbsentDataset), type(None)]:
-            result._add(name, 'OPTIONAL_DATASET_MISSING')
-        else:
-            try:
-                if type(self._sourceLabels) is type(_PresentDataset) or 'sourceLabels' in self._h:
-                    dataset = self._h['sourceLabels']
-                else:
-                    dataset = _create_dataset_string_array(tmp, 'sourceLabels', self._sourceLabels)
-                result._add(name, _validate_string_array(dataset, ndims=[1]))
-            except ValueError:  # If the _create_dataset function can't convert the data
-                result._add(name, 'INVALID_DATASET_TYPE')
-        name = self.location + '/detectorLabels'
-        if type(self._detectorLabels) in [type(_AbsentDataset), type(None)]:
-            result._add(name, 'OPTIONAL_DATASET_MISSING')
-        else:
-            try:
-                if type(self._detectorLabels) is type(_PresentDataset) or 'detectorLabels' in self._h:
-                    dataset = self._h['detectorLabels']
-                else:
-                    dataset = _create_dataset_string_array(tmp, 'detectorLabels', self._detectorLabels)
-                result._add(name, _validate_string_array(dataset, ndims=[1]))
-            except ValueError:  # If the _create_dataset function can't convert the data
-                result._add(name, 'INVALID_DATASET_TYPE')
-        name = self.location + '/landmarkPos2D'
-        if type(self._landmarkPos2D) in [type(_AbsentDataset), type(None)]:
-            result._add(name, 'OPTIONAL_DATASET_MISSING')
-        else:
-            try:
-                if type(self._landmarkPos2D) is type(_PresentDataset) or 'landmarkPos2D' in self._h:
-                    dataset = self._h['landmarkPos2D']
-                else:
-                    dataset = _create_dataset_float_array(tmp, 'landmarkPos2D', self._landmarkPos2D)
-                result._add(name, _validate_float_array(dataset, ndims=[2]))
-            except ValueError:  # If the _create_dataset function can't convert the data
-                result._add(name, 'INVALID_DATASET_TYPE')
-        name = self.location + '/landmarkPos3D'
-        if type(self._landmarkPos3D) in [type(_AbsentDataset), type(None)]:
-            result._add(name, 'OPTIONAL_DATASET_MISSING')
-        else:
-            try:
-                if type(self._landmarkPos3D) is type(_PresentDataset) or 'landmarkPos3D' in self._h:
-                    dataset = self._h['landmarkPos3D']
-                else:
-                    dataset = _create_dataset_float_array(tmp, 'landmarkPos3D', self._landmarkPos3D)
-                result._add(name, _validate_float_array(dataset, ndims=[2]))
-            except ValueError:  # If the _create_dataset function can't convert the data
-                result._add(name, 'INVALID_DATASET_TYPE')
-        name = self.location + '/landmarkLabels'
-        if type(self._landmarkLabels) in [type(_AbsentDataset), type(None)]:
-            result._add(name, 'OPTIONAL_DATASET_MISSING')
-        else:
-            try:
-                if type(self._landmarkLabels) is type(_PresentDataset) or 'landmarkLabels' in self._h:
-                    dataset = self._h['landmarkLabels']
-                else:
-                    dataset = _create_dataset_string_array(tmp, 'landmarkLabels', self._landmarkLabels)
-                result._add(name, _validate_string_array(dataset, ndims=[1]))
-            except ValueError:  # If the _create_dataset function can't convert the data
-                result._add(name, 'INVALID_DATASET_TYPE')
-        name = self.location + '/useLocalIndex'
-        if type(self._useLocalIndex) in [type(_AbsentDataset), type(None)]:
-            result._add(name, 'OPTIONAL_DATASET_MISSING')
-        else:
-            try:
-                if type(self._useLocalIndex) is type(_PresentDataset) or 'useLocalIndex' in self._h:
-                    dataset = self._h['useLocalIndex']
-                else:
-                    dataset = _create_dataset_int(tmp, 'useLocalIndex', self._useLocalIndex)
-                err_code = _validate_int(dataset)
-                if _read_int(dataset) < 0 and err_code == 'OK':
-                    result._add(name, 'NEGATIVE_INDEX')
-                elif _read_int(dataset) == 0 and err_code == 'OK':
-                    result._add(name, 'INDEX_OF_ZERO')
-                else:
-                    result._add(name, err_code)
-            except ValueError:  # If the _create_dataset function can't convert the data
-                result._add(name, 'INVALID_DATASET_TYPE')
-        for key in self._h.keys():
-            if not any([key.startswith(name) for name in self._snirf_names]):
-                if type(self._h[key]) is h5py.Group:
-                    result._add(self.location + '/' + key, 'UNRECOGNIZED_GROUP')
-                elif type(self._h[key]) is h5py.Dataset:
-                    result._add(self.location + '/' + key, 'UNRECOGNIZED_DATASET')
+        with h5py.File(TemporaryFile(), 'w') as tmp:
+            name = self.location + '/wavelengths'
+            if type(self._wavelengths) in [type(_AbsentDataset), type(None)]:
+                result._add(name, 'REQUIRED_DATASET_MISSING')
+            else:
+                try:
+                    if type(self._wavelengths) is type(_PresentDataset) or 'wavelengths' in self._h:
+                        dataset = self._h['wavelengths']
+                    else:
+                        dataset = _create_dataset_float_array(tmp, 'wavelengths', self._wavelengths)
+                    result._add(name, _validate_float_array(dataset, ndims=[1]))
+                except ValueError:  # If the _create_dataset function can't convert the data
+                    result._add(name, 'INVALID_DATASET_TYPE')
+            name = self.location + '/wavelengthsEmission'
+            if type(self._wavelengthsEmission) in [type(_AbsentDataset), type(None)]:
+                result._add(name, 'OPTIONAL_DATASET_MISSING')
+            else:
+                try:
+                    if type(self._wavelengthsEmission) is type(_PresentDataset) or 'wavelengthsEmission' in self._h:
+                        dataset = self._h['wavelengthsEmission']
+                    else:
+                        dataset = _create_dataset_float_array(tmp, 'wavelengthsEmission', self._wavelengthsEmission)
+                    result._add(name, _validate_float_array(dataset, ndims=[1]))
+                except ValueError:  # If the _create_dataset function can't convert the data
+                    result._add(name, 'INVALID_DATASET_TYPE')
+            name = self.location + '/sourcePos2D'
+            if type(self._sourcePos2D) in [type(_AbsentDataset), type(None)]:
+                result._add(name, 'REQUIRED_DATASET_MISSING')
+            else:
+                try:
+                    if type(self._sourcePos2D) is type(_PresentDataset) or 'sourcePos2D' in self._h:
+                        dataset = self._h['sourcePos2D']
+                    else:
+                        dataset = _create_dataset_float_array(tmp, 'sourcePos2D', self._sourcePos2D)
+                    result._add(name, _validate_float_array(dataset, ndims=[2]))
+                except ValueError:  # If the _create_dataset function can't convert the data
+                    result._add(name, 'INVALID_DATASET_TYPE')
+            name = self.location + '/sourcePos3D'
+            if type(self._sourcePos3D) in [type(_AbsentDataset), type(None)]:
+                result._add(name, 'REQUIRED_DATASET_MISSING')
+            else:
+                try:
+                    if type(self._sourcePos3D) is type(_PresentDataset) or 'sourcePos3D' in self._h:
+                        dataset = self._h['sourcePos3D']
+                    else:
+                        dataset = _create_dataset_float_array(tmp, 'sourcePos3D', self._sourcePos3D)
+                    result._add(name, _validate_float_array(dataset, ndims=[2]))
+                except ValueError:  # If the _create_dataset function can't convert the data
+                    result._add(name, 'INVALID_DATASET_TYPE')
+            name = self.location + '/detectorPos2D'
+            if type(self._detectorPos2D) in [type(_AbsentDataset), type(None)]:
+                result._add(name, 'REQUIRED_DATASET_MISSING')
+            else:
+                try:
+                    if type(self._detectorPos2D) is type(_PresentDataset) or 'detectorPos2D' in self._h:
+                        dataset = self._h['detectorPos2D']
+                    else:
+                        dataset = _create_dataset_float_array(tmp, 'detectorPos2D', self._detectorPos2D)
+                    result._add(name, _validate_float_array(dataset, ndims=[2]))
+                except ValueError:  # If the _create_dataset function can't convert the data
+                    result._add(name, 'INVALID_DATASET_TYPE')
+            name = self.location + '/detectorPos3D'
+            if type(self._detectorPos3D) in [type(_AbsentDataset), type(None)]:
+                result._add(name, 'REQUIRED_DATASET_MISSING')
+            else:
+                try:
+                    if type(self._detectorPos3D) is type(_PresentDataset) or 'detectorPos3D' in self._h:
+                        dataset = self._h['detectorPos3D']
+                    else:
+                        dataset = _create_dataset_float_array(tmp, 'detectorPos3D', self._detectorPos3D)
+                    result._add(name, _validate_float_array(dataset, ndims=[2]))
+                except ValueError:  # If the _create_dataset function can't convert the data
+                    result._add(name, 'INVALID_DATASET_TYPE')
+            name = self.location + '/frequencies'
+            if type(self._frequencies) in [type(_AbsentDataset), type(None)]:
+                result._add(name, 'OPTIONAL_DATASET_MISSING')
+            else:
+                try:
+                    if type(self._frequencies) is type(_PresentDataset) or 'frequencies' in self._h:
+                        dataset = self._h['frequencies']
+                    else:
+                        dataset = _create_dataset_float_array(tmp, 'frequencies', self._frequencies)
+                    result._add(name, _validate_float_array(dataset, ndims=[1]))
+                except ValueError:  # If the _create_dataset function can't convert the data
+                    result._add(name, 'INVALID_DATASET_TYPE')
+            name = self.location + '/timeDelays'
+            if type(self._timeDelays) in [type(_AbsentDataset), type(None)]:
+                result._add(name, 'OPTIONAL_DATASET_MISSING')
+            else:
+                try:
+                    if type(self._timeDelays) is type(_PresentDataset) or 'timeDelays' in self._h:
+                        dataset = self._h['timeDelays']
+                    else:
+                        dataset = _create_dataset_float_array(tmp, 'timeDelays', self._timeDelays)
+                    result._add(name, _validate_float_array(dataset, ndims=[1]))
+                except ValueError:  # If the _create_dataset function can't convert the data
+                    result._add(name, 'INVALID_DATASET_TYPE')
+            name = self.location + '/timeDelayWidths'
+            if type(self._timeDelayWidths) in [type(_AbsentDataset), type(None)]:
+                result._add(name, 'OPTIONAL_DATASET_MISSING')
+            else:
+                try:
+                    if type(self._timeDelayWidths) is type(_PresentDataset) or 'timeDelayWidths' in self._h:
+                        dataset = self._h['timeDelayWidths']
+                    else:
+                        dataset = _create_dataset_float_array(tmp, 'timeDelayWidths', self._timeDelayWidths)
+                    result._add(name, _validate_float_array(dataset, ndims=[1]))
+                except ValueError:  # If the _create_dataset function can't convert the data
+                    result._add(name, 'INVALID_DATASET_TYPE')
+            name = self.location + '/momentOrders'
+            if type(self._momentOrders) in [type(_AbsentDataset), type(None)]:
+                result._add(name, 'OPTIONAL_DATASET_MISSING')
+            else:
+                try:
+                    if type(self._momentOrders) is type(_PresentDataset) or 'momentOrders' in self._h:
+                        dataset = self._h['momentOrders']
+                    else:
+                        dataset = _create_dataset_float_array(tmp, 'momentOrders', self._momentOrders)
+                    result._add(name, _validate_float_array(dataset, ndims=[1]))
+                except ValueError:  # If the _create_dataset function can't convert the data
+                    result._add(name, 'INVALID_DATASET_TYPE')
+            name = self.location + '/correlationTimeDelays'
+            if type(self._correlationTimeDelays) in [type(_AbsentDataset), type(None)]:
+                result._add(name, 'OPTIONAL_DATASET_MISSING')
+            else:
+                try:
+                    if type(self._correlationTimeDelays) is type(_PresentDataset) or 'correlationTimeDelays' in self._h:
+                        dataset = self._h['correlationTimeDelays']
+                    else:
+                        dataset = _create_dataset_float_array(tmp, 'correlationTimeDelays', self._correlationTimeDelays)
+                    result._add(name, _validate_float_array(dataset, ndims=[1]))
+                except ValueError:  # If the _create_dataset function can't convert the data
+                    result._add(name, 'INVALID_DATASET_TYPE')
+            name = self.location + '/correlationTimeDelayWidths'
+            if type(self._correlationTimeDelayWidths) in [type(_AbsentDataset), type(None)]:
+                result._add(name, 'OPTIONAL_DATASET_MISSING')
+            else:
+                try:
+                    if type(self._correlationTimeDelayWidths) is type(_PresentDataset) or 'correlationTimeDelayWidths' in self._h:
+                        dataset = self._h['correlationTimeDelayWidths']
+                    else:
+                        dataset = _create_dataset_float_array(tmp, 'correlationTimeDelayWidths', self._correlationTimeDelayWidths)
+                    result._add(name, _validate_float_array(dataset, ndims=[1]))
+                except ValueError:  # If the _create_dataset function can't convert the data
+                    result._add(name, 'INVALID_DATASET_TYPE')
+            name = self.location + '/sourceLabels'
+            if type(self._sourceLabels) in [type(_AbsentDataset), type(None)]:
+                result._add(name, 'OPTIONAL_DATASET_MISSING')
+            else:
+                try:
+                    if type(self._sourceLabels) is type(_PresentDataset) or 'sourceLabels' in self._h:
+                        dataset = self._h['sourceLabels']
+                    else:
+                        dataset = _create_dataset_string_array(tmp, 'sourceLabels', self._sourceLabels)
+                    result._add(name, _validate_string_array(dataset, ndims=[1]))
+                except ValueError:  # If the _create_dataset function can't convert the data
+                    result._add(name, 'INVALID_DATASET_TYPE')
+            name = self.location + '/detectorLabels'
+            if type(self._detectorLabels) in [type(_AbsentDataset), type(None)]:
+                result._add(name, 'OPTIONAL_DATASET_MISSING')
+            else:
+                try:
+                    if type(self._detectorLabels) is type(_PresentDataset) or 'detectorLabels' in self._h:
+                        dataset = self._h['detectorLabels']
+                    else:
+                        dataset = _create_dataset_string_array(tmp, 'detectorLabels', self._detectorLabels)
+                    result._add(name, _validate_string_array(dataset, ndims=[1]))
+                except ValueError:  # If the _create_dataset function can't convert the data
+                    result._add(name, 'INVALID_DATASET_TYPE')
+            name = self.location + '/landmarkPos2D'
+            if type(self._landmarkPos2D) in [type(_AbsentDataset), type(None)]:
+                result._add(name, 'OPTIONAL_DATASET_MISSING')
+            else:
+                try:
+                    if type(self._landmarkPos2D) is type(_PresentDataset) or 'landmarkPos2D' in self._h:
+                        dataset = self._h['landmarkPos2D']
+                    else:
+                        dataset = _create_dataset_float_array(tmp, 'landmarkPos2D', self._landmarkPos2D)
+                    result._add(name, _validate_float_array(dataset, ndims=[2]))
+                except ValueError:  # If the _create_dataset function can't convert the data
+                    result._add(name, 'INVALID_DATASET_TYPE')
+            name = self.location + '/landmarkPos3D'
+            if type(self._landmarkPos3D) in [type(_AbsentDataset), type(None)]:
+                result._add(name, 'OPTIONAL_DATASET_MISSING')
+            else:
+                try:
+                    if type(self._landmarkPos3D) is type(_PresentDataset) or 'landmarkPos3D' in self._h:
+                        dataset = self._h['landmarkPos3D']
+                    else:
+                        dataset = _create_dataset_float_array(tmp, 'landmarkPos3D', self._landmarkPos3D)
+                    result._add(name, _validate_float_array(dataset, ndims=[2]))
+                except ValueError:  # If the _create_dataset function can't convert the data
+                    result._add(name, 'INVALID_DATASET_TYPE')
+            name = self.location + '/landmarkLabels'
+            if type(self._landmarkLabels) in [type(_AbsentDataset), type(None)]:
+                result._add(name, 'OPTIONAL_DATASET_MISSING')
+            else:
+                try:
+                    if type(self._landmarkLabels) is type(_PresentDataset) or 'landmarkLabels' in self._h:
+                        dataset = self._h['landmarkLabels']
+                    else:
+                        dataset = _create_dataset_string_array(tmp, 'landmarkLabels', self._landmarkLabels)
+                    result._add(name, _validate_string_array(dataset, ndims=[1]))
+                except ValueError:  # If the _create_dataset function can't convert the data
+                    result._add(name, 'INVALID_DATASET_TYPE')
+            name = self.location + '/useLocalIndex'
+            if type(self._useLocalIndex) in [type(_AbsentDataset), type(None)]:
+                result._add(name, 'OPTIONAL_DATASET_MISSING')
+            else:
+                try:
+                    if type(self._useLocalIndex) is type(_PresentDataset) or 'useLocalIndex' in self._h:
+                        dataset = self._h['useLocalIndex']
+                    else:
+                        dataset = _create_dataset_int(tmp, 'useLocalIndex', self._useLocalIndex)
+                    err_code = _validate_int(dataset)
+                    if _read_int(dataset) < 0 and err_code == 'OK':
+                        result._add(name, 'NEGATIVE_INDEX')
+                    elif _read_int(dataset) == 0 and err_code == 'OK':
+                        result._add(name, 'INDEX_OF_ZERO')
+                    else:
+                        result._add(name, err_code)
+                except ValueError:  # If the _create_dataset function can't convert the data
+                    result._add(name, 'INVALID_DATASET_TYPE')
+            for key in self._h.keys():
+                if not any([key.startswith(name) for name in self._snirf_names]):
+                    if type(self._h[key]) is h5py.Group:
+                        result._add(self.location + '/' + key, 'UNRECOGNIZED_GROUP')
+                    elif type(self._h[key]) is h5py.Dataset:
+                        result._add(self.location + '/' + key, 'UNRECOGNIZED_DATASET')
 
 
 
@@ -2780,15 +2778,14 @@ class NirsElement(Group):
             self._probe = Probe(self.location + '/' + 'probe', self._cfg)  # Anonymous group (wrapper only)
         self.aux = Aux(self, self._cfg)  # Indexed group
         self._indexed_groups.append(self.aux)
-                
 
     @property
     def metaDataTags(self):
         """SNIRF field `metaDataTags`.
-            
+
         If dynamic_loading=True, the data is loaded from the SNIRF file only
         when accessed through the getter
-            
+
         The `metaDataTags` group contains the metadata associated with the measurements.
         Each metadata record is represented as a dataset under this group - with the name of
         the record, i.e. the key, as the dataset's name, and the value of the record as the 
@@ -2815,10 +2812,10 @@ class NirsElement(Group):
     @property
     def data(self):
         """SNIRF field `data`.
-            
+
         If dynamic_loading=True, the data is loaded from the SNIRF file only
         when accessed through the getter
-            
+
         This group stores one block of NIRS data.  This can be extended adding the 
         count number (e.g. `data1`, `data2`,...) to the group name.  This is intended to 
         allow the storage of 1 or more blocks of NIRS data from within the same `/nirs` 
@@ -2843,10 +2840,10 @@ class NirsElement(Group):
     @property
     def stim(self):
         """SNIRF field `stim`.
-            
+
         If dynamic_loading=True, the data is loaded from the SNIRF file only
         when accessed through the getter
-            
+
         This is an array describing any stimulus conditions. Each element of the array 
         has the following required fields.
 
@@ -2867,10 +2864,10 @@ class NirsElement(Group):
     @property
     def probe(self):
         """SNIRF field `probe`.
-            
+
         If dynamic_loading=True, the data is loaded from the SNIRF file only
         when accessed through the getter
-            
+
         This is a structured variable that describes the probe (source-detector) 
         geometry.  This variable has a number of required fields.
 
@@ -2892,10 +2889,10 @@ class NirsElement(Group):
     @property
     def aux(self):
         """SNIRF field `aux`.
-            
+
         If dynamic_loading=True, the data is loaded from the SNIRF file only
         when accessed through the getter
-            
+
         This optional array specifies any recorded auxiliary data. Each element of 
         `aux` has the following required fields:
 
@@ -2946,49 +2943,49 @@ class NirsElement(Group):
 
     def _validate(self, result: ValidationResult):
         # Validate unwritten datasets after writing them to this tempfile
-        tmp = h5py.File(TemporaryFile(), 'w')
-        name = self.location + '/metaDataTags'
-        # If Group is not present in file and empty in the wrapper, it is missing
-        if type(self._metaDataTags) in [type(_AbsentGroup), type(None)] or ('metaDataTags' not in self._h and self._metaDataTags.is_empty()):
-            result._add(name, 'REQUIRED_GROUP_MISSING')
-        else:
-            self._metaDataTags._validate(result)
-        name = self.location + '/data'
-        if len(self._data) == 0:
-            result._add(name, 'REQUIRED_INDEXED_GROUP_EMPTY')
-        else:
-            self.data._validate(result)
-        name = self.location + '/stim'
-        if len(self._stim) == 0:
-            result._add(name, 'OPTIONAL_INDEXED_GROUP_EMPTY')
-        else:
-            self.stim._validate(result)
-        name = self.location + '/probe'
-        # If Group is not present in file and empty in the wrapper, it is missing
-        if type(self._probe) in [type(_AbsentGroup), type(None)] or ('probe' not in self._h and self._probe.is_empty()):
-            result._add(name, 'REQUIRED_GROUP_MISSING')
-        else:
-            self._probe._validate(result)
-        name = self.location + '/aux'
-        if len(self._aux) == 0:
-            result._add(name, 'OPTIONAL_INDEXED_GROUP_EMPTY')
-        else:
-            self.aux._validate(result)
-        for key in self._h.keys():
-            if not any([key.startswith(name) for name in self._snirf_names]):
-                if type(self._h[key]) is h5py.Group:
-                    result._add(self.location + '/' + key, 'UNRECOGNIZED_GROUP')
-                elif type(self._h[key]) is h5py.Dataset:
-                    result._add(self.location + '/' + key, 'UNRECOGNIZED_DATASET')
+        with h5py.File(TemporaryFile(), 'w') as tmp:
+            name = self.location + '/metaDataTags'
+            # If Group is not present in file and empty in the wrapper, it is missing
+            if type(self._metaDataTags) in [type(_AbsentGroup), type(None)] or ('metaDataTags' not in self._h and self._metaDataTags.is_empty()):
+                result._add(name, 'REQUIRED_GROUP_MISSING')
+            else:
+                self._metaDataTags._validate(result)
+            name = self.location + '/data'
+            if len(self._data) == 0:
+                result._add(name, 'REQUIRED_INDEXED_GROUP_EMPTY')
+            else:
+                self.data._validate(result)
+            name = self.location + '/stim'
+            if len(self._stim) == 0:
+                result._add(name, 'OPTIONAL_INDEXED_GROUP_EMPTY')
+            else:
+                self.stim._validate(result)
+            name = self.location + '/probe'
+            # If Group is not present in file and empty in the wrapper, it is missing
+            if type(self._probe) in [type(_AbsentGroup), type(None)] or ('probe' not in self._h and self._probe.is_empty()):
+                result._add(name, 'REQUIRED_GROUP_MISSING')
+            else:
+                self._probe._validate(result)
+            name = self.location + '/aux'
+            if len(self._aux) == 0:
+                result._add(name, 'OPTIONAL_INDEXED_GROUP_EMPTY')
+            else:
+                self.aux._validate(result)
+            for key in self._h.keys():
+                if not any([key.startswith(name) for name in self._snirf_names]):
+                    if type(self._h[key]) is h5py.Group:
+                        result._add(self.location + '/' + key, 'UNRECOGNIZED_GROUP')
+                    elif type(self._h[key]) is h5py.Dataset:
+                        result._add(self.location + '/' + key, 'UNRECOGNIZED_DATASET')
 
 
 class Nirs(IndexedGroup):
     """Interface for indexed group `Nirs`.
-    
+
     Can be indexed like a list to retrieve `Nirs` elements.
-    
+
     To add or remove an element from the list, use the `appendGroup` method and the `del` operator, respectively.
-    
+
     This group stores one set of NIRS data.  This can be extended by adding the count 
     number (e.g. `/nirs1`, `/nirs2`,...) to the group name. This is intended to 
     allow the storage of 1 or more complete NIRS datasets inside a single SNIRF 
@@ -3033,15 +3030,14 @@ class DataElement(Group):
             self._time = _AbsentDataset
         self.measurementList = MeasurementList(self, self._cfg)  # Indexed group
         self._indexed_groups.append(self.measurementList)
-                
 
     @property
     def dataTimeSeries(self):
         """SNIRF field `dataTimeSeries`.
-            
+
         If dynamic_loading=True, the data is loaded from the SNIRF file only
         when accessed through the getter
-            
+
         This is the actual raw or processed data variable. This variable has dimensions 
         of `<number of time points> x <number of channels>`. Columns in 
         `dataTimeSeries` are mapped to the measurement list (`measurementList` variable 
@@ -3074,10 +3070,10 @@ class DataElement(Group):
     @property
     def time(self):
         """SNIRF field `time`.
-            
+
         If dynamic_loading=True, the data is loaded from the SNIRF file only
         when accessed through the getter
-            
+
         The `time` variable. This provides the acquisition time of the measurement 
         relative to the time origin.  This will usually be a straight line with slope 
         equal to the acquisition frequency, but does not need to be equal spacing.  For 
@@ -3115,10 +3111,10 @@ class DataElement(Group):
     @property
     def measurementList(self):
         """SNIRF field `measurementList`.
-            
+
         If dynamic_loading=True, the data is loaded from the SNIRF file only
         when accessed through the getter
-            
+
         The measurement list. This variable serves to map the data array onto the probe 
         geometry (sources and detectors), data type, and wavelength. This variable is 
         an array structure that has the size `<number of channels>` that 
@@ -3166,7 +3162,7 @@ class DataElement(Group):
                 del file[name]
             _create_dataset_float_array(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
-        else:   
+        else:
             if name in file:
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
@@ -3177,7 +3173,7 @@ class DataElement(Group):
                 del file[name]
             _create_dataset_float_array(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
-        else:   
+        else:
             if name in file:
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
@@ -3185,51 +3181,51 @@ class DataElement(Group):
 
     def _validate(self, result: ValidationResult):
         # Validate unwritten datasets after writing them to this tempfile
-        tmp = h5py.File(TemporaryFile(), 'w')
-        name = self.location + '/dataTimeSeries'
-        if type(self._dataTimeSeries) in [type(_AbsentDataset), type(None)]:
-            result._add(name, 'REQUIRED_DATASET_MISSING')
-        else:
-            try:
-                if type(self._dataTimeSeries) is type(_PresentDataset) or 'dataTimeSeries' in self._h:
-                    dataset = self._h['dataTimeSeries']
-                else:
-                    dataset = _create_dataset_float_array(tmp, 'dataTimeSeries', self._dataTimeSeries)
-                result._add(name, _validate_float_array(dataset, ndims=[2]))
-            except ValueError:  # If the _create_dataset function can't convert the data
-                result._add(name, 'INVALID_DATASET_TYPE')
-        name = self.location + '/time'
-        if type(self._time) in [type(_AbsentDataset), type(None)]:
-            result._add(name, 'REQUIRED_DATASET_MISSING')
-        else:
-            try:
-                if type(self._time) is type(_PresentDataset) or 'time' in self._h:
-                    dataset = self._h['time']
-                else:
-                    dataset = _create_dataset_float_array(tmp, 'time', self._time)
-                result._add(name, _validate_float_array(dataset, ndims=[1]))
-            except ValueError:  # If the _create_dataset function can't convert the data
-                result._add(name, 'INVALID_DATASET_TYPE')
-        name = self.location + '/measurementList'
-        if len(self._measurementList) == 0:
-            result._add(name, 'REQUIRED_INDEXED_GROUP_EMPTY')
-        else:
-            self.measurementList._validate(result)
-        for key in self._h.keys():
-            if not any([key.startswith(name) for name in self._snirf_names]):
-                if type(self._h[key]) is h5py.Group:
-                    result._add(self.location + '/' + key, 'UNRECOGNIZED_GROUP')
-                elif type(self._h[key]) is h5py.Dataset:
-                    result._add(self.location + '/' + key, 'UNRECOGNIZED_DATASET')
+        with h5py.File(TemporaryFile(), 'w') as tmp:
+            name = self.location + '/dataTimeSeries'
+            if type(self._dataTimeSeries) in [type(_AbsentDataset), type(None)]:
+                result._add(name, 'REQUIRED_DATASET_MISSING')
+            else:
+                try:
+                    if type(self._dataTimeSeries) is type(_PresentDataset) or 'dataTimeSeries' in self._h:
+                        dataset = self._h['dataTimeSeries']
+                    else:
+                        dataset = _create_dataset_float_array(tmp, 'dataTimeSeries', self._dataTimeSeries)
+                    result._add(name, _validate_float_array(dataset, ndims=[2]))
+                except ValueError:  # If the _create_dataset function can't convert the data
+                    result._add(name, 'INVALID_DATASET_TYPE')
+            name = self.location + '/time'
+            if type(self._time) in [type(_AbsentDataset), type(None)]:
+                result._add(name, 'REQUIRED_DATASET_MISSING')
+            else:
+                try:
+                    if type(self._time) is type(_PresentDataset) or 'time' in self._h:
+                        dataset = self._h['time']
+                    else:
+                        dataset = _create_dataset_float_array(tmp, 'time', self._time)
+                    result._add(name, _validate_float_array(dataset, ndims=[1]))
+                except ValueError:  # If the _create_dataset function can't convert the data
+                    result._add(name, 'INVALID_DATASET_TYPE')
+            name = self.location + '/measurementList'
+            if len(self._measurementList) == 0:
+                result._add(name, 'REQUIRED_INDEXED_GROUP_EMPTY')
+            else:
+                self.measurementList._validate(result)
+            for key in self._h.keys():
+                if not any([key.startswith(name) for name in self._snirf_names]):
+                    if type(self._h[key]) is h5py.Group:
+                        result._add(self.location + '/' + key, 'UNRECOGNIZED_GROUP')
+                    elif type(self._h[key]) is h5py.Dataset:
+                        result._add(self.location + '/' + key, 'UNRECOGNIZED_DATASET')
 
 
 class Data(IndexedGroup):
     """Interface for indexed group `Data`.
-    
+
     Can be indexed like a list to retrieve `Data` elements.
-    
+
     To add or remove an element from the list, use the `appendGroup` method and the `del` operator, respectively.
-    
+
     This group stores one block of NIRS data.  This can be extended adding the 
     count number (e.g. `data1`, `data2`,...) to the group name.  This is intended to 
     allow the storage of 1 or more blocks of NIRS data from within the same `/nirs` 
@@ -3365,15 +3361,14 @@ class MeasurementListElement(Group):
                 self._detectorModuleIndex = _PresentDataset
         else:  # if the dataset is not found on disk
             self._detectorModuleIndex = _AbsentDataset
-                
 
     @property
     def sourceIndex(self):
         """SNIRF field `sourceIndex`.
-            
+
         If dynamic_loading=True, the data is loaded from the SNIRF file only
         when accessed through the getter
-            
+
         Index of the source.
          
         """
@@ -3397,10 +3392,10 @@ class MeasurementListElement(Group):
     @property
     def detectorIndex(self):
         """SNIRF field `detectorIndex`.
-            
+
         If dynamic_loading=True, the data is loaded from the SNIRF file only
         when accessed through the getter
-            
+
         Index of the detector.
 
         """
@@ -3424,10 +3419,10 @@ class MeasurementListElement(Group):
     @property
     def wavelengthIndex(self):
         """SNIRF field `wavelengthIndex`.
-            
+
         If dynamic_loading=True, the data is loaded from the SNIRF file only
         when accessed through the getter
-            
+
         Index of the "nominal" wavelength (in `probe.wavelengths`).
 
         """
@@ -3451,10 +3446,10 @@ class MeasurementListElement(Group):
     @property
     def wavelengthActual(self):
         """SNIRF field `wavelengthActual`.
-            
+
         If dynamic_loading=True, the data is loaded from the SNIRF file only
         when accessed through the getter
-            
+
         Actual (measured) wavelength in nm, if available, for the source in a given channel.
 
         """
@@ -3478,10 +3473,10 @@ class MeasurementListElement(Group):
     @property
     def wavelengthEmissionActual(self):
         """SNIRF field `wavelengthEmissionActual`.
-            
+
         If dynamic_loading=True, the data is loaded from the SNIRF file only
         when accessed through the getter
-            
+
         Actual (measured) emission wavelength in nm, if available, for the source in a given channel.
          
         """
@@ -3505,10 +3500,10 @@ class MeasurementListElement(Group):
     @property
     def dataType(self):
         """SNIRF field `dataType`.
-            
+
         If dynamic_loading=True, the data is loaded from the SNIRF file only
         when accessed through the getter
-            
+
         Data-type identifier. See Appendix for list possible values.
 
         """
@@ -3532,10 +3527,10 @@ class MeasurementListElement(Group):
     @property
     def dataUnit(self):
         """SNIRF field `dataUnit`.
-            
+
         If dynamic_loading=True, the data is loaded from the SNIRF file only
         when accessed through the getter
-            
+
         International System of Units (SI units) identifier for the given channel. Encoding should follow the [CMIXF-12 standard](https://people.csail.mit.edu/jaffer/MIXF/CMIXF-12), avoiding special unicode symbols like U+03BC (m) or U+00B5 (u) and using '/' rather than 'per' for units such as `V/us`. The recommended export format is in unscaled units such as V, s, Mole.
 
         """
@@ -3559,10 +3554,10 @@ class MeasurementListElement(Group):
     @property
     def dataTypeLabel(self):
         """SNIRF field `dataTypeLabel`.
-            
+
         If dynamic_loading=True, the data is loaded from the SNIRF file only
         when accessed through the getter
-            
+
         Data-type label. Only required if dataType is "processed" (`99999`). See Appendix 
         for list of possible values.
 
@@ -3587,10 +3582,10 @@ class MeasurementListElement(Group):
     @property
     def dataTypeIndex(self):
         """SNIRF field `dataTypeIndex`.
-            
+
         If dynamic_loading=True, the data is loaded from the SNIRF file only
         when accessed through the getter
-            
+
         Data-type specific parameter indices. The data type index specifies additional data type specific parameters that are further elaborated by other fields in the probe structure, as detailed below. Note that the Time Domain and Diffuse Correlation Spectroscopy data types have two additional parameters and so the data type index must be a vector with 2 elements that index the additional parameters. One use of this parameter is as a 
         stimulus condition index when `measurementList(k).dataType = 99999` (i.e, `processed` and 
         `measurementList(k).dataTypeLabel = 'HRF ...'` .
@@ -3616,10 +3611,10 @@ class MeasurementListElement(Group):
     @property
     def sourcePower(self):
         """SNIRF field `sourcePower`.
-            
+
         If dynamic_loading=True, the data is loaded from the SNIRF file only
         when accessed through the getter
-            
+
         Source power in milliwatt (mW). 
 
         """
@@ -3643,10 +3638,10 @@ class MeasurementListElement(Group):
     @property
     def detectorGain(self):
         """SNIRF field `detectorGain`.
-            
+
         If dynamic_loading=True, the data is loaded from the SNIRF file only
         when accessed through the getter
-            
+
         Detector gain
 
         """
@@ -3670,10 +3665,10 @@ class MeasurementListElement(Group):
     @property
     def moduleIndex(self):
         """SNIRF field `moduleIndex`.
-            
+
         If dynamic_loading=True, the data is loaded from the SNIRF file only
         when accessed through the getter
-            
+
         Index of a repeating module. If `moduleIndex` is provided while `useLocalIndex`
         is set to `true`, then, both `measurementList(k).sourceIndex` and 
         `measurementList(k).detectorIndex` are assumed to be the local indices
@@ -3704,10 +3699,10 @@ class MeasurementListElement(Group):
     @property
     def sourceModuleIndex(self):
         """SNIRF field `sourceModuleIndex`.
-            
+
         If dynamic_loading=True, the data is loaded from the SNIRF file only
         when accessed through the getter
-            
+
         Index of the module that contains the source of the channel. 
         This index must be used together with `detectorModuleIndex`, and 
         can not be used when `moduleIndex` presents.
@@ -3733,10 +3728,10 @@ class MeasurementListElement(Group):
     @property
     def detectorModuleIndex(self):
         """SNIRF field `detectorModuleIndex`.
-            
+
         If dynamic_loading=True, the data is loaded from the SNIRF file only
         when accessed through the getter
-            
+
         Index of the module that contains the detector of the channel. 
         This index must be used together with `sourceModuleIndex`, and 
         can not be used when `moduleIndex` presents.
@@ -3816,7 +3811,7 @@ class MeasurementListElement(Group):
                 del file[name]
             _create_dataset_int(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
-        else:   
+        else:
             if name in file:
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
@@ -3827,7 +3822,7 @@ class MeasurementListElement(Group):
                 del file[name]
             _create_dataset_int(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
-        else:   
+        else:
             if name in file:
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
@@ -3838,7 +3833,7 @@ class MeasurementListElement(Group):
                 del file[name]
             _create_dataset_int(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
-        else:   
+        else:
             if name in file:
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
@@ -3849,7 +3844,7 @@ class MeasurementListElement(Group):
                 del file[name]
             _create_dataset_float(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
-        else:   
+        else:
             if name in file:
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
@@ -3860,7 +3855,7 @@ class MeasurementListElement(Group):
                 del file[name]
             _create_dataset_float(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
-        else:   
+        else:
             if name in file:
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
@@ -3871,7 +3866,7 @@ class MeasurementListElement(Group):
                 del file[name]
             _create_dataset_int(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
-        else:   
+        else:
             if name in file:
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
@@ -3882,7 +3877,7 @@ class MeasurementListElement(Group):
                 del file[name]
             _create_dataset_string(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
-        else:   
+        else:
             if name in file:
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
@@ -3893,7 +3888,7 @@ class MeasurementListElement(Group):
                 del file[name]
             _create_dataset_string(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
-        else:   
+        else:
             if name in file:
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
@@ -3904,7 +3899,7 @@ class MeasurementListElement(Group):
                 del file[name]
             _create_dataset_int(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
-        else:   
+        else:
             if name in file:
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
@@ -3915,7 +3910,7 @@ class MeasurementListElement(Group):
                 del file[name]
             _create_dataset_float(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
-        else:   
+        else:
             if name in file:
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
@@ -3926,7 +3921,7 @@ class MeasurementListElement(Group):
                 del file[name]
             _create_dataset_float(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
-        else:   
+        else:
             if name in file:
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
@@ -3937,7 +3932,7 @@ class MeasurementListElement(Group):
                 del file[name]
             _create_dataset_int(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
-        else:   
+        else:
             if name in file:
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
@@ -3948,7 +3943,7 @@ class MeasurementListElement(Group):
                 del file[name]
             _create_dataset_int(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
-        else:   
+        else:
             if name in file:
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
@@ -3959,239 +3954,239 @@ class MeasurementListElement(Group):
                 del file[name]
             _create_dataset_int(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
-        else:   
+        else:
             if name in file:
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
 
     def _validate(self, result: ValidationResult):
         # Validate unwritten datasets after writing them to this tempfile
-        tmp = h5py.File(TemporaryFile(), 'w')
-        name = self.location + '/sourceIndex'
-        if type(self._sourceIndex) in [type(_AbsentDataset), type(None)]:
-            result._add(name, 'REQUIRED_DATASET_MISSING')
-        else:
-            try:
-                if type(self._sourceIndex) is type(_PresentDataset) or 'sourceIndex' in self._h:
-                    dataset = self._h['sourceIndex']
-                else:
-                    dataset = _create_dataset_int(tmp, 'sourceIndex', self._sourceIndex)
-                err_code = _validate_int(dataset)
-                if _read_int(dataset) < 0 and err_code == 'OK':
-                    result._add(name, 'NEGATIVE_INDEX')
-                elif _read_int(dataset) == 0 and err_code == 'OK':
-                    result._add(name, 'INDEX_OF_ZERO')
-                else:
-                    result._add(name, err_code)
-            except ValueError:  # If the _create_dataset function can't convert the data
-                result._add(name, 'INVALID_DATASET_TYPE')
-        name = self.location + '/detectorIndex'
-        if type(self._detectorIndex) in [type(_AbsentDataset), type(None)]:
-            result._add(name, 'REQUIRED_DATASET_MISSING')
-        else:
-            try:
-                if type(self._detectorIndex) is type(_PresentDataset) or 'detectorIndex' in self._h:
-                    dataset = self._h['detectorIndex']
-                else:
-                    dataset = _create_dataset_int(tmp, 'detectorIndex', self._detectorIndex)
-                err_code = _validate_int(dataset)
-                if _read_int(dataset) < 0 and err_code == 'OK':
-                    result._add(name, 'NEGATIVE_INDEX')
-                elif _read_int(dataset) == 0 and err_code == 'OK':
-                    result._add(name, 'INDEX_OF_ZERO')
-                else:
-                    result._add(name, err_code)
-            except ValueError:  # If the _create_dataset function can't convert the data
-                result._add(name, 'INVALID_DATASET_TYPE')
-        name = self.location + '/wavelengthIndex'
-        if type(self._wavelengthIndex) in [type(_AbsentDataset), type(None)]:
-            result._add(name, 'REQUIRED_DATASET_MISSING')
-        else:
-            try:
-                if type(self._wavelengthIndex) is type(_PresentDataset) or 'wavelengthIndex' in self._h:
-                    dataset = self._h['wavelengthIndex']
-                else:
-                    dataset = _create_dataset_int(tmp, 'wavelengthIndex', self._wavelengthIndex)
-                err_code = _validate_int(dataset)
-                if _read_int(dataset) < 0 and err_code == 'OK':
-                    result._add(name, 'NEGATIVE_INDEX')
-                elif _read_int(dataset) == 0 and err_code == 'OK':
-                    result._add(name, 'INDEX_OF_ZERO')
-                else:
-                    result._add(name, err_code)
-            except ValueError:  # If the _create_dataset function can't convert the data
-                result._add(name, 'INVALID_DATASET_TYPE')
-        name = self.location + '/wavelengthActual'
-        if type(self._wavelengthActual) in [type(_AbsentDataset), type(None)]:
-            result._add(name, 'OPTIONAL_DATASET_MISSING')
-        else:
-            try:
-                if type(self._wavelengthActual) is type(_PresentDataset) or 'wavelengthActual' in self._h:
-                    dataset = self._h['wavelengthActual']
-                else:
-                    dataset = _create_dataset_float(tmp, 'wavelengthActual', self._wavelengthActual)
-                result._add(name, _validate_float(dataset))
-            except ValueError:  # If the _create_dataset function can't convert the data
-                result._add(name, 'INVALID_DATASET_TYPE')
-        name = self.location + '/wavelengthEmissionActual'
-        if type(self._wavelengthEmissionActual) in [type(_AbsentDataset), type(None)]:
-            result._add(name, 'OPTIONAL_DATASET_MISSING')
-        else:
-            try:
-                if type(self._wavelengthEmissionActual) is type(_PresentDataset) or 'wavelengthEmissionActual' in self._h:
-                    dataset = self._h['wavelengthEmissionActual']
-                else:
-                    dataset = _create_dataset_float(tmp, 'wavelengthEmissionActual', self._wavelengthEmissionActual)
-                result._add(name, _validate_float(dataset))
-            except ValueError:  # If the _create_dataset function can't convert the data
-                result._add(name, 'INVALID_DATASET_TYPE')
-        name = self.location + '/dataType'
-        if type(self._dataType) in [type(_AbsentDataset), type(None)]:
-            result._add(name, 'REQUIRED_DATASET_MISSING')
-        else:
-            try:
-                if type(self._dataType) is type(_PresentDataset) or 'dataType' in self._h:
-                    dataset = self._h['dataType']
-                else:
-                    dataset = _create_dataset_int(tmp, 'dataType', self._dataType)
-                result._add(name, _validate_int(dataset))
-            except ValueError:  # If the _create_dataset function can't convert the data
-                result._add(name, 'INVALID_DATASET_TYPE')
-        name = self.location + '/dataUnit'
-        if type(self._dataUnit) in [type(_AbsentDataset), type(None)]:
-            result._add(name, 'OPTIONAL_DATASET_MISSING')
-        else:
-            try:
-                if type(self._dataUnit) is type(_PresentDataset) or 'dataUnit' in self._h:
-                    dataset = self._h['dataUnit']
-                else:
-                    dataset = _create_dataset_string(tmp, 'dataUnit', self._dataUnit)
-                result._add(name, _validate_string(dataset))
-            except ValueError:  # If the _create_dataset function can't convert the data
-                result._add(name, 'INVALID_DATASET_TYPE')
-        name = self.location + '/dataTypeLabel'
-        if type(self._dataTypeLabel) in [type(_AbsentDataset), type(None)]:
-            result._add(name, 'OPTIONAL_DATASET_MISSING')
-        else:
-            try:
-                if type(self._dataTypeLabel) is type(_PresentDataset) or 'dataTypeLabel' in self._h:
-                    dataset = self._h['dataTypeLabel']
-                else:
-                    dataset = _create_dataset_string(tmp, 'dataTypeLabel', self._dataTypeLabel)
-                result._add(name, _validate_string(dataset))
-            except ValueError:  # If the _create_dataset function can't convert the data
-                result._add(name, 'INVALID_DATASET_TYPE')
-        name = self.location + '/dataTypeIndex'
-        if type(self._dataTypeIndex) in [type(_AbsentDataset), type(None)]:
-            result._add(name, 'REQUIRED_DATASET_MISSING')
-        else:
-            try:
-                if type(self._dataTypeIndex) is type(_PresentDataset) or 'dataTypeIndex' in self._h:
-                    dataset = self._h['dataTypeIndex']
-                else:
-                    dataset = _create_dataset_int(tmp, 'dataTypeIndex', self._dataTypeIndex)
-                err_code = _validate_int(dataset)
-                if _read_int(dataset) < 0 and err_code == 'OK':
-                    result._add(name, 'NEGATIVE_INDEX')
-                elif _read_int(dataset) == 0 and err_code == 'OK':
-                    result._add(name, 'INDEX_OF_ZERO')
-                else:
-                    result._add(name, err_code)
-            except ValueError:  # If the _create_dataset function can't convert the data
-                result._add(name, 'INVALID_DATASET_TYPE')
-        name = self.location + '/sourcePower'
-        if type(self._sourcePower) in [type(_AbsentDataset), type(None)]:
-            result._add(name, 'OPTIONAL_DATASET_MISSING')
-        else:
-            try:
-                if type(self._sourcePower) is type(_PresentDataset) or 'sourcePower' in self._h:
-                    dataset = self._h['sourcePower']
-                else:
-                    dataset = _create_dataset_float(tmp, 'sourcePower', self._sourcePower)
-                result._add(name, _validate_float(dataset))
-            except ValueError:  # If the _create_dataset function can't convert the data
-                result._add(name, 'INVALID_DATASET_TYPE')
-        name = self.location + '/detectorGain'
-        if type(self._detectorGain) in [type(_AbsentDataset), type(None)]:
-            result._add(name, 'OPTIONAL_DATASET_MISSING')
-        else:
-            try:
-                if type(self._detectorGain) is type(_PresentDataset) or 'detectorGain' in self._h:
-                    dataset = self._h['detectorGain']
-                else:
-                    dataset = _create_dataset_float(tmp, 'detectorGain', self._detectorGain)
-                result._add(name, _validate_float(dataset))
-            except ValueError:  # If the _create_dataset function can't convert the data
-                result._add(name, 'INVALID_DATASET_TYPE')
-        name = self.location + '/moduleIndex'
-        if type(self._moduleIndex) in [type(_AbsentDataset), type(None)]:
-            result._add(name, 'OPTIONAL_DATASET_MISSING')
-        else:
-            try:
-                if type(self._moduleIndex) is type(_PresentDataset) or 'moduleIndex' in self._h:
-                    dataset = self._h['moduleIndex']
-                else:
-                    dataset = _create_dataset_int(tmp, 'moduleIndex', self._moduleIndex)
-                err_code = _validate_int(dataset)
-                if _read_int(dataset) < 0 and err_code == 'OK':
-                    result._add(name, 'NEGATIVE_INDEX')
-                elif _read_int(dataset) == 0 and err_code == 'OK':
-                    result._add(name, 'INDEX_OF_ZERO')
-                else:
-                    result._add(name, err_code)
-            except ValueError:  # If the _create_dataset function can't convert the data
-                result._add(name, 'INVALID_DATASET_TYPE')
-        name = self.location + '/sourceModuleIndex'
-        if type(self._sourceModuleIndex) in [type(_AbsentDataset), type(None)]:
-            result._add(name, 'OPTIONAL_DATASET_MISSING')
-        else:
-            try:
-                if type(self._sourceModuleIndex) is type(_PresentDataset) or 'sourceModuleIndex' in self._h:
-                    dataset = self._h['sourceModuleIndex']
-                else:
-                    dataset = _create_dataset_int(tmp, 'sourceModuleIndex', self._sourceModuleIndex)
-                err_code = _validate_int(dataset)
-                if _read_int(dataset) < 0 and err_code == 'OK':
-                    result._add(name, 'NEGATIVE_INDEX')
-                elif _read_int(dataset) == 0 and err_code == 'OK':
-                    result._add(name, 'INDEX_OF_ZERO')
-                else:
-                    result._add(name, err_code)
-            except ValueError:  # If the _create_dataset function can't convert the data
-                result._add(name, 'INVALID_DATASET_TYPE')
-        name = self.location + '/detectorModuleIndex'
-        if type(self._detectorModuleIndex) in [type(_AbsentDataset), type(None)]:
-            result._add(name, 'OPTIONAL_DATASET_MISSING')
-        else:
-            try:
-                if type(self._detectorModuleIndex) is type(_PresentDataset) or 'detectorModuleIndex' in self._h:
-                    dataset = self._h['detectorModuleIndex']
-                else:
-                    dataset = _create_dataset_int(tmp, 'detectorModuleIndex', self._detectorModuleIndex)
-                err_code = _validate_int(dataset)
-                if _read_int(dataset) < 0 and err_code == 'OK':
-                    result._add(name, 'NEGATIVE_INDEX')
-                elif _read_int(dataset) == 0 and err_code == 'OK':
-                    result._add(name, 'INDEX_OF_ZERO')
-                else:
-                    result._add(name, err_code)
-            except ValueError:  # If the _create_dataset function can't convert the data
-                result._add(name, 'INVALID_DATASET_TYPE')
-        for key in self._h.keys():
-            if not any([key.startswith(name) for name in self._snirf_names]):
-                if type(self._h[key]) is h5py.Group:
-                    result._add(self.location + '/' + key, 'UNRECOGNIZED_GROUP')
-                elif type(self._h[key]) is h5py.Dataset:
-                    result._add(self.location + '/' + key, 'UNRECOGNIZED_DATASET')
+        with h5py.File(TemporaryFile(), 'w') as tmp:
+            name = self.location + '/sourceIndex'
+            if type(self._sourceIndex) in [type(_AbsentDataset), type(None)]:
+                result._add(name, 'REQUIRED_DATASET_MISSING')
+            else:
+                try:
+                    if type(self._sourceIndex) is type(_PresentDataset) or 'sourceIndex' in self._h:
+                        dataset = self._h['sourceIndex']
+                    else:
+                        dataset = _create_dataset_int(tmp, 'sourceIndex', self._sourceIndex)
+                    err_code = _validate_int(dataset)
+                    if _read_int(dataset) < 0 and err_code == 'OK':
+                        result._add(name, 'NEGATIVE_INDEX')
+                    elif _read_int(dataset) == 0 and err_code == 'OK':
+                        result._add(name, 'INDEX_OF_ZERO')
+                    else:
+                        result._add(name, err_code)
+                except ValueError:  # If the _create_dataset function can't convert the data
+                    result._add(name, 'INVALID_DATASET_TYPE')
+            name = self.location + '/detectorIndex'
+            if type(self._detectorIndex) in [type(_AbsentDataset), type(None)]:
+                result._add(name, 'REQUIRED_DATASET_MISSING')
+            else:
+                try:
+                    if type(self._detectorIndex) is type(_PresentDataset) or 'detectorIndex' in self._h:
+                        dataset = self._h['detectorIndex']
+                    else:
+                        dataset = _create_dataset_int(tmp, 'detectorIndex', self._detectorIndex)
+                    err_code = _validate_int(dataset)
+                    if _read_int(dataset) < 0 and err_code == 'OK':
+                        result._add(name, 'NEGATIVE_INDEX')
+                    elif _read_int(dataset) == 0 and err_code == 'OK':
+                        result._add(name, 'INDEX_OF_ZERO')
+                    else:
+                        result._add(name, err_code)
+                except ValueError:  # If the _create_dataset function can't convert the data
+                    result._add(name, 'INVALID_DATASET_TYPE')
+            name = self.location + '/wavelengthIndex'
+            if type(self._wavelengthIndex) in [type(_AbsentDataset), type(None)]:
+                result._add(name, 'REQUIRED_DATASET_MISSING')
+            else:
+                try:
+                    if type(self._wavelengthIndex) is type(_PresentDataset) or 'wavelengthIndex' in self._h:
+                        dataset = self._h['wavelengthIndex']
+                    else:
+                        dataset = _create_dataset_int(tmp, 'wavelengthIndex', self._wavelengthIndex)
+                    err_code = _validate_int(dataset)
+                    if _read_int(dataset) < 0 and err_code == 'OK':
+                        result._add(name, 'NEGATIVE_INDEX')
+                    elif _read_int(dataset) == 0 and err_code == 'OK':
+                        result._add(name, 'INDEX_OF_ZERO')
+                    else:
+                        result._add(name, err_code)
+                except ValueError:  # If the _create_dataset function can't convert the data
+                    result._add(name, 'INVALID_DATASET_TYPE')
+            name = self.location + '/wavelengthActual'
+            if type(self._wavelengthActual) in [type(_AbsentDataset), type(None)]:
+                result._add(name, 'OPTIONAL_DATASET_MISSING')
+            else:
+                try:
+                    if type(self._wavelengthActual) is type(_PresentDataset) or 'wavelengthActual' in self._h:
+                        dataset = self._h['wavelengthActual']
+                    else:
+                        dataset = _create_dataset_float(tmp, 'wavelengthActual', self._wavelengthActual)
+                    result._add(name, _validate_float(dataset))
+                except ValueError:  # If the _create_dataset function can't convert the data
+                    result._add(name, 'INVALID_DATASET_TYPE')
+            name = self.location + '/wavelengthEmissionActual'
+            if type(self._wavelengthEmissionActual) in [type(_AbsentDataset), type(None)]:
+                result._add(name, 'OPTIONAL_DATASET_MISSING')
+            else:
+                try:
+                    if type(self._wavelengthEmissionActual) is type(_PresentDataset) or 'wavelengthEmissionActual' in self._h:
+                        dataset = self._h['wavelengthEmissionActual']
+                    else:
+                        dataset = _create_dataset_float(tmp, 'wavelengthEmissionActual', self._wavelengthEmissionActual)
+                    result._add(name, _validate_float(dataset))
+                except ValueError:  # If the _create_dataset function can't convert the data
+                    result._add(name, 'INVALID_DATASET_TYPE')
+            name = self.location + '/dataType'
+            if type(self._dataType) in [type(_AbsentDataset), type(None)]:
+                result._add(name, 'REQUIRED_DATASET_MISSING')
+            else:
+                try:
+                    if type(self._dataType) is type(_PresentDataset) or 'dataType' in self._h:
+                        dataset = self._h['dataType']
+                    else:
+                        dataset = _create_dataset_int(tmp, 'dataType', self._dataType)
+                    result._add(name, _validate_int(dataset))
+                except ValueError:  # If the _create_dataset function can't convert the data
+                    result._add(name, 'INVALID_DATASET_TYPE')
+            name = self.location + '/dataUnit'
+            if type(self._dataUnit) in [type(_AbsentDataset), type(None)]:
+                result._add(name, 'OPTIONAL_DATASET_MISSING')
+            else:
+                try:
+                    if type(self._dataUnit) is type(_PresentDataset) or 'dataUnit' in self._h:
+                        dataset = self._h['dataUnit']
+                    else:
+                        dataset = _create_dataset_string(tmp, 'dataUnit', self._dataUnit)
+                    result._add(name, _validate_string(dataset))
+                except ValueError:  # If the _create_dataset function can't convert the data
+                    result._add(name, 'INVALID_DATASET_TYPE')
+            name = self.location + '/dataTypeLabel'
+            if type(self._dataTypeLabel) in [type(_AbsentDataset), type(None)]:
+                result._add(name, 'OPTIONAL_DATASET_MISSING')
+            else:
+                try:
+                    if type(self._dataTypeLabel) is type(_PresentDataset) or 'dataTypeLabel' in self._h:
+                        dataset = self._h['dataTypeLabel']
+                    else:
+                        dataset = _create_dataset_string(tmp, 'dataTypeLabel', self._dataTypeLabel)
+                    result._add(name, _validate_string(dataset))
+                except ValueError:  # If the _create_dataset function can't convert the data
+                    result._add(name, 'INVALID_DATASET_TYPE')
+            name = self.location + '/dataTypeIndex'
+            if type(self._dataTypeIndex) in [type(_AbsentDataset), type(None)]:
+                result._add(name, 'REQUIRED_DATASET_MISSING')
+            else:
+                try:
+                    if type(self._dataTypeIndex) is type(_PresentDataset) or 'dataTypeIndex' in self._h:
+                        dataset = self._h['dataTypeIndex']
+                    else:
+                        dataset = _create_dataset_int(tmp, 'dataTypeIndex', self._dataTypeIndex)
+                    err_code = _validate_int(dataset)
+                    if _read_int(dataset) < 0 and err_code == 'OK':
+                        result._add(name, 'NEGATIVE_INDEX')
+                    elif _read_int(dataset) == 0 and err_code == 'OK':
+                        result._add(name, 'INDEX_OF_ZERO')
+                    else:
+                        result._add(name, err_code)
+                except ValueError:  # If the _create_dataset function can't convert the data
+                    result._add(name, 'INVALID_DATASET_TYPE')
+            name = self.location + '/sourcePower'
+            if type(self._sourcePower) in [type(_AbsentDataset), type(None)]:
+                result._add(name, 'OPTIONAL_DATASET_MISSING')
+            else:
+                try:
+                    if type(self._sourcePower) is type(_PresentDataset) or 'sourcePower' in self._h:
+                        dataset = self._h['sourcePower']
+                    else:
+                        dataset = _create_dataset_float(tmp, 'sourcePower', self._sourcePower)
+                    result._add(name, _validate_float(dataset))
+                except ValueError:  # If the _create_dataset function can't convert the data
+                    result._add(name, 'INVALID_DATASET_TYPE')
+            name = self.location + '/detectorGain'
+            if type(self._detectorGain) in [type(_AbsentDataset), type(None)]:
+                result._add(name, 'OPTIONAL_DATASET_MISSING')
+            else:
+                try:
+                    if type(self._detectorGain) is type(_PresentDataset) or 'detectorGain' in self._h:
+                        dataset = self._h['detectorGain']
+                    else:
+                        dataset = _create_dataset_float(tmp, 'detectorGain', self._detectorGain)
+                    result._add(name, _validate_float(dataset))
+                except ValueError:  # If the _create_dataset function can't convert the data
+                    result._add(name, 'INVALID_DATASET_TYPE')
+            name = self.location + '/moduleIndex'
+            if type(self._moduleIndex) in [type(_AbsentDataset), type(None)]:
+                result._add(name, 'OPTIONAL_DATASET_MISSING')
+            else:
+                try:
+                    if type(self._moduleIndex) is type(_PresentDataset) or 'moduleIndex' in self._h:
+                        dataset = self._h['moduleIndex']
+                    else:
+                        dataset = _create_dataset_int(tmp, 'moduleIndex', self._moduleIndex)
+                    err_code = _validate_int(dataset)
+                    if _read_int(dataset) < 0 and err_code == 'OK':
+                        result._add(name, 'NEGATIVE_INDEX')
+                    elif _read_int(dataset) == 0 and err_code == 'OK':
+                        result._add(name, 'INDEX_OF_ZERO')
+                    else:
+                        result._add(name, err_code)
+                except ValueError:  # If the _create_dataset function can't convert the data
+                    result._add(name, 'INVALID_DATASET_TYPE')
+            name = self.location + '/sourceModuleIndex'
+            if type(self._sourceModuleIndex) in [type(_AbsentDataset), type(None)]:
+                result._add(name, 'OPTIONAL_DATASET_MISSING')
+            else:
+                try:
+                    if type(self._sourceModuleIndex) is type(_PresentDataset) or 'sourceModuleIndex' in self._h:
+                        dataset = self._h['sourceModuleIndex']
+                    else:
+                        dataset = _create_dataset_int(tmp, 'sourceModuleIndex', self._sourceModuleIndex)
+                    err_code = _validate_int(dataset)
+                    if _read_int(dataset) < 0 and err_code == 'OK':
+                        result._add(name, 'NEGATIVE_INDEX')
+                    elif _read_int(dataset) == 0 and err_code == 'OK':
+                        result._add(name, 'INDEX_OF_ZERO')
+                    else:
+                        result._add(name, err_code)
+                except ValueError:  # If the _create_dataset function can't convert the data
+                    result._add(name, 'INVALID_DATASET_TYPE')
+            name = self.location + '/detectorModuleIndex'
+            if type(self._detectorModuleIndex) in [type(_AbsentDataset), type(None)]:
+                result._add(name, 'OPTIONAL_DATASET_MISSING')
+            else:
+                try:
+                    if type(self._detectorModuleIndex) is type(_PresentDataset) or 'detectorModuleIndex' in self._h:
+                        dataset = self._h['detectorModuleIndex']
+                    else:
+                        dataset = _create_dataset_int(tmp, 'detectorModuleIndex', self._detectorModuleIndex)
+                    err_code = _validate_int(dataset)
+                    if _read_int(dataset) < 0 and err_code == 'OK':
+                        result._add(name, 'NEGATIVE_INDEX')
+                    elif _read_int(dataset) == 0 and err_code == 'OK':
+                        result._add(name, 'INDEX_OF_ZERO')
+                    else:
+                        result._add(name, err_code)
+                except ValueError:  # If the _create_dataset function can't convert the data
+                    result._add(name, 'INVALID_DATASET_TYPE')
+            for key in self._h.keys():
+                if not any([key.startswith(name) for name in self._snirf_names]):
+                    if type(self._h[key]) is h5py.Group:
+                        result._add(self.location + '/' + key, 'UNRECOGNIZED_GROUP')
+                    elif type(self._h[key]) is h5py.Dataset:
+                        result._add(self.location + '/' + key, 'UNRECOGNIZED_DATASET')
 
 
 class MeasurementList(IndexedGroup):
     """Interface for indexed group `MeasurementList`.
-    
+
     Can be indexed like a list to retrieve `MeasurementList` elements.
-    
+
     To add or remove an element from the list, use the `appendGroup` method and the `del` operator, respectively.
-    
+
     The measurement list. This variable serves to map the data array onto the probe 
     geometry (sources and detectors), data type, and wavelength. This variable is 
     an array structure that has the size `<number of channels>` that 
@@ -4242,15 +4237,14 @@ class StimElement(Group):
                 self._dataLabels = _PresentDataset
         else:  # if the dataset is not found on disk
             self._dataLabels = _AbsentDataset
-                
 
     @property
     def name(self):
         """SNIRF field `name`.
-            
+
         If dynamic_loading=True, the data is loaded from the SNIRF file only
         when accessed through the getter
-            
+
         This is a string describing the j<sup>th</sup> stimulus condition.
 
 
@@ -4275,10 +4269,10 @@ class StimElement(Group):
     @property
     def data(self):
         """SNIRF field `data`.
-            
+
         If dynamic_loading=True, the data is loaded from the SNIRF file only
         when accessed through the getter
-            
+
         * **Allowed attribute**: `names`
 
         This is a numeric 2-D array with at least 3 columns, specifying the stimulus 
@@ -4314,10 +4308,10 @@ class StimElement(Group):
     @property
     def dataLabels(self):
         """SNIRF field `dataLabels`.
-            
+
         If dynamic_loading=True, the data is loaded from the SNIRF file only
         when accessed through the getter
-            
+
         This is a string array providing annotations for each data column in 
         `/nirs(i)/stim(j)/data`. Each element of the array must be a string;
         the total length of this array must be the same as the column number
@@ -4364,7 +4358,7 @@ class StimElement(Group):
                 del file[name]
             _create_dataset_string(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
-        else:   
+        else:
             if name in file:
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
@@ -4375,7 +4369,7 @@ class StimElement(Group):
                 del file[name]
             _create_dataset_float_array(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
-        else:   
+        else:
             if name in file:
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
@@ -4386,65 +4380,65 @@ class StimElement(Group):
                 del file[name]
             _create_dataset_string_array(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
-        else:   
+        else:
             if name in file:
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
 
     def _validate(self, result: ValidationResult):
         # Validate unwritten datasets after writing them to this tempfile
-        tmp = h5py.File(TemporaryFile(), 'w')
-        name = self.location + '/name'
-        if type(self._name) in [type(_AbsentDataset), type(None)]:
-            result._add(name, 'OPTIONAL_DATASET_MISSING')
-        else:
-            try:
-                if type(self._name) is type(_PresentDataset) or 'name' in self._h:
-                    dataset = self._h['name']
-                else:
-                    dataset = _create_dataset_string(tmp, 'name', self._name)
-                result._add(name, _validate_string(dataset))
-            except ValueError:  # If the _create_dataset function can't convert the data
-                result._add(name, 'INVALID_DATASET_TYPE')
-        name = self.location + '/data'
-        if type(self._data) in [type(_AbsentDataset), type(None)]:
-            result._add(name, 'OPTIONAL_DATASET_MISSING')
-        else:
-            try:
-                if type(self._data) is type(_PresentDataset) or 'data' in self._h:
-                    dataset = self._h['data']
-                else:
-                    dataset = _create_dataset_float_array(tmp, 'data', self._data)
-                result._add(name, _validate_float_array(dataset, ndims=[2]))
-            except ValueError:  # If the _create_dataset function can't convert the data
-                result._add(name, 'INVALID_DATASET_TYPE')
-        name = self.location + '/dataLabels'
-        if type(self._dataLabels) in [type(_AbsentDataset), type(None)]:
-            result._add(name, 'OPTIONAL_DATASET_MISSING')
-        else:
-            try:
-                if type(self._dataLabels) is type(_PresentDataset) or 'dataLabels' in self._h:
-                    dataset = self._h['dataLabels']
-                else:
-                    dataset = _create_dataset_string_array(tmp, 'dataLabels', self._dataLabels)
-                result._add(name, _validate_string_array(dataset, ndims=[1]))
-            except ValueError:  # If the _create_dataset function can't convert the data
-                result._add(name, 'INVALID_DATASET_TYPE')
-        for key in self._h.keys():
-            if not any([key.startswith(name) for name in self._snirf_names]):
-                if type(self._h[key]) is h5py.Group:
-                    result._add(self.location + '/' + key, 'UNRECOGNIZED_GROUP')
-                elif type(self._h[key]) is h5py.Dataset:
-                    result._add(self.location + '/' + key, 'UNRECOGNIZED_DATASET')
+        with h5py.File(TemporaryFile(), 'w') as tmp:
+            name = self.location + '/name'
+            if type(self._name) in [type(_AbsentDataset), type(None)]:
+                result._add(name, 'OPTIONAL_DATASET_MISSING')
+            else:
+                try:
+                    if type(self._name) is type(_PresentDataset) or 'name' in self._h:
+                        dataset = self._h['name']
+                    else:
+                        dataset = _create_dataset_string(tmp, 'name', self._name)
+                    result._add(name, _validate_string(dataset))
+                except ValueError:  # If the _create_dataset function can't convert the data
+                    result._add(name, 'INVALID_DATASET_TYPE')
+            name = self.location + '/data'
+            if type(self._data) in [type(_AbsentDataset), type(None)]:
+                result._add(name, 'OPTIONAL_DATASET_MISSING')
+            else:
+                try:
+                    if type(self._data) is type(_PresentDataset) or 'data' in self._h:
+                        dataset = self._h['data']
+                    else:
+                        dataset = _create_dataset_float_array(tmp, 'data', self._data)
+                    result._add(name, _validate_float_array(dataset, ndims=[2]))
+                except ValueError:  # If the _create_dataset function can't convert the data
+                    result._add(name, 'INVALID_DATASET_TYPE')
+            name = self.location + '/dataLabels'
+            if type(self._dataLabels) in [type(_AbsentDataset), type(None)]:
+                result._add(name, 'OPTIONAL_DATASET_MISSING')
+            else:
+                try:
+                    if type(self._dataLabels) is type(_PresentDataset) or 'dataLabels' in self._h:
+                        dataset = self._h['dataLabels']
+                    else:
+                        dataset = _create_dataset_string_array(tmp, 'dataLabels', self._dataLabels)
+                    result._add(name, _validate_string_array(dataset, ndims=[1]))
+                except ValueError:  # If the _create_dataset function can't convert the data
+                    result._add(name, 'INVALID_DATASET_TYPE')
+            for key in self._h.keys():
+                if not any([key.startswith(name) for name in self._snirf_names]):
+                    if type(self._h[key]) is h5py.Group:
+                        result._add(self.location + '/' + key, 'UNRECOGNIZED_GROUP')
+                    elif type(self._h[key]) is h5py.Dataset:
+                        result._add(self.location + '/' + key, 'UNRECOGNIZED_DATASET')
 
 
 class Stim(IndexedGroup):
     """Interface for indexed group `Stim`.
-    
+
     Can be indexed like a list to retrieve `Stim` elements.
-    
+
     To add or remove an element from the list, use the `appendGroup` method and the `del` operator, respectively.
-    
+
     This is an array describing any stimulus conditions. Each element of the array 
     has the following required fields.
 
@@ -4504,15 +4498,14 @@ class AuxElement(Group):
                 self._timeOffset = _PresentDataset
         else:  # if the dataset is not found on disk
             self._timeOffset = _AbsentDataset
-                
 
     @property
     def name(self):
         """SNIRF field `name`.
-            
+
         If dynamic_loading=True, the data is loaded from the SNIRF file only
         when accessed through the getter
-            
+
         This is string describing the j<sup>th</sup> auxiliary data timecourse.
 
         """
@@ -4536,10 +4529,10 @@ class AuxElement(Group):
     @property
     def dataTimeSeries(self):
         """SNIRF field `dataTimeSeries`.
-            
+
         If dynamic_loading=True, the data is loaded from the SNIRF file only
         when accessed through the getter
-            
+
         This is the aux data variable. This variable has dimensions of `<number of 
         time points> x 1`.
 
@@ -4566,10 +4559,10 @@ class AuxElement(Group):
     @property
     def dataUnit(self):
         """SNIRF field `dataUnit`.
-            
+
         If dynamic_loading=True, the data is loaded from the SNIRF file only
         when accessed through the getter
-            
+
         International System of Units (SI units) identifier for the given channel. Encoding should follow the [CMIXF-12 standard](https://people.csail.mit.edu/jaffer/MIXF/CMIXF-12), avoiding special unicode symbols like U+03BC (m) or U+00B5 (u) and using '/' rather than 'per' for units such as `V/us`. The recommended export format is in unscaled units such as V, s, Mole.
 
         """
@@ -4593,10 +4586,10 @@ class AuxElement(Group):
     @property
     def time(self):
         """SNIRF field `time`.
-            
+
         If dynamic_loading=True, the data is loaded from the SNIRF file only
         when accessed through the getter
-            
+
         The time variable. This provides the acquisition time (in `TimeUnit` units) 
         of the aux measurement relative to the time origin.  This will usually be 
         a straight line with slope equal to the acquisition frequency, but does 
@@ -4627,10 +4620,10 @@ class AuxElement(Group):
     @property
     def timeOffset(self):
         """SNIRF field `timeOffset`.
-            
+
         If dynamic_loading=True, the data is loaded from the SNIRF file only
         when accessed through the getter
-            
+
         This variable specifies the offset of the file time origin relative to absolute
         (clock) time in `TimeUnit` units.
 
@@ -4677,7 +4670,7 @@ class AuxElement(Group):
                 del file[name]
             _create_dataset_string(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
-        else:   
+        else:
             if name in file:
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
@@ -4688,7 +4681,7 @@ class AuxElement(Group):
                 del file[name]
             _create_dataset_float_array(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
-        else:   
+        else:
             if name in file:
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
@@ -4699,7 +4692,7 @@ class AuxElement(Group):
                 del file[name]
             _create_dataset_string(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
-        else:   
+        else:
             if name in file:
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
@@ -4710,7 +4703,7 @@ class AuxElement(Group):
                 del file[name]
             _create_dataset_float_array(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
-        else:   
+        else:
             if name in file:
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
@@ -4721,89 +4714,89 @@ class AuxElement(Group):
                 del file[name]
             _create_dataset_float_array(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
-        else:   
+        else:
             if name in file:
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
 
     def _validate(self, result: ValidationResult):
         # Validate unwritten datasets after writing them to this tempfile
-        tmp = h5py.File(TemporaryFile(), 'w')
-        name = self.location + '/name'
-        if type(self._name) in [type(_AbsentDataset), type(None)]:
-            result._add(name, 'OPTIONAL_DATASET_MISSING')
-        else:
-            try:
-                if type(self._name) is type(_PresentDataset) or 'name' in self._h:
-                    dataset = self._h['name']
-                else:
-                    dataset = _create_dataset_string(tmp, 'name', self._name)
-                result._add(name, _validate_string(dataset))
-            except ValueError:  # If the _create_dataset function can't convert the data
-                result._add(name, 'INVALID_DATASET_TYPE')
-        name = self.location + '/dataTimeSeries'
-        if type(self._dataTimeSeries) in [type(_AbsentDataset), type(None)]:
-            result._add(name, 'OPTIONAL_DATASET_MISSING')
-        else:
-            try:
-                if type(self._dataTimeSeries) is type(_PresentDataset) or 'dataTimeSeries' in self._h:
-                    dataset = self._h['dataTimeSeries']
-                else:
-                    dataset = _create_dataset_float_array(tmp, 'dataTimeSeries', self._dataTimeSeries)
-                result._add(name, _validate_float_array(dataset, ndims=[1]))
-            except ValueError:  # If the _create_dataset function can't convert the data
-                result._add(name, 'INVALID_DATASET_TYPE')
-        name = self.location + '/dataUnit'
-        if type(self._dataUnit) in [type(_AbsentDataset), type(None)]:
-            result._add(name, 'OPTIONAL_DATASET_MISSING')
-        else:
-            try:
-                if type(self._dataUnit) is type(_PresentDataset) or 'dataUnit' in self._h:
-                    dataset = self._h['dataUnit']
-                else:
-                    dataset = _create_dataset_string(tmp, 'dataUnit', self._dataUnit)
-                result._add(name, _validate_string(dataset))
-            except ValueError:  # If the _create_dataset function can't convert the data
-                result._add(name, 'INVALID_DATASET_TYPE')
-        name = self.location + '/time'
-        if type(self._time) in [type(_AbsentDataset), type(None)]:
-            result._add(name, 'OPTIONAL_DATASET_MISSING')
-        else:
-            try:
-                if type(self._time) is type(_PresentDataset) or 'time' in self._h:
-                    dataset = self._h['time']
-                else:
-                    dataset = _create_dataset_float_array(tmp, 'time', self._time)
-                result._add(name, _validate_float_array(dataset, ndims=[1]))
-            except ValueError:  # If the _create_dataset function can't convert the data
-                result._add(name, 'INVALID_DATASET_TYPE')
-        name = self.location + '/timeOffset'
-        if type(self._timeOffset) in [type(_AbsentDataset), type(None)]:
-            result._add(name, 'OPTIONAL_DATASET_MISSING')
-        else:
-            try:
-                if type(self._timeOffset) is type(_PresentDataset) or 'timeOffset' in self._h:
-                    dataset = self._h['timeOffset']
-                else:
-                    dataset = _create_dataset_float_array(tmp, 'timeOffset', self._timeOffset)
-                result._add(name, _validate_float_array(dataset, ndims=[1]))
-            except ValueError:  # If the _create_dataset function can't convert the data
-                result._add(name, 'INVALID_DATASET_TYPE')
-        for key in self._h.keys():
-            if not any([key.startswith(name) for name in self._snirf_names]):
-                if type(self._h[key]) is h5py.Group:
-                    result._add(self.location + '/' + key, 'UNRECOGNIZED_GROUP')
-                elif type(self._h[key]) is h5py.Dataset:
-                    result._add(self.location + '/' + key, 'UNRECOGNIZED_DATASET')
+        with h5py.File(TemporaryFile(), 'w') as tmp:
+            name = self.location + '/name'
+            if type(self._name) in [type(_AbsentDataset), type(None)]:
+                result._add(name, 'OPTIONAL_DATASET_MISSING')
+            else:
+                try:
+                    if type(self._name) is type(_PresentDataset) or 'name' in self._h:
+                        dataset = self._h['name']
+                    else:
+                        dataset = _create_dataset_string(tmp, 'name', self._name)
+                    result._add(name, _validate_string(dataset))
+                except ValueError:  # If the _create_dataset function can't convert the data
+                    result._add(name, 'INVALID_DATASET_TYPE')
+            name = self.location + '/dataTimeSeries'
+            if type(self._dataTimeSeries) in [type(_AbsentDataset), type(None)]:
+                result._add(name, 'OPTIONAL_DATASET_MISSING')
+            else:
+                try:
+                    if type(self._dataTimeSeries) is type(_PresentDataset) or 'dataTimeSeries' in self._h:
+                        dataset = self._h['dataTimeSeries']
+                    else:
+                        dataset = _create_dataset_float_array(tmp, 'dataTimeSeries', self._dataTimeSeries)
+                    result._add(name, _validate_float_array(dataset, ndims=[1]))
+                except ValueError:  # If the _create_dataset function can't convert the data
+                    result._add(name, 'INVALID_DATASET_TYPE')
+            name = self.location + '/dataUnit'
+            if type(self._dataUnit) in [type(_AbsentDataset), type(None)]:
+                result._add(name, 'OPTIONAL_DATASET_MISSING')
+            else:
+                try:
+                    if type(self._dataUnit) is type(_PresentDataset) or 'dataUnit' in self._h:
+                        dataset = self._h['dataUnit']
+                    else:
+                        dataset = _create_dataset_string(tmp, 'dataUnit', self._dataUnit)
+                    result._add(name, _validate_string(dataset))
+                except ValueError:  # If the _create_dataset function can't convert the data
+                    result._add(name, 'INVALID_DATASET_TYPE')
+            name = self.location + '/time'
+            if type(self._time) in [type(_AbsentDataset), type(None)]:
+                result._add(name, 'OPTIONAL_DATASET_MISSING')
+            else:
+                try:
+                    if type(self._time) is type(_PresentDataset) or 'time' in self._h:
+                        dataset = self._h['time']
+                    else:
+                        dataset = _create_dataset_float_array(tmp, 'time', self._time)
+                    result._add(name, _validate_float_array(dataset, ndims=[1]))
+                except ValueError:  # If the _create_dataset function can't convert the data
+                    result._add(name, 'INVALID_DATASET_TYPE')
+            name = self.location + '/timeOffset'
+            if type(self._timeOffset) in [type(_AbsentDataset), type(None)]:
+                result._add(name, 'OPTIONAL_DATASET_MISSING')
+            else:
+                try:
+                    if type(self._timeOffset) is type(_PresentDataset) or 'timeOffset' in self._h:
+                        dataset = self._h['timeOffset']
+                    else:
+                        dataset = _create_dataset_float_array(tmp, 'timeOffset', self._timeOffset)
+                    result._add(name, _validate_float_array(dataset, ndims=[1]))
+                except ValueError:  # If the _create_dataset function can't convert the data
+                    result._add(name, 'INVALID_DATASET_TYPE')
+            for key in self._h.keys():
+                if not any([key.startswith(name) for name in self._snirf_names]):
+                    if type(self._h[key]) is h5py.Group:
+                        result._add(self.location + '/' + key, 'UNRECOGNIZED_GROUP')
+                    elif type(self._h[key]) is h5py.Dataset:
+                        result._add(self.location + '/' + key, 'UNRECOGNIZED_DATASET')
 
 
 class Aux(IndexedGroup):
     """Interface for indexed group `Aux`.
-    
+
     Can be indexed like a list to retrieve `Aux` elements.
-    
+
     To add or remove an element from the list, use the `appendGroup` method and the `del` operator, respectively.
-    
+
     This optional array specifies any recorded auxiliary data. Each element of 
     `aux` has the following required fields:
 
@@ -4816,9 +4809,9 @@ class Aux(IndexedGroup):
 
 
 class Snirf(Group):
-    
+
     _name = '/'
-    
+
     # overload
     def __init__(self, *args, dynamic_loading: bool = False, logfile: bool = False):
         self._cfg = SnirfConfig()
@@ -4859,15 +4852,14 @@ class Snirf(Group):
             self._formatVersion = _AbsentDataset
         self.nirs = Nirs(self, self._cfg)  # Indexed group
         self._indexed_groups.append(self.nirs)
-                
 
     @property
     def formatVersion(self):
         """SNIRF field `formatVersion`.
-            
+
         If dynamic_loading=True, the data is loaded from the SNIRF file only
         when accessed through the getter
-            
+
         This is a string that specifies the version of the file format.  This document 
         describes format version "1.0"
          
@@ -4892,10 +4884,10 @@ class Snirf(Group):
     @property
     def nirs(self):
         """SNIRF field `nirs`.
-            
+
         If dynamic_loading=True, the data is loaded from the SNIRF file only
         when accessed through the getter
-            
+
         This group stores one set of NIRS data.  This can be extended by adding the count 
         number (e.g. `/nirs1`, `/nirs2`,...) to the group name. This is intended to 
         allow the storage of 1 or more complete NIRS datasets inside a single SNIRF 
@@ -4942,7 +4934,7 @@ class Snirf(Group):
                 del file[name]
             _create_dataset_string(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
-        else:   
+        else:
             if name in file:
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
@@ -4950,43 +4942,43 @@ class Snirf(Group):
 
     def _validate(self, result: ValidationResult):
         # Validate unwritten datasets after writing them to this tempfile
-        tmp = h5py.File(TemporaryFile(), 'w')
-        name = self.location + '/formatVersion'
-        if type(self._formatVersion) in [type(_AbsentDataset), type(None)]:
-            result._add(name, 'REQUIRED_DATASET_MISSING')
-        else:
-            try:
-                if type(self._formatVersion) is type(_PresentDataset) or 'formatVersion' in self._h:
-                    dataset = self._h['formatVersion']
-                else:
-                    dataset = _create_dataset_string(tmp, 'formatVersion', self._formatVersion)
-                result._add(name, _validate_string(dataset))
-            except ValueError:  # If the _create_dataset function can't convert the data
-                result._add(name, 'INVALID_DATASET_TYPE')
-        name = self.location + '/nirs'
-        if len(self._nirs) == 0:
-            result._add(name, 'REQUIRED_INDEXED_GROUP_EMPTY')
-        else:
-            self.nirs._validate(result)
-        for key in self._h.keys():
-            if not any([key.startswith(name) for name in self._snirf_names]):
-                if type(self._h[key]) is h5py.Group:
-                    result._add(self.location + '/' + key, 'UNRECOGNIZED_GROUP')
-                elif type(self._h[key]) is h5py.Dataset:
-                    result._add(self.location + '/' + key, 'UNRECOGNIZED_DATASET')
+        with h5py.File(TemporaryFile(), 'w') as tmp:
+            name = self.location + '/formatVersion'
+            if type(self._formatVersion) in [type(_AbsentDataset), type(None)]:
+                result._add(name, 'REQUIRED_DATASET_MISSING')
+            else:
+                try:
+                    if type(self._formatVersion) is type(_PresentDataset) or 'formatVersion' in self._h:
+                        dataset = self._h['formatVersion']
+                    else:
+                        dataset = _create_dataset_string(tmp, 'formatVersion', self._formatVersion)
+                    result._add(name, _validate_string(dataset))
+                except ValueError:  # If the _create_dataset function can't convert the data
+                    result._add(name, 'INVALID_DATASET_TYPE')
+            name = self.location + '/nirs'
+            if len(self._nirs) == 0:
+                result._add(name, 'REQUIRED_INDEXED_GROUP_EMPTY')
+            else:
+                self.nirs._validate(result)
+            for key in self._h.keys():
+                if not any([key.startswith(name) for name in self._snirf_names]):
+                    if type(self._h[key]) is h5py.Group:
+                        result._add(self.location + '/' + key, 'UNRECOGNIZED_GROUP')
+                    elif type(self._h[key]) is h5py.Dataset:
+                        result._add(self.location + '/' + key, 'UNRECOGNIZED_DATASET')
 
 
     # overload
     def save(self, *args):
         """Save a SNIRF file to disk.
-        
+
         Args:
             args (str or h5py.File): A path to a closed or nonexistant SNIRF file on disk or an open `h5py.File` instance
-    
+
         Examples:
             save can overwrite the current contents of a Snirf file:
             >>> mysnirf.save()
-            
+
             or take a new filename to write the file there:
             >>> mysnirf.save(<new destination>)
         """
@@ -4994,10 +4986,9 @@ class Snirf(Group):
             path = args[0]
             if not path.endswith('.snirf'):
                 path += '.snirf'
-            new_file = h5py.File(path, 'w')
-            self._save(new_file)
-            self._cfg.logger.info('Saved Snirf file at %s to copy at %s', self.filename, path)
-            new_file.close()
+            with h5py.File(path, 'w') as new_file:
+                self._save(new_file)
+                self._cfg.logger.info('Saved Snirf file at %s to copy at %s', self.filename, path)
         else:
             self._save(self._h.file)
 
