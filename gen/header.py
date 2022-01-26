@@ -83,7 +83,7 @@ _DTYPE_FIXED_LEN_STR = 'S'  # Not sure how robust this is, but fixed length stri
 _DTYPE_VAR_LEN_STR = 'O'  # Variable length string
 
 _INT_DTYPES = [int, np.int32, np.int64]
-_FLOAT_DTYPES = [float, np.float, np.float64]
+_FLOAT_DTYPES = [float, np.float32, np.float64]
 _STR_DTYPES = [str, np.string_]
 
 # -- Dataset creators  ---------------------------------------
@@ -259,7 +259,7 @@ def _read_dataset(dataset: h5py.Dataset):
 
 def _read_string(dataset: h5py.Dataset) -> str:
     """Reads the contents of an `h5py.Dataset` to a `str`.
-    
+
     Args:
         dataset (h5py.Dataset): An open` h5py.Dataset` instance
     Returns:
@@ -276,7 +276,7 @@ def _read_string(dataset: h5py.Dataset) -> str:
 
 def _read_int(dataset: h5py.Dataset) -> int:
     """Reads the contents of an `h5py.Dataset` to an `int`.
-    
+
     Args:
         dataset (h5py.Dataset): An open` h5py.Dataset` instance
     Returns:
@@ -292,7 +292,7 @@ def _read_int(dataset: h5py.Dataset) -> int:
 
 def _read_float(dataset: h5py.Dataset) -> float:
     """Reads the contents of an `h5py.Dataset` to a `float`.
-    
+
     Args:
         dataset (h5py.Dataset): An open` h5py.Dataset` instance
     Returns:
@@ -308,7 +308,7 @@ def _read_float(dataset: h5py.Dataset) -> float:
 
 def _read_string_array(dataset: h5py.Dataset) -> np.ndarray:
     """Reads the contents of an `h5py.Dataset` to an array of `dtype=str`.
-    
+
     Args:
         dataset (h5py.Dataset): An open` h5py.Dataset` instance
     Returns:
@@ -321,7 +321,7 @@ def _read_string_array(dataset: h5py.Dataset) -> np.ndarray:
 
 def _read_int_array(dataset: h5py.Dataset) -> np.ndarray:
     """Reads the contents of an `h5py.Dataset` to an array of `dtype=int`.
-    
+
     Args:
         dataset (h5py.Dataset): An open` h5py.Dataset` instance
     Returns:
@@ -334,7 +334,7 @@ def _read_int_array(dataset: h5py.Dataset) -> np.ndarray:
 
 def _read_float_array(dataset: h5py.Dataset) -> np.ndarray:
     """Reads the contents of an `h5py.Dataset` to an array of `dtype=float`.
-    
+
     Args:
         dataset (h5py.Dataset): An open` h5py.Dataset` instance
     Returns:
@@ -400,14 +400,14 @@ class ValidationIssue:
         location: A relative HDF5 name corresponding to the location of the issue
         name: A string describing the issue. Must be predefined in `_CODES`
         id: An integer corresponding to the predefined error type
-        severity: An integer ranking the serverity level of the issue. 
+        severity: An integer ranking the serverity level of the issue.
             0 OK, Nothing remarkable
             1 Potentially useful `INFO`
             2 `WARNING`, the file is valid but exhibits undefined behavior or features marked deprecation
             3 `FATAL`, The file is invalid.
         message: A string containing a more verbose description of the issue
     """
-    
+
     def __init__(self, name: str, location: str):
         self.location = location  # A location in the Snirf file matching an HDF5 name
         self.name = name  # The name of the issue, a key in _CODES above
@@ -425,7 +425,7 @@ class ValidationIssue:
 
 class ValidationResult:
     """The result of Snirf file validation routines.
-    
+
     Validation results in a list of issues. Each issue records information about
     the validity of each location (each named Dataset and Group) in a SNIRF file.
     ValidationResult organizes the issues catalogued during validation and affords interfaces
@@ -451,22 +451,22 @@ class ValidationResult:
             if issue.severity > 2:
                 return False
         return True
-    
+
     @property
     def issues(self):
         """A comprehensive list of all `ValidationIssue` instances for the result."""
         return self._issues
-    
+
     @property
     def locations(self):
         """A list of the HDF5 location associated with each issue."""
         return self._locations
-    
+
     @property
     def codes(self):
         """A list of each unique code name associated with all catalogued issues."""
         return list(set([issue.name for issue in self._issues]))
-    
+
     @property
     def errors(self):
         """A list of the `FATAL` issues catalogued during validation."""
@@ -475,7 +475,7 @@ class ValidationResult:
             if issue.severity == 3:
                 errors.append(issue)
         return errors
-    
+
     @property
     def warnings(self):
         """A list of the `WARNING` issues catalogued during validation."""
@@ -484,7 +484,7 @@ class ValidationResult:
             if issue.severity == 2:
                 warnings.append(issue)
         return warnings
-    
+
     @property
     def info(self):
         """A list of the `INFO` issues catalogued during validation."""
@@ -493,10 +493,10 @@ class ValidationResult:
             if issue.severity == 1:
                 info.append(issue)
         return info
-        
+
     def display(self, severity=2):
         """Reads the contents of an `h5py.Dataset` to an array of `dtype=str`.
-        
+
         Args:
             severity: An `int` which sets the minimum severity message to
             display. Default is 2.
@@ -519,7 +519,7 @@ class ValidationResult:
                 s += issue.location.ljust(longest_key) + ' ' + _SEVERITY_LEVELS[sev] + ' ' + issue.name.ljust(longest_code) + '\n'
         print(s)
         for i in range(0, severity):
-            [_printg, _printb, _printm, _printr][i]('Found ' + str(printed[i]) + ' ' + termcolor.colored(_SEVERITY_LEVELS[i], _SEVERITY_COLORS[i]) + ' (hidden)')            
+            [_printg, _printb, _printm, _printr][i]('Found ' + str(printed[i]) + ' ' + termcolor.colored(_SEVERITY_LEVELS[i], _SEVERITY_COLORS[i]) + ' (hidden)')
         for i in range(severity, 4):
             [_printg, _printb, _printm, _printr][i]('Found ' + str(printed[i]) + ' ' + termcolor.colored(_SEVERITY_LEVELS[i], _SEVERITY_COLORS[i]))
         i = int(self.is_valid())
@@ -531,25 +531,25 @@ class ValidationResult:
         if location not in self:  # only one issue per HDF5 name
             issue = ValidationIssue(key, location)
             self._locations.append(location)
-            self._issues.append(issue) 
-        
+            self._issues.append(issue)
+
     def __contains__(self, key):
         for issue in self._issues:
             if issue.location == key:
                 return True
         return False
-        
+
     def __getitem__(self, key):
         for issue in self._issues:
             if issue.location == key:
                 return issue
         raise KeyError("'" + key + "' not in issues list")
-            
-        
+
+
     def __repr__(self):
-        return object.__repr__(self) + ' is_valid ' + str(self.is_valid()) 
-        
-    
+        return object.__repr__(self) + ' is_valid ' + str(self.is_valid())
+
+
 # -- Validation functions ---------------------------------------
 
 
@@ -557,7 +557,7 @@ def _validate_string(dataset: h5py.Dataset) -> str:
     """Determines an issue code (as predefined in `_CODES`) based on the contents an `h5py.Dataset` instance..
 
     Args:
-        dataset (h5py.Dataset): An open` h5py.Dataset` instance 
+        dataset (h5py.Dataset): An open` h5py.Dataset` instance
 
     Returns:
         An issue code describing the validity of the dataset based on its format and shape
@@ -578,7 +578,7 @@ def _validate_int(dataset: h5py.Dataset) -> str:
     """Determines an issue code (as predefined in `_CODES`) based on the contents an `h5py.Dataset` instance.
 
     Args:
-        dataset (h5py.Dataset): An open` h5py.Dataset` instance 
+        dataset (h5py.Dataset): An open` h5py.Dataset` instance
 
     Returns:
         An issue code describing the validity of the dataset based on its format and shape
@@ -599,7 +599,7 @@ def _validate_float(dataset: h5py.Dataset) -> str:
     """Determines an issue code (as predefined in `_CODES`) based on the contents an `h5py.Dataset` instance.
 
     Args:
-        dataset (h5py.Dataset): An open` h5py.Dataset` instance 
+        dataset (h5py.Dataset): An open` h5py.Dataset` instance
 
     Returns:
         An issue code describing the validity of the dataset based on its format and shape
@@ -618,7 +618,7 @@ def _validate_string_array(dataset: h5py.Dataset, ndims=[1]) -> str:
     """Determines an issue code (as predefined in `_CODES`) based on the contents an `h5py.Dataset` instance.
 
     Args:
-        dataset (h5py.Dataset): An open` h5py.Dataset` instance 
+        dataset (h5py.Dataset): An open` h5py.Dataset` instance
 
     Returns:
         An issue code describing the validity of the dataset based on its format and shape
@@ -639,7 +639,7 @@ def _validate_int_array(dataset: h5py.Dataset, ndims=[1]) -> str:
     """Determines an issue code (as predefined in `_CODES`) based on the contents an `h5py.Dataset` instance.
 
     Args:
-        dataset (h5py.Dataset): An open` h5py.Dataset` instance 
+        dataset (h5py.Dataset): An open` h5py.Dataset` instance
 
     Returns:
         An issue code describing the validity of the dataset based on its format and shape
@@ -659,7 +659,7 @@ def _validate_float_array(dataset: h5py.Dataset, ndims=[1]) -> str:
     """Determines an issue code (as predefined in `_CODES`) based on the contents an `h5py.Dataset` instance.
 
     Args:
-        dataset (h5py.Dataset): An open` h5py.Dataset` instance 
+        dataset (h5py.Dataset): An open` h5py.Dataset` instance
 
     Returns:
         An issue code describing the validity of the dataset based on its format and shape
@@ -679,7 +679,7 @@ def _validate_float_array(dataset: h5py.Dataset, ndims=[1]) -> str:
 
 class SnirfConfig:
     """Structure containing Snirf-wide data and settings.
-    
+
     Properties:
         logger (logging.Logger): The logger that the Snirf instance writes to
         dynamic_loading (bool): If True, data is loaded from the HDF5 file only on access via property
@@ -736,14 +736,14 @@ class Group(ABC):
 
     def save(self, *args):
         """Group level save to a SNIRF file on disk.
-        
+
         Args:
             args (str or h5py.File): A path to a closed SNIRF file on disk or an open `h5py.File` instance
-    
+
         Examples:
             save can be called on a Group already on disk to overwrite the current contents:
             >>> mysnirf.nirs[0].probe.save()
-            
+
             or using a new filename to write the Group there:
             >>> mysnirf.nirs[0].probe.save(<new destination>)
         """
@@ -771,8 +771,8 @@ class Group(ABC):
     @property
     def filename(self):
         """The filename the Snirf object was loaded from and will save to.
-        
-        None if not associated with a Group on disk.        
+
+        None if not associated with a Group on disk.
         """
         if self._h != {}:
             return self._h.file.filename
@@ -782,7 +782,7 @@ class Group(ABC):
     @property
     def location(self):
         """The HDF5 relative location indentifier.
-        
+
         None if not associataed with a Group on disk.
         """
         if self._h != {}:
@@ -792,7 +792,7 @@ class Group(ABC):
 
     def is_empty(self):
         """If the Group has no member Groups or Datasets.
-        
+
         Returns:
             bool: True if empty, False if not
         """
@@ -845,7 +845,7 @@ class IndexedGroup(MutableSequence, ABC):
 
     def __init__(self, parent: Group, cfg: SnirfConfig):
         """Represents several Groups which share a name, an "indexed group".
-        
+
         Represents the "indexed group" which is defined by v1.0 of the SNIRF
         specification as:
             If a data element is an HDF5 group and contains multiple sub-groups,
@@ -854,12 +854,12 @@ class IndexedGroup(MutableSequence, ABC):
             from 1, with no preceding zeros) in the name, for example, /.../name1
             denotes the first sub-group of data element name, and /.../name2
             denotes the 2nd element, and so on.
-        
+
         Because the indexed group is not a true HDF5 group but rather an
         iterable list of HDF5 groups, it takes a base group or file and
         searches its keys, appending the appropriate elements to itself
         in order.
-        
+
         The appropriate elements are identified using the `_name` attribute: if
         a key begins with `_name` and ends with a number, or is equal to `_name`.
 
@@ -910,7 +910,7 @@ class IndexedGroup(MutableSequence, ABC):
 
     def is_empty(self):
         """Returns True if the Indexed Group has no member Groups with contents.
-        
+
         Returns:
             bool: True if empty, False if not
         """
@@ -922,7 +922,7 @@ class IndexedGroup(MutableSequence, ABC):
 
     def insert(self, i, item):
         """Insert a new Group into the IndexedGroup.
-        
+
         Args:
             i (int): an index
             item: must be of type _element
@@ -934,7 +934,7 @@ class IndexedGroup(MutableSequence, ABC):
 
     def append(self, item):
         """Append a new Group to the IndexedGroup.
-        
+
         Args:
             item: must be of type _element
         """
@@ -945,17 +945,17 @@ class IndexedGroup(MutableSequence, ABC):
 
     def save(self, *args):
         """Save the groups to a SNIRF file on disk.
-        
+
         When saving, the naming convention defined by the SNIRF spec is enforced:
         groups are named `/<name>1`, `/<name>2`, `/<name>3`, and so on.
-        
+
         Args:
             args (str or h5py.File): A path to a closed SNIRF file on disk or an open `h5py.File` instance
-    
+
         Examples:
             save can be called on an Indexed Group already on disk to overwrite the current contents:
             >>> mysnirf.nirs[0].stim.save()
-            
+
             or using a new filename to write the Indexed Group there:
             >>> mysnirf.nirs[0].stim.save(<new destination>)
         """
@@ -985,8 +985,8 @@ class IndexedGroup(MutableSequence, ABC):
 
     def appendGroup(self):
         """Insert a new Group at the end of the Indexed Group.
-        
-        Creates an empty Group with the appropriate name at the end of the 
+
+        Creates an empty Group with the appropriate name at the end of the
         list of Groups managed by the IndexedGroup.
         """
         location = self._parent.location + '/' + self._name + str(len(self._list) + 1)
@@ -996,11 +996,11 @@ class IndexedGroup(MutableSequence, ABC):
 
     def insertGroup(self, i):
         """Insert a new Group following the index given.
-        
+
         Creates an empty Group with a placeholder name within the list of Groups
         managed by the IndexedGroup. The placeholder name will be replaced with a
         name with the correct order once `save` is called.
-        
+
         Args:
             i (int): the position at which to insert the new Group
         """
@@ -1027,11 +1027,11 @@ class IndexedGroup(MutableSequence, ABC):
 
     def _order_names(self, h=None):
         """Renumber (rename) the HDF5 Groups in the wrapper and on disk such that they ascend in order.
-        
+
         Enforce the format of the names of HDF5 groups within a group or file on disk. i.e. `IndexedGroup` `stim`'s elements
         will be renamed, in order, /stim1, /stim2, /stim3. This is expensive but can be avoided by `save()`ing individual groups
         within the IndexedGroup
-        
+
         Args:
             h (`h5py.File` or `h5py.Group`): if supplied, the rename will be carried out on the given h5py wrapper. For copying.
         """
