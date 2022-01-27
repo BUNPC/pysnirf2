@@ -19,8 +19,8 @@ pysnirf2 requires Python > 3.6
 
 # Features
 
-## Load a SNIRF file
-`Snirf(<path>)` loads a SNIRF file from the path _or creates a new one if it doesn't exist._
+## Open a SNIRF file
+`Snirf(<path>)` opens a SNIRF file at `<path>` _or creates a new one if it doesn't exist._
 ```python
 from pysnirf2 import Snirf
 >>> snirf = Snirf(r'some\path\subj1_run01.snirf')
@@ -30,6 +30,19 @@ from pysnirf2 import Snirf
 ```python
 >>> snirf = Snirf()
 ```
+
+## Closing a SNIRF file
+A `Snirf` instance wraps a file on disk. It should be closed when you're done reading from it or saving.
+```python
+>>> snirf.close()
+```
+Use a `with` statement to ensure that the file is closed when you're done with it:
+```python
+>>> with Snirf(r'some\path\subj1_run01.snirf') as snirf:
+>>>      # Read/write
+>>>      snirf.save()
+```
+
 ## View or retrieve a file's contents
 ```python
 >>> snirf
@@ -151,16 +164,16 @@ For larger files, it may be useful to load data dynamically: data will only be l
 pysnirf2 features functions for validating SNIRF files against the specification and generating detailed error reports.
 ## Validate a Snirf object you have created
 ```python
->> valid, result = snirf.validate()
+>> result = snirf.validate()
 ```
 ## Validate a SNIRF file on disk
 To validate a SNIRF file on disk
 ```python
 >> from pysnirf2 import validateSnirf
->> valid, result = validateSnirf(r'some\path\subj1_run01.snirf')
+>> result = validateSnirf(r'some\path\subj1_run01.snirf')
 ```
 ## Validation results
-The validation functions return a `bool` reflecting the validity of the file and a detailed `ValidationResult` structure.
+The validation functions return a [`ValidationResult`](https://github.com/BUNPC/pysnirf2/blob/main/docs/pysnirf2.md#class-validationresult) instance which contains details about the SNIRF file.
 ```python
 >> assert valid
 ```
@@ -181,7 +194,7 @@ File is INVALID
 ```
 To look at a particular result:
 ```python
->> result.errors[3]
+>> result.errors[2]
 <pysnirf2.pysnirf2.ValidationIssue object at 0x000001C0CB502F70>
 location: /nirs1/data1
 severity: 3   FATAL  
@@ -189,7 +202,6 @@ name:     8   INVALID_MEASUREMENTLIST
 message:  The number of measurementList elements does not match the second dimension of dataTimeSeries
 ```
 The full list of validation results `result.issues` can be explored programatically.
-
 # Code generation
 
 The interface and validator are generated via metacode that downloads and parses [the latest SNIRF specification](https://raw.githubusercontent.com/fNIRS/snirf/master/snirf_specification.md). 
