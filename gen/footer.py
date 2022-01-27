@@ -147,6 +147,15 @@ class Snirf(Snirf):
         self._validate(result)
         return result
 
+    # overload
+    @property
+    def filename(self):
+        """The filename the Snirf object was loaded from and will save to."""
+        if self._h != {}:
+            return self._h.filename
+        else:
+            return None
+
     def close(self):
         """Close the file underlying a `Snirf` instance.
 
@@ -161,9 +170,10 @@ class Snirf(Snirf):
     def __enter__(self):
         return self
 
-    def __del__(self):
+    def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
-
+        return True if exc_type is None else False
+        
     def __getitem__(self, key):
         if self._h != {}:
             if key in self._h:
