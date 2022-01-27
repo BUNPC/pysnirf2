@@ -23,7 +23,7 @@ Maintained by the Boston University Neurophotonics Center
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L5183"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L5189"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `loadSnirf`
 
@@ -58,7 +58,7 @@ Returns a `Snirf` object loaded from path if a SNIRF file exists there. Takes th
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L5209"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L5215"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `saveSnirf`
 
@@ -78,17 +78,17 @@ Saves a SNIRF file to disk.
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L5223"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L5229"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `validateSnirf`
 
 ```python
-validateSnirf(path:str) → Tuple[bool, ValidationResult]
+validateSnirf(path:str) → ValidationResult
 ```
 
 Validate a SNIRF file on disk. 
 
-Returns a bool representing the validity of the Snirf object on disk at path along with the detailed output structure ValidationResult instance. 
+Returns truthy ValidationResult instance which holds detailed results of validation 
 
 
 ---
@@ -137,8 +137,8 @@ The result of Snirf file validation routines.
 Validation results in a list of issues. Each issue records information about the validity of each location (each named Dataset and Group) in a SNIRF file. ValidationResult organizes the issues catalogued during validation and affords interfaces to retrieve and display them. 
 
 ```
-(<ValidationResult>.is_valid(), <ValidationResult>) = <Snirf instance>.validate()
-(<ValidationResult>.is_valid(), <ValidationResult>) = validateSnirf(<path>)
+<ValidationResult> = <Snirf instance>.validate()
+ <ValidationResult> = validateSnirf(<path>)
 ``` 
 
 <a href="../pysnirf2/pysnirf2.py#L440"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
@@ -621,7 +621,7 @@ None if not associataed with a Group on disk.
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L5040"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L4975"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `add`
 
@@ -658,7 +658,7 @@ If the Group has no member Groups or Datasets.
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L5056"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L4991"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `remove`
 
@@ -2523,8 +2523,6 @@ __init__(*args, dynamic_loading:bool=False, logfile:bool=False)
 
 The filename the Snirf object was loaded from and will save to. 
 
-None if not associated with a Group on disk. 
-
 ---
 
 #### <kbd>property</kbd> formatVersion
@@ -2559,7 +2557,7 @@ This group stores one set of NIRS data.  This can be extended by adding the coun
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L5012"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L5129"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `close`
 
@@ -2593,7 +2591,7 @@ If the Group has no member Groups or Datasets.
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L4972"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L5084"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `save`
 
@@ -2620,26 +2618,23 @@ Save a SNIRF file to disk.
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L4995"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L5107"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `validate`
 
 ```python
-validate() → Tuple[bool, ValidationResult]
+validate() → ValidationResult
 ```
 
 Validate a `Snirf` instance. 
 
 Returns the validity of the current state of a `Snirf` object, including modifications made in memory to a loaded SNIRF file. 
 
-Returns a bool representing the validity of the `Snirf` object and the detailed output structure `ValidationResult` instance 
-
 
 
 **Returns:**
  
- - <b>`bool`</b>:  True if the file is valid 
- - <b>`ValidationResult`</b>:  structure containing detailed validation results 
+ - <b>`ValidationResult`</b>:  truthy structure containing detailed validation results 
 
 
 
