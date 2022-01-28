@@ -171,12 +171,10 @@ To validate a SNIRF file on disk
 ```python
 >> from pysnirf2 import validateSnirf
 >> result = validateSnirf(r'some\path\subj1_run01.snirf')
+>> assert result
 ```
 ## Validation results
 The validation functions return a [`ValidationResult`](https://github.com/BUNPC/pysnirf2/blob/main/docs/pysnirf2.md#class-validationresult) instance which contains details about the SNIRF file.
-```python
->> assert result.is_valid()
-```
 To view the validation result:
 ```python
 >> result.display(severity=3)
