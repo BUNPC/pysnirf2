@@ -175,7 +175,7 @@ To validate a SNIRF file on disk
 ## Validation results
 The validation functions return a [`ValidationResult`](https://github.com/BUNPC/pysnirf2/blob/main/docs/pysnirf2.md#class-validationresult) instance which contains details about the SNIRF file.
 ```python
->> assert valid
+>> assert result.is_valid()
 ```
 To view the validation result:
 ```python
