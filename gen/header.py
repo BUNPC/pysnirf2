@@ -383,6 +383,8 @@ _CODES = {
         'UNRECOGNIZED_DATATYPELABEL': (18, 2, 'measurementList/dataTypeLabel is not one of the recognized values listed in the Appendix'),
         'UNRECOGNIZED_DATATYPE': (19, 2, 'measurementList/dataType is not one of the recognized values listed in the Appendix'),
         'INT_64': (25, 2, 'The SNIRF specification limits users to the use of 32 bit native integer types'),
+        'UNRECOGNIZED_COORDINATESYSTEM': (26, 2, 'The identifying string of the coordinate system was not recognized.'),
+        'NO_COORDINATE_SYSTEM_DESCRIPTION': (27, 2, "The coordinate system was unrecognized or 'Other' but lacks a probe/coordinateSystemDescription"),
         'FIXED_LENGTH_STRING': (20, 2, 'The use of fixed-length strings is discouraged and may be banned by a future spec version. Rewrite this file with pysnirf2 to use variable length strings'),
         # Info (Severity 1)
         'OPTIONAL_GROUP_MISSING': (21, 1, 'Missing an optional Group in this location'),

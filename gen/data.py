@@ -36,3 +36,24 @@ TABLE_DELIM_END = 'In the above table, the used notations are explained below'
 
 DEFINITIONS_DELIM_START = '### SNIRF data container definitions'
 DEFINITIONS_DELIM_END = '## Appendix'
+
+# -- BIDS Probe name identifiers ---------------------------------------------
+
+BIDS_PROBE_NAMES = ['ICBM452AirSpace',
+                    'ICBM452Warp5Space',
+                    'IXI549Space',
+                    'fsaverage',
+                    'fsaverageSym',
+                    'fsLR',
+                    'MNIColin27',
+                    'MNI152Lin',
+                    'MNI152NLin2009[a-c][Sym|Asym]',
+                    'MNI152NLin6Sym',
+                    'MNI152NLin6ASym',
+                    'MNI305',
+                    'NIHPD',
+                    'OASIS30AntsOASISAnts',
+                    'OASIS30Atropos',
+                    'Talairach',
+                    'UNCInfant']
+

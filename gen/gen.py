@@ -159,6 +159,19 @@ if __name__ == '__main__':
                             'required': required
                             })
     
+    ans = input('Proceed? y/n\n')
+    if ans not in ['y', 'Y']:
+        sys.exit('pysnirf2 generation aborted.')
+    
+    bids_probe_names = {}
+    print('Loading BIDS-specified Probe names from gen/data.py...')
+    for name in BIDS_PROBE_NAMES:
+        print('Found', name)
+    
+    ans = input('Proceed? y/n\n')
+    if ans not in ['y', 'Y']:
+        sys.exit('pysnirf2 generation aborted.')
+    
     #  Generate data for template
     SNIRF = {
             'VERSION': VERSION,
@@ -171,7 +184,8 @@ if __name__ == '__main__':
             'DATE': str(date.today()),
             'INDEXED_GROUPS': [], 
             'GROUPS': [], 
-            'UNSPECIFIED_DATASETS_OK': UNSPECIFIED_DATASETS_OK
+            'UNSPECIFIED_DATASETS_OK': UNSPECIFIED_DATASETS_OK,
+            'BIDS_PROBE_NAMES': bids_probe_names
             }
     
     #  Build list of groups and indexed groups
