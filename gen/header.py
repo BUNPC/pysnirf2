@@ -5,7 +5,7 @@ SNIRF files are HDF5 files designed to facilitate the sharing of near-infrared
 spectrocopy data. Their specification is defined at https://github.com/fNIRS/snirf.
 
 This library wraps each HDF5 Group and offers a Pythonic interface on lists
-of like-Groups which the SNIRF speicification calls "indexed Groups".
+of like-Groups which the SNIRF specification calls "indexed Groups".
 
 Example:
     Load a file::
