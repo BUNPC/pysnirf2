@@ -30,10 +30,10 @@ if __name__ == '__main__':
     from data import *
     
     sys.path.append(cwd)
-    from pysnirf2.__version__ import __version__ as VERSION
+    from pysnirf2.__version__ import __version__ as LIB_VERSION
     
     print('-------------------------------------')
-    print('pysnirf2 generation script v' + VERSION)
+    print('pysnirf2 generation script v' + LIB_VERSION)
     print('-------------------------------------')
     
     local_spec = SPEC_SRC.split('/')[-1].split('.')[0] + '_retrieved_' + datetime.now().strftime('%d_%m_%y') + '.txt'
@@ -173,7 +173,7 @@ if __name__ == '__main__':
     
     #  Generate data for template
     SNIRF = {
-            'VERSION': VERSION,
+            'VERSION': SPEC_VERSION,
             'SPEC_SRC': SPEC_SRC,
             'HEADER': '',
             'FOOTER': '',

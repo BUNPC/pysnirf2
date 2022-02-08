@@ -1,5 +1,5 @@
 SPEC_SRC = 'https://raw.githubusercontent.com/fNIRS/snirf/master/snirf_specification.md'
-VERSION = 'v1.0.1-development'  # Version of the spec linked above
+SPEC_VERSION = 'v1.1-development'  # Version of the spec linked above
 
 """
 These types are fragments of the string codes used to describe the types of
