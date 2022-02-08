@@ -106,15 +106,18 @@ class Probe(Probe):
             result._add(self.location + '/sourcePos3D', ['REQUIRED_DATASET_MISSING', 'OK'][int(s3)])
             result._add(self.location + '/detectorPos3D', ['REQUIRED_DATASET_MISSING', 'OK'][int(d3)])
         
+        if self.coordinateSystem is not None:
+            if not self.coordinateSystem in _RECOGNIZED_COORDINATE_SYSTEM_NAMES:
+                result._add(self.location + '/coordinateSystem', 'UNRECOGNIZED_COORDINATE_SYSTEM')            
+                if self.coordinateSystemDescription is None:
+                    result._add(self.location + '/coordinateSystemDescription', 'NO_COORDINATE_SYSTEM_DESCRIPTION')
+        
         # The above will supersede the errors from the template code because
         # duplicate names cannot be added to the issues list
         super()._validate(result)
-        
-        if self.coordinateSystem is not None:
-            if self.coordinateSystem not in _RECOGNIZED_COORDINATE_SYSTEM_NAMES:
-                result._add(self.location + '/coordinateSystem', 'UNRECOGNIZED_COORDINATESYSTEM')            
-                if self.coordinateSystemDescription is None:
-                    result._add(self.location + '/coordinateSystemDescription', 'NO_COORDINATE_SYSTEM_DESCRIPTION')            
+    
+
+class Snirf(Snirf):
     
     # overload
     def save(self, *args):

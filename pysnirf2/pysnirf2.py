@@ -383,7 +383,7 @@ _CODES = {
         'UNRECOGNIZED_DATATYPELABEL': (18, 2, 'measurementList/dataTypeLabel is not one of the recognized values listed in the Appendix'),
         'UNRECOGNIZED_DATATYPE': (19, 2, 'measurementList/dataType is not one of the recognized values listed in the Appendix'),
         'INT_64': (25, 2, 'The SNIRF specification limits users to the use of 32 bit native integer types'),
-        'UNRECOGNIZED_COORDINATESYSTEM': (26, 2, 'The identifying string of the coordinate system was not recognized.'),
+        'UNRECOGNIZED_COORDINATE_SYSTEM': (26, 2, 'The identifying string of the coordinate system was not recognized.'),
         'NO_COORDINATE_SYSTEM_DESCRIPTION': (27, 2, "The coordinate system was unrecognized or 'Other' but lacks a probe/coordinateSystemDescription"),
         'FIXED_LENGTH_STRING': (20, 2, 'The use of fixed-length strings is discouraged and may be banned by a future spec version. Rewrite this file with pysnirf2 to use variable length strings'),
         # Info (Severity 1)
@@ -1584,9 +1584,9 @@ class Probe(Group):
         self._landmarkPos2D = _AbsentDataset  # [[<f>,...]]
         self._landmarkPos3D = _AbsentDataset  # [[<f>,...]]
         self._landmarkLabels = _AbsentDataset  # ["s",...]
-        self._coordinateSystem = _AbsentDataset  # <i>
+        self._coordinateSystem = _AbsentDataset  # "s"
         self._coordinateSystemDescription = _AbsentDataset  # "s"
-        self._useLocalIndex = _AbsentDataset  # "s"
+        self._useLocalIndex = _AbsentDataset  # <i>
         self._snirf_names = ['wavelengths', 'wavelengthsEmission', 'sourcePos2D', 'sourcePos3D', 'detectorPos2D', 'detectorPos3D', 'frequencies', 'timeDelays', 'timeDelayWidths', 'momentOrders', 'correlationTimeDelays', 'correlationTimeDelayWidths', 'sourceLabels', 'detectorLabels', 'landmarkPos2D', 'landmarkPos3D', 'landmarkLabels', 'coordinateSystem', 'coordinateSystemDescription', 'useLocalIndex', ]
 
         self._indexed_groups = []
@@ -1711,7 +1711,7 @@ class Probe(Group):
             self._landmarkLabels = _AbsentDataset
         if 'coordinateSystem' in self._h:
             if not self._cfg.dynamic_loading:
-                self._coordinateSystem = _read_int(self._h['coordinateSystem'])
+                self._coordinateSystem = _read_string(self._h['coordinateSystem'])
             else:  # if the dataset is found on disk but dynamic_loading=True
                 self._coordinateSystem = _PresentDataset
         else:  # if the dataset is not found on disk
@@ -1725,7 +1725,7 @@ class Probe(Group):
             self._coordinateSystemDescription = _AbsentDataset
         if 'useLocalIndex' in self._h:
             if not self._cfg.dynamic_loading:
-                self._useLocalIndex = _read_string(self._h['useLocalIndex'])
+                self._useLocalIndex = _read_int(self._h['useLocalIndex'])
             else:  # if the dataset is found on disk but dynamic_loading=True
                 self._useLocalIndex = _PresentDataset
         else:  # if the dataset is not found on disk
@@ -2308,7 +2308,7 @@ class Probe(Group):
         if type(self._coordinateSystem) is type(_AbsentDataset):
             return None
         if type(self._coordinateSystem) is type(_PresentDataset):
-            return _read_int(self._h['coordinateSystem'])
+            return _read_string(self._h['coordinateSystem'])
             self._cfg.logger.info('Dynamically loaded %s/coordinateSystem from %s', self.location, self.filename)
         return self._coordinateSystem
 
@@ -2373,7 +2373,7 @@ class Probe(Group):
         if type(self._useLocalIndex) is type(_AbsentDataset):
             return None
         if type(self._useLocalIndex) is type(_PresentDataset):
-            return _read_string(self._h['useLocalIndex'])
+            return _read_int(self._h['useLocalIndex'])
             self._cfg.logger.info('Dynamically loaded %s/useLocalIndex from %s', self.location, self.filename)
         return self._useLocalIndex
 
@@ -2595,7 +2595,7 @@ class Probe(Group):
             data = self.coordinateSystem  # Use loader function via getter
             if name in file:
                 del file[name]
-            _create_dataset_int(file, name, data)
+            _create_dataset_string(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         else:
             if name in file:
@@ -2617,7 +2617,7 @@ class Probe(Group):
             data = self.useLocalIndex  # Use loader function via getter
             if name in file:
                 del file[name]
-            _create_dataset_string(file, name, data)
+            _create_dataset_int(file, name, data)
             # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
         else:
             if name in file:
@@ -2839,8 +2839,8 @@ class Probe(Group):
                     if type(self._coordinateSystem) is type(_PresentDataset) or 'coordinateSystem' in self._h:
                         dataset = self._h['coordinateSystem']
                     else:
-                        dataset = _create_dataset_int(tmp, 'coordinateSystem', self._coordinateSystem)
-                    result._add(name, _validate_int(dataset))
+                        dataset = _create_dataset_string(tmp, 'coordinateSystem', self._coordinateSystem)
+                    result._add(name, _validate_string(dataset))
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/coordinateSystemDescription'
@@ -2863,8 +2863,14 @@ class Probe(Group):
                     if type(self._useLocalIndex) is type(_PresentDataset) or 'useLocalIndex' in self._h:
                         dataset = self._h['useLocalIndex']
                     else:
-                        dataset = _create_dataset_string(tmp, 'useLocalIndex', self._useLocalIndex)
-                    result._add(name, _validate_string(dataset))
+                        dataset = _create_dataset_int(tmp, 'useLocalIndex', self._useLocalIndex)
+                    err_code = _validate_int(dataset)
+                    if _read_int(dataset) < 0 and err_code == 'OK':
+                        result._add(name, 'NEGATIVE_INDEX')
+                    elif _read_int(dataset) == 0 and err_code == 'OK':
+                        result._add(name, 'INDEX_OF_ZERO')
+                    else:
+                        result._add(name, err_code)
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             for key in self._h.keys():
@@ -5202,15 +5208,18 @@ class Probe(Probe):
             result._add(self.location + '/sourcePos3D', ['REQUIRED_DATASET_MISSING', 'OK'][int(s3)])
             result._add(self.location + '/detectorPos3D', ['REQUIRED_DATASET_MISSING', 'OK'][int(d3)])
         
+        if self.coordinateSystem is not None:
+            if not self.coordinateSystem in _RECOGNIZED_COORDINATE_SYSTEM_NAMES:
+                result._add(self.location + '/coordinateSystem', 'UNRECOGNIZED_COORDINATE_SYSTEM')            
+                if self.coordinateSystemDescription is None:
+                    result._add(self.location + '/coordinateSystemDescription', 'NO_COORDINATE_SYSTEM_DESCRIPTION')
+        
         # The above will supersede the errors from the template code because
         # duplicate names cannot be added to the issues list
         super()._validate(result)
-        
-        if self.coordinateSystem is not None:
-            if self.coordinateSystem not in _RECOGNIZED_COORDINATE_SYSTEM_NAMES:
-                result._add(self.location + '/coordinateSystem', 'UNRECOGNIZED_COORDINATESYSTEM')            
-                if self.coordinateSystemDescription is None:
-                    result._add(self.location + '/coordinateSystemDescription', 'NO_COORDINATE_SYSTEM_DESCRIPTION')            
+    
+
+class Snirf(Snirf):
     
     # overload
     def save(self, *args):
