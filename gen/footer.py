@@ -40,8 +40,11 @@ class StimElement(StimElement):
         super()._validate(result)
         
         if all(attr is not None for attr in [self.data, self.dataLabels]):
-            if np.shape(self.data)[1] != len(self.dataLabels):
-                result._add(self.location + '/dataLabels', 'INVALID_STIM_DATALABELS')        
+            try:
+                if np.shape(self.data)[1] != len(self.dataLabels):
+                    result._add(self.location + '/dataLabels', 'INVALID_STIM_DATALABELS')        
+            except IndexError:  # If data doesn't have columns
+                result._add(self.location + '/data', 'INVALID_DATASET_SHAPE')    
 
 
 class Stim(Stim):
@@ -103,11 +106,17 @@ class Probe(Probe):
             result._add(self.location + '/sourcePos3D', ['REQUIRED_DATASET_MISSING', 'OK'][int(s3)])
             result._add(self.location + '/detectorPos3D', ['REQUIRED_DATASET_MISSING', 'OK'][int(d3)])
         
+        if self.coordinateSystem is not None:
+            if not self.coordinateSystem in _RECOGNIZED_COORDINATE_SYSTEM_NAMES:
+                result._add(self.location + '/coordinateSystem', 'UNRECOGNIZED_COORDINATE_SYSTEM')            
+                if self.coordinateSystemDescription is None:
+                    result._add(self.location + '/coordinateSystemDescription', 'NO_COORDINATE_SYSTEM_DESCRIPTION')
+        
         # The above will supersede the errors from the template code because
         # duplicate names cannot be added to the issues list
         super()._validate(result)
-
     
+
 class Snirf(Snirf):
     
     # overload

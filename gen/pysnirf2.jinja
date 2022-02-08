@@ -387,4 +387,6 @@ class Snirf(Group):
 {{ gen_writer(ROOT) }}
 {{ gen_validator(ROOT) }}
 
+_RECOGNIZED_COORDINATE_SYSTEM_NAMES = [{% for NAME in BIDS_COORDINATE_SYSTEM_NAMES %}'{{ NAME }}', {% endfor -%}]
+
 {{ FOOTER }}

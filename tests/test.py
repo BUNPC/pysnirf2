@@ -147,6 +147,53 @@ def _print_keys(group):
 
 class PySnirf2_Test(unittest.TestCase):
     
+    def test_unknown_coordsys_name(self):
+        for i, mode in enumerate([False, True]):
+            for file in self._test_files:
+                if VERBOSE:
+                    print('Loading', file, 'with dynamic_loading=' + str(mode))
+                with Snirf(file, dynamic_loading=mode) as s:
+                    if VERBOSE:    
+                        print("Adding unrecognized coordinate system")
+                    s.nirs[0].probe.coordinateSystem = 'MNIFoo27'
+                    result = s.validate()
+                    if VERBOSE:
+                        result.display(severity=2)
+                    self.assertTrue('UNRECOGNIZED_COORDINATE_SYSTEM' in [issue.name for issue in result.warnings], msg='Failed to raise warning about unknown coordinate system')
+                    newname = file.split('.')[0] + '_coordinate_system_added'
+                    s.save(newname)
+                if VERBOSE:
+                    print('Loading', newname, 'with dynamic_loading=' + str(mode))
+                with Snirf(newname, dynamic_loading=mode) as s:
+                    result = s.validate()
+                    if VERBOSE:
+                        result.display(severity=2)
+                    self.assertTrue('UNRECOGNIZED_COORDINATE_SYSTEM' in [issue.name for issue in result.warnings], msg='Failed to raise warning about unknown coordinate system in file saved to disk')
+                    self.assertTrue(s.validate(), msg='File was incorrectly invalidated')
+
+    def test_known_coordsys_name(self):
+        for i, mode in enumerate([False, True]):
+            for file in self._test_files:
+                if VERBOSE:
+                    print('Loading', file, 'with dynamic_loading=' + str(mode))
+                with Snirf(file, dynamic_loading=mode) as s:
+                    if VERBOSE:    
+                        print("Adding recognized coordinate system")
+                    s.nirs[0].probe.coordinateSystem = 'MNIColin27'
+                    result = s.validate()
+                    if VERBOSE:
+                        result.display(severity=2)
+                    self.assertFalse('UNRECOGNIZED_COORDINATE_SYSTEM' in [issue.name for issue in result.warnings], msg='Failed to recognize known coordinate system')
+                    newname = file.split('.')[0] + '_unknown_coordinate_system_added'
+                    s.save(newname)
+                if VERBOSE:
+                    print('Loading', newname, 'with dynamic_loading=' + str(mode))
+                with Snirf(newname, dynamic_loading=mode) as s:
+                    result = s.validate()
+                    if VERBOSE:
+                        result.display(severity=2)
+                    self.assertFalse('UNRECOGNIZED_COORDINATE_SYSTEM' in [issue.name for issue in result.warnings], msg='Failed to recognize known coordinate system in file saved to disk')
+                    self.assertTrue(s.validate(), msg='File was incorrectly invalidated')
     
     def test_unspecified_metadatatags(self):
         for i, mode in enumerate([False, True]):

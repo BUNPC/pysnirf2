@@ -5,7 +5,7 @@ SNIRF files are HDF5 files designed to facilitate the sharing of near-infrared
 spectrocopy data. Their specification is defined at https://github.com/fNIRS/snirf.
 
 This library wraps each HDF5 Group and offers a Pythonic interface on lists
-of like-Groups which the SNIRF speicification calls "indexed Groups".
+of like-Groups which the SNIRF specification calls "indexed Groups".
 
 Example:
     Load a file::
@@ -28,6 +28,7 @@ import logging
 import termcolor
 import colorama
 from typing import Tuple
+import time
 
 try:
     from pysnirf2.__version__ import __version__ as __version__
@@ -69,8 +70,15 @@ def _create_logger(name, log_file, level=logging.INFO):
     return logger
 
 # Package-wide logger
-_logger = _create_logger('pysnirf2', 'pysnirf2.log')
+_logfile = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'pysnirf2.log')
 
+if os.path.exists(_logfile):
+    if (time.time() - os.path.getctime(_logfile)) / 86400 > 10:  # Keep logs for only 10 days
+        try:
+            os.remove(_logfile)
+        except (FileNotFoundError, PermissionError):
+            pass
+_logger = _create_logger('pysnirf2', _logfile)
 
 # -- methods to cast data prior to writing to and after reading from h5py interfaces------
 
@@ -383,6 +391,8 @@ _CODES = {
         'UNRECOGNIZED_DATATYPELABEL': (18, 2, 'measurementList/dataTypeLabel is not one of the recognized values listed in the Appendix'),
         'UNRECOGNIZED_DATATYPE': (19, 2, 'measurementList/dataType is not one of the recognized values listed in the Appendix'),
         'INT_64': (25, 2, 'The SNIRF specification limits users to the use of 32 bit native integer types'),
+        'UNRECOGNIZED_COORDINATE_SYSTEM': (26, 2, 'The identifying string of the coordinate system was not recognized.'),
+        'NO_COORDINATE_SYSTEM_DESCRIPTION': (27, 2, "The coordinate system was unrecognized or 'Other' but lacks a probe/coordinateSystemDescription"),
         'FIXED_LENGTH_STRING': (20, 2, 'The use of fixed-length strings is discouraged and may be banned by a future spec version. Rewrite this file with pysnirf2 to use variable length strings'),
         # Info (Severity 1)
         'OPTIONAL_GROUP_MISSING': (21, 1, 'Missing an optional Group in this location'),

@@ -30,10 +30,10 @@ if __name__ == '__main__':
     from data import *
     
     sys.path.append(cwd)
-    from pysnirf2.__version__ import __version__ as VERSION
+    from pysnirf2.__version__ import __version__ as LIB_VERSION
     
     print('-------------------------------------')
-    print('pysnirf2 generation script v' + VERSION)
+    print('pysnirf2 generation script v' + LIB_VERSION)
     print('-------------------------------------')
     
     local_spec = SPEC_SRC.split('/')[-1].split('.')[0] + '_retrieved_' + datetime.now().strftime('%d_%m_%y') + '.txt'
@@ -159,9 +159,21 @@ if __name__ == '__main__':
                             'required': required
                             })
     
+    ans = input('Proceed? y/n\n')
+    if ans not in ['y', 'Y']:
+        sys.exit('pysnirf2 generation aborted.')
+    
+    print('Loading BIDS-specified Probe names from gen/data.py...')
+    for name in BIDS_PROBE_NAMES:
+        print('Found', name)
+    
+    ans = input('Proceed? y/n\n')
+    if ans not in ['y', 'Y']:
+        sys.exit('pysnirf2 generation aborted.')
+    
     #  Generate data for template
     SNIRF = {
-            'VERSION': VERSION,
+            'VERSION': SPEC_VERSION,
             'SPEC_SRC': SPEC_SRC,
             'HEADER': '',
             'FOOTER': '',
@@ -171,7 +183,8 @@ if __name__ == '__main__':
             'DATE': str(date.today()),
             'INDEXED_GROUPS': [], 
             'GROUPS': [], 
-            'UNSPECIFIED_DATASETS_OK': UNSPECIFIED_DATASETS_OK
+            'UNSPECIFIED_DATASETS_OK': UNSPECIFIED_DATASETS_OK,
+            'BIDS_COORDINATE_SYSTEM_NAMES': BIDS_PROBE_NAMES
             }
     
     #  Build list of groups and indexed groups
