@@ -28,6 +28,7 @@ import logging
 import termcolor
 import colorama
 from typing import Tuple
+import time
 
 try:
     from pysnirf2.__version__ import __version__ as __version__
@@ -69,8 +70,15 @@ def _create_logger(name, log_file, level=logging.INFO):
     return logger
 
 # Package-wide logger
-_logger = _create_logger('pysnirf2', 'pysnirf2.log')
+_logfile = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'pysnirf2.log')
 
+if os.path.exists(_logfile):
+    if (time.time() - os.path.getctime(_logfile)) / 86400 > 10:  # Keep logs for only 10 days
+        try:
+            os.remove(_logfile)
+        except (FileNotFoundError, PermissionError):
+            pass
+_logger = _create_logger('pysnirf2', _logfile)
 
 # -- methods to cast data prior to writing to and after reading from h5py interfaces------
 

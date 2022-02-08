@@ -195,319 +195,319 @@ class PySnirf2_Test(unittest.TestCase):
                     self.assertFalse('UNRECOGNIZED_COORDINATE_SYSTEM' in [issue.name for issue in result.warnings], msg='Failed to recognize known coordinate system in file saved to disk')
                     self.assertTrue(s.validate(), msg='File was incorrectly invalidated')
     
-    # def test_unspecified_metadatatags(self):
-    #     for i, mode in enumerate([False, True]):
-    #         for file in self._test_files:
-    #             if VERBOSE:
-    #                 print('Loading', file, 'with dynamic_loading=' + str(mode))
-    #             with Snirf(file, dynamic_loading=mode) as s:
-    #                 if VERBOSE:    
-    #                     print("Adding metaDataTags 'foo', 'bar', and 'array_of_strings'")
-    #                 s.nirs[0].metaDataTags.add('foo', 'Hello')
-    #                 s.nirs[0].metaDataTags.add('Bar', 'World')
-    #                 s.nirs[0].metaDataTags.add('_array_of_strings', ['foo', 'bar'])
-    #                 self.assertTrue(s.validate(), msg='adding the unspecified metaDataTags resulted in an INVALID file...')
-    #                 self.assertTrue(s.nirs[0].metaDataTags.foo == 'Hello', msg='Failed to set the unspecified metadatatags')
-    #                 self.assertTrue(s.nirs[0].metaDataTags.Bar == 'World', msg='Failed to set the unspecified metadatatags')
-    #                 self.assertTrue(s.nirs[0].metaDataTags._array_of_strings[0] == 'foo', msg='Failed to set the unspecified metadatatags')
-    #                 newname = file.split('.')[0] + '_unspecified_tags'
-    #                 s.save(newname)
-    #                 if VERBOSE:
-    #                     print('Loading', newname, 'with dynamic_loading=' + str(mode))
-    #             with Snirf(newname, dynamic_loading=mode) as s:
-    #                 self.assertTrue(s.nirs[0].metaDataTags.foo == 'Hello', msg='Failed to save the unspecified metadatatags to disk')
-    #                 self.assertTrue(s.nirs[0].metaDataTags.Bar == 'World', msg='Failed to save the unspecified metadatatags to disk')
-    #                 self.assertTrue(s.nirs[0].metaDataTags._array_of_strings[0] == 'foo', msg='Failed to save the unspecified metadatatags to disk')
-    #                 s.nirs[0].metaDataTags.remove('foo')
-    #                 s.nirs[0].metaDataTags.remove('Bar')
-    #                 s.nirs[0].metaDataTags.remove('_array_of_strings')
-    #                 s.save()
-    #             dataset_equal_test(self, file, newname + '.snirf')
+    def test_unspecified_metadatatags(self):
+        for i, mode in enumerate([False, True]):
+            for file in self._test_files:
+                if VERBOSE:
+                    print('Loading', file, 'with dynamic_loading=' + str(mode))
+                with Snirf(file, dynamic_loading=mode) as s:
+                    if VERBOSE:    
+                        print("Adding metaDataTags 'foo', 'bar', and 'array_of_strings'")
+                    s.nirs[0].metaDataTags.add('foo', 'Hello')
+                    s.nirs[0].metaDataTags.add('Bar', 'World')
+                    s.nirs[0].metaDataTags.add('_array_of_strings', ['foo', 'bar'])
+                    self.assertTrue(s.validate(), msg='adding the unspecified metaDataTags resulted in an INVALID file...')
+                    self.assertTrue(s.nirs[0].metaDataTags.foo == 'Hello', msg='Failed to set the unspecified metadatatags')
+                    self.assertTrue(s.nirs[0].metaDataTags.Bar == 'World', msg='Failed to set the unspecified metadatatags')
+                    self.assertTrue(s.nirs[0].metaDataTags._array_of_strings[0] == 'foo', msg='Failed to set the unspecified metadatatags')
+                    newname = file.split('.')[0] + '_unspecified_tags'
+                    s.save(newname)
+                    if VERBOSE:
+                        print('Loading', newname, 'with dynamic_loading=' + str(mode))
+                with Snirf(newname, dynamic_loading=mode) as s:
+                    self.assertTrue(s.nirs[0].metaDataTags.foo == 'Hello', msg='Failed to save the unspecified metadatatags to disk')
+                    self.assertTrue(s.nirs[0].metaDataTags.Bar == 'World', msg='Failed to save the unspecified metadatatags to disk')
+                    self.assertTrue(s.nirs[0].metaDataTags._array_of_strings[0] == 'foo', msg='Failed to save the unspecified metadatatags to disk')
+                    s.nirs[0].metaDataTags.remove('foo')
+                    s.nirs[0].metaDataTags.remove('Bar')
+                    s.nirs[0].metaDataTags.remove('_array_of_strings')
+                    s.save()
+                dataset_equal_test(self, file, newname + '.snirf')
     
-    # def test_validator_required_probe_dataset_missing(self):
-    #     for i, mode in enumerate([False, True]):
-    #         for file in self._test_files:
-    #             if VERBOSE:
-    #                 print('Loading', file, 'with dynamic_loading=' + str(mode))
-    #             with Snirf(file, dynamic_loading=mode) as s:
-    #                 probloc = s.nirs[0].probe.location
-    #                 del s.nirs[0].probe.sourcePos2D
-    #                 del s.nirs[0].probe.detectorPos2D
-    #                 if VERBOSE:
-    #                     print('Deleted source and detector 2D positions from probe:')
-    #                     print(s.nirs[0].probe)
-    #                 result = s.validate()
-    #                 if VERBOSE:
-    #                     result.display(severity=3)
-    #                 self.assertFalse(result[probloc + '/sourcePos2D'].name == 'REQUIRED_DATASET_MISSING', msg='REQUIRED_DATASET_MISSING not expected')
-    #                 self.assertFalse(result[probloc + '/detectorPos2D'].name == 'REQUIRED_DATASET_MISSING', msg='REQUIRED_DATASET_MISSING not expected')
-    #                 self.assertTrue(result[probloc + '/sourcePos2D'].name == 'OPTIONAL_DATASET_MISSING', msg='OPTIONAL_DATASET_MISSING expected')
-    #                 self.assertTrue(result[probloc + '/detectorPos2D'].name == 'OPTIONAL_DATASET_MISSING', msg='OPTIONAL_DATASET_MISSING expected')
-    #                 newname = file.split('.')[0] + '_optional_pos_missing'
-    #                 newname2 = file.split('.')[0] + '_required_pos_missing'
-    #                 s.save(newname)
-    #                 del s.nirs[0].probe.sourcePos3D
-    #                 del s.nirs[0].probe.detectorPos3D
-    #                 s.save(newname2)
+    def test_validator_required_probe_dataset_missing(self):
+        for i, mode in enumerate([False, True]):
+            for file in self._test_files:
+                if VERBOSE:
+                    print('Loading', file, 'with dynamic_loading=' + str(mode))
+                with Snirf(file, dynamic_loading=mode) as s:
+                    probloc = s.nirs[0].probe.location
+                    del s.nirs[0].probe.sourcePos2D
+                    del s.nirs[0].probe.detectorPos2D
+                    if VERBOSE:
+                        print('Deleted source and detector 2D positions from probe:')
+                        print(s.nirs[0].probe)
+                    result = s.validate()
+                    if VERBOSE:
+                        result.display(severity=3)
+                    self.assertFalse(result[probloc + '/sourcePos2D'].name == 'REQUIRED_DATASET_MISSING', msg='REQUIRED_DATASET_MISSING not expected')
+                    self.assertFalse(result[probloc + '/detectorPos2D'].name == 'REQUIRED_DATASET_MISSING', msg='REQUIRED_DATASET_MISSING not expected')
+                    self.assertTrue(result[probloc + '/sourcePos2D'].name == 'OPTIONAL_DATASET_MISSING', msg='OPTIONAL_DATASET_MISSING expected')
+                    self.assertTrue(result[probloc + '/detectorPos2D'].name == 'OPTIONAL_DATASET_MISSING', msg='OPTIONAL_DATASET_MISSING expected')
+                    newname = file.split('.')[0] + '_optional_pos_missing'
+                    newname2 = file.split('.')[0] + '_required_pos_missing'
+                    s.save(newname)
+                    del s.nirs[0].probe.sourcePos3D
+                    del s.nirs[0].probe.detectorPos3D
+                    s.save(newname2)
 
-    #             result = validateSnirf(newname)
-    #             if VERBOSE:
-    #                 result.display(severity=3)
-    #             self.assertFalse(result[probloc + '/sourcePos2D'].name == 'REQUIRED_DATASET_MISSING', msg='REQUIRED_DATASET_MISSING not expected')
-    #             self.assertFalse(result[probloc + '/detectorPos2D'].name == 'REQUIRED_DATASET_MISSING', msg='REQUIRED_DATASET_MISSING not expected')
-    #             self.assertTrue(result[probloc + '/sourcePos2D'].name == 'OPTIONAL_DATASET_MISSING', msg='OPTIONAL_DATASET_MISSING expected')
-    #             self.assertTrue(result[probloc + '/detectorPos2D'].name == 'OPTIONAL_DATASET_MISSING', msg='OPTIONAL_DATASET_MISSING expected')
-    #             result = validateSnirf(newname2)
-    #             if VERBOSE:
-    #                 print('Deleted source and detector 2D and 3D positions from probe:')
-    #                 result.display(severity=3)
-    #             self.assertTrue(result[probloc + '/sourcePos2D'].name == 'REQUIRED_DATASET_MISSING', msg='REQUIRED_DATASET_MISSING expected')
-    #             self.assertTrue(result[probloc + '/detectorPos2D'].name == 'REQUIRED_DATASET_MISSING', msg='REQUIRED_DATASET_MISSING expected')
-    #             self.assertTrue(result[probloc + '/sourcePos3D'].name == 'REQUIRED_DATASET_MISSING', msg='REQUIRED_DATASET_MISSING expected')
-    #             self.assertTrue(result[probloc + '/detectorPos3D'].name == 'REQUIRED_DATASET_MISSING', msg='REQUIRED_DATASET_MISSING expected')
+                result = validateSnirf(newname)
+                if VERBOSE:
+                    result.display(severity=3)
+                self.assertFalse(result[probloc + '/sourcePos2D'].name == 'REQUIRED_DATASET_MISSING', msg='REQUIRED_DATASET_MISSING not expected')
+                self.assertFalse(result[probloc + '/detectorPos2D'].name == 'REQUIRED_DATASET_MISSING', msg='REQUIRED_DATASET_MISSING not expected')
+                self.assertTrue(result[probloc + '/sourcePos2D'].name == 'OPTIONAL_DATASET_MISSING', msg='OPTIONAL_DATASET_MISSING expected')
+                self.assertTrue(result[probloc + '/detectorPos2D'].name == 'OPTIONAL_DATASET_MISSING', msg='OPTIONAL_DATASET_MISSING expected')
+                result = validateSnirf(newname2)
+                if VERBOSE:
+                    print('Deleted source and detector 2D and 3D positions from probe:')
+                    result.display(severity=3)
+                self.assertTrue(result[probloc + '/sourcePos2D'].name == 'REQUIRED_DATASET_MISSING', msg='REQUIRED_DATASET_MISSING expected')
+                self.assertTrue(result[probloc + '/detectorPos2D'].name == 'REQUIRED_DATASET_MISSING', msg='REQUIRED_DATASET_MISSING expected')
+                self.assertTrue(result[probloc + '/sourcePos3D'].name == 'REQUIRED_DATASET_MISSING', msg='REQUIRED_DATASET_MISSING expected')
+                self.assertTrue(result[probloc + '/detectorPos3D'].name == 'REQUIRED_DATASET_MISSING', msg='REQUIRED_DATASET_MISSING expected')
     
-    # def test_validator_required_group_missing(self):
-    #     for i, mode in enumerate([False, True]):
-    #         for file in self._test_files:
-    #             if VERBOSE:
-    #                 print('Loading', file, 'with dynamic_loading=' + str(mode))
-    #             with Snirf(file, dynamic_loading=mode) as s:
-    #                 del s.nirs[0].probe
-    #                 if VERBOSE:
-    #                     print('Performing local validation on probeless', s)
-    #                 result = s.validate()
-    #                 if VERBOSE:
-    #                     result.display(severity=3)
-    #                 self.assertFalse(result, msg='The Snirf object was incorrectly validated')
-    #                 self.assertTrue('REQUIRED_GROUP_MISSING' in [issue.name for issue in result.errors], msg='REQUIRED_GROUP_MISSING not found')
-    #                 newname = file.split('.')[0] + '_required_group_missing'
-    #                 s.save(newname)
+    def test_validator_required_group_missing(self):
+        for i, mode in enumerate([False, True]):
+            for file in self._test_files:
+                if VERBOSE:
+                    print('Loading', file, 'with dynamic_loading=' + str(mode))
+                with Snirf(file, dynamic_loading=mode) as s:
+                    del s.nirs[0].probe
+                    if VERBOSE:
+                        print('Performing local validation on probeless', s)
+                    result = s.validate()
+                    if VERBOSE:
+                        result.display(severity=3)
+                    self.assertFalse(result, msg='The Snirf object was incorrectly validated')
+                    self.assertTrue('REQUIRED_GROUP_MISSING' in [issue.name for issue in result.errors], msg='REQUIRED_GROUP_MISSING not found')
+                    newname = file.split('.')[0] + '_required_group_missing'
+                    s.save(newname)
 
-    #             if VERBOSE:
-    #                 print('Performing file validation on probeless', newname + '.snirf')
-    #             result = validateSnirf(newname)
-    #             if VERBOSE:
-    #                 result.display(severity=3)
-    #             self.assertFalse(result, msg='The file was incorrectly validated')
-    #             self.assertTrue('REQUIRED_GROUP_MISSING' in [issue.name for issue in result.errors], msg='REQUIRED_GROUP_MISSING not found')
+                if VERBOSE:
+                    print('Performing file validation on probeless', newname + '.snirf')
+                result = validateSnirf(newname)
+                if VERBOSE:
+                    result.display(severity=3)
+                self.assertFalse(result, msg='The file was incorrectly validated')
+                self.assertTrue('REQUIRED_GROUP_MISSING' in [issue.name for issue in result.errors], msg='REQUIRED_GROUP_MISSING not found')
     
-    # def test_validator_required_dataset_missing(self):
-    #     for i, mode in enumerate([False, True]):
-    #         for file in self._test_files[0:1]:
-    #             if VERBOSE:
-    #                 print('Loading', file + '.snirf', 'with dynamic_loading=' + str(mode))
-    #             with Snirf(file, dynamic_loading=mode) as s:
-    #                 del s.formatVersion
-    #                 if VERBOSE:
-    #                     print('Performing local validation on formatVersionless', s)
-    #                 result = s.validate()
-    #                 if VERBOSE:
-    #                     result.display(severity=3)
-    #                 self.assertFalse(result, msg='The Snirf object was incorrectly validated')
-    #                 self.assertTrue('REQUIRED_DATASET_MISSING' in [issue.name for issue in result.errors], msg='REQUIRED_DATASET_MISSING not found')
-    #                 newname = file.split('.')[0] + '_required_dataset_missing'
-    #                 s.save(newname)
+    def test_validator_required_dataset_missing(self):
+        for i, mode in enumerate([False, True]):
+            for file in self._test_files[0:1]:
+                if VERBOSE:
+                    print('Loading', file + '.snirf', 'with dynamic_loading=' + str(mode))
+                with Snirf(file, dynamic_loading=mode) as s:
+                    del s.formatVersion
+                    if VERBOSE:
+                        print('Performing local validation on formatVersionless', s)
+                    result = s.validate()
+                    if VERBOSE:
+                        result.display(severity=3)
+                    self.assertFalse(result, msg='The Snirf object was incorrectly validated')
+                    self.assertTrue('REQUIRED_DATASET_MISSING' in [issue.name for issue in result.errors], msg='REQUIRED_DATASET_MISSING not found')
+                    newname = file.split('.')[0] + '_required_dataset_missing'
+                    s.save(newname)
 
-    #             if VERBOSE:
-    #                 print('Performing file validation on formatVersionless', newname + '.snirf')
-    #             result = validateSnirf(newname)
-    #             if VERBOSE:
-    #                 result.display(severity=3)
-    #             self.assertFalse(result, msg='The file was incorrectly validated')
-    #             self.assertTrue('REQUIRED_DATASET_MISSING' in [issue.name for issue in result.errors], msg='REQUIRED_DATASET_MISSING not found')
+                if VERBOSE:
+                    print('Performing file validation on formatVersionless', newname + '.snirf')
+                result = validateSnirf(newname)
+                if VERBOSE:
+                    result.display(severity=3)
+                self.assertFalse(result, msg='The file was incorrectly validated')
+                self.assertTrue('REQUIRED_DATASET_MISSING' in [issue.name for issue in result.errors], msg='REQUIRED_DATASET_MISSING not found')
     
-    # def test_validator_required_indexed_group_empty(self):
-    #     for i, mode in enumerate([False, True]):
-    #         for file in self._test_files[0:1]:
-    #             if VERBOSE:
-    #                 print('Loading', file + '.snirf', 'with dynamic_loading=' + str(mode))
-    #             s = Snirf(file, dynamic_loading=mode)
-    #             while len(s.nirs[0].data) > 0:
-    #                 del s.nirs[0].data[0]
-    #             if VERBOSE:
-    #                 print('Performing local validation on dataless', s)
-    #             result = s.validate()
-    #             if VERBOSE:
-    #                 result.display(severity=3)
-    #             self.assertFalse(result, msg='The Snirf object was incorrectly validated')
-    #             self.assertTrue('REQUIRED_INDEXED_GROUP_EMPTY' in [issue.name for issue in result.errors], msg='REQUIRED_INDEXED_GROUP_EMPTY not found')
-    #             newname = file.split('.')[0] + '_required_ig_empty'
-    #             s.save(newname)
-    #             s.close()
-    #             if VERBOSE:
-    #                 print('Performing file validation on dataless', newname + '.snirf')
-    #             result = validateSnirf(newname)
-    #             if VERBOSE:
-    #                 result.display(severity=3)
-    #             self.assertFalse(result, msg='The file was incorrectly validated')
-    #             self.assertTrue('REQUIRED_INDEXED_GROUP_EMPTY' in [issue.name for issue in result.errors], msg='REQUIRED_INDEXED_GROUP_EMPTY not found')
+    def test_validator_required_indexed_group_empty(self):
+        for i, mode in enumerate([False, True]):
+            for file in self._test_files[0:1]:
+                if VERBOSE:
+                    print('Loading', file + '.snirf', 'with dynamic_loading=' + str(mode))
+                s = Snirf(file, dynamic_loading=mode)
+                while len(s.nirs[0].data) > 0:
+                    del s.nirs[0].data[0]
+                if VERBOSE:
+                    print('Performing local validation on dataless', s)
+                result = s.validate()
+                if VERBOSE:
+                    result.display(severity=3)
+                self.assertFalse(result, msg='The Snirf object was incorrectly validated')
+                self.assertTrue('REQUIRED_INDEXED_GROUP_EMPTY' in [issue.name for issue in result.errors], msg='REQUIRED_INDEXED_GROUP_EMPTY not found')
+                newname = file.split('.')[0] + '_required_ig_empty'
+                s.save(newname)
+                s.close()
+                if VERBOSE:
+                    print('Performing file validation on dataless', newname + '.snirf')
+                result = validateSnirf(newname)
+                if VERBOSE:
+                    result.display(severity=3)
+                self.assertFalse(result, msg='The file was incorrectly validated')
+                self.assertTrue('REQUIRED_INDEXED_GROUP_EMPTY' in [issue.name for issue in result.errors], msg='REQUIRED_INDEXED_GROUP_EMPTY not found')
     
-    # def test_validator_invalid_measurement_list(self):
-    #     for i, mode in enumerate([False, True]):
-    #         for file in self._test_files[0:1]:
-    #             if VERBOSE:
-    #                 print('Loading', file + '.snirf', 'with dynamic_loading=' + str(mode))
-    #             s = Snirf(file, dynamic_loading=mode)
-    #             s.nirs[0].data[0].measurementList.appendGroup()  # Add extra ml
-    #             if VERBOSE:
-    #                 print('Performing local validation on invalid ml', s)
-    #             result = s.validate()
-    #             if VERBOSE:
-    #                 result.display(severity=3)
-    #             self.assertFalse(result, msg='The Snirf object was incorrectly validated')
-    #             self.assertTrue('INVALID_MEASUREMENTLIST' in [issue.name for issue in result.errors], msg='INVALID_MEASUREMENTLIST not found')
-    #             newname = file.split('.')[0] + '_invalid_ml'
-    #             s.save(newname)
-    #             s.close()
-    #             if VERBOSE:
-    #                 print('Performing file validation on invalid ml', newname + '.snirf')
-    #             result = validateSnirf(newname)
-    #             if VERBOSE:
-    #                 result.display(severity=3)
-    #             self.assertFalse(result, msg='The file was incorrectly validated')
-    #             self.assertTrue('INVALID_MEASUREMENTLIST' in [issue.name for issue in result.errors], msg='INVALID_MEASUREMENTLIST not found')
+    def test_validator_invalid_measurement_list(self):
+        for i, mode in enumerate([False, True]):
+            for file in self._test_files[0:1]:
+                if VERBOSE:
+                    print('Loading', file + '.snirf', 'with dynamic_loading=' + str(mode))
+                s = Snirf(file, dynamic_loading=mode)
+                s.nirs[0].data[0].measurementList.appendGroup()  # Add extra ml
+                if VERBOSE:
+                    print('Performing local validation on invalid ml', s)
+                result = s.validate()
+                if VERBOSE:
+                    result.display(severity=3)
+                self.assertFalse(result, msg='The Snirf object was incorrectly validated')
+                self.assertTrue('INVALID_MEASUREMENTLIST' in [issue.name for issue in result.errors], msg='INVALID_MEASUREMENTLIST not found')
+                newname = file.split('.')[0] + '_invalid_ml'
+                s.save(newname)
+                s.close()
+                if VERBOSE:
+                    print('Performing file validation on invalid ml', newname + '.snirf')
+                result = validateSnirf(newname)
+                if VERBOSE:
+                    result.display(severity=3)
+                self.assertFalse(result, msg='The file was incorrectly validated')
+                self.assertTrue('INVALID_MEASUREMENTLIST' in [issue.name for issue in result.errors], msg='INVALID_MEASUREMENTLIST not found')
     
-    # def test_edit_probe_group(self):
-    #     """
-    #     Edit some probe Group. Confirm they can be saved using save functions on
-    #     the Snirf object and just the Group
-    #     """
-    #     for i, mode in enumerate([False, True]):
-    #         for file in self._test_files:
-    #             if VERBOSE:
-    #                 print('Loading', file + '.snirf', 'with dynamic_loading=' + str(mode))
-    #             s = Snirf(file, dynamic_loading=mode)
+    def test_edit_probe_group(self):
+        """
+        Edit some probe Group. Confirm they can be saved using save functions on
+        the Snirf object and just the Group
+        """
+        for i, mode in enumerate([False, True]):
+            for file in self._test_files:
+                if VERBOSE:
+                    print('Loading', file + '.snirf', 'with dynamic_loading=' + str(mode))
+                s = Snirf(file, dynamic_loading=mode)
                 
-    #             group_save_file = file.split('.')[0] + '_edited_group_save.snirf'
-    #             if VERBOSE:
-    #                 print('Creating working copy for Group-level save', group_save_file)
-    #             s.save(group_save_file)
+                group_save_file = file.split('.')[0] + '_edited_group_save.snirf'
+                if VERBOSE:
+                    print('Creating working copy for Group-level save', group_save_file)
+                s.save(group_save_file)
                 
-    #             desired_probe_sourcelabels = ['S1_A', 'S2_A', 'S3_A', 'S4_A',
-    #                                           'S5_A', 'S6_A', 'S7_A', 'S8_A',
-    #                                           'S9_A', 'S10_A', 'S11_A', 'S12_A',
-    #                                           'S13_A', 'S14_A', 'S15_A']
-    #             desired_probe_uselocalindex = 1
-    #             desired_probe_sourcepos3d = np.random.random([31, 3])
+                desired_probe_sourcelabels = ['S1_A', 'S2_A', 'S3_A', 'S4_A',
+                                              'S5_A', 'S6_A', 'S7_A', 'S8_A',
+                                              'S9_A', 'S10_A', 'S11_A', 'S12_A',
+                                              'S13_A', 'S14_A', 'S15_A']
+                desired_probe_uselocalindex = 1
+                desired_probe_sourcepos3d = np.random.random([31, 3])
             
-    #             s.nirs[0].probe.sourceLabels = desired_probe_sourcelabels
-    #             s.nirs[0].probe.useLocalIndex = desired_probe_uselocalindex
-    #             s.nirs[0].probe.sourcePos3D = desired_probe_sourcepos3d
+                s.nirs[0].probe.sourceLabels = desired_probe_sourcelabels
+                s.nirs[0].probe.useLocalIndex = desired_probe_uselocalindex
+                s.nirs[0].probe.sourcePos3D = desired_probe_sourcepos3d
                 
-    #             snirf_save_file = file.split('.')[0] + '_edited_snirf_save.snirf'
-    #             print('Saving edited file to', snirf_save_file)
-    #             s.save(snirf_save_file)
+                snirf_save_file = file.split('.')[0] + '_edited_snirf_save.snirf'
+                print('Saving edited file to', snirf_save_file)
+                s.save(snirf_save_file)
                 
-    #             print('Saving edited Probe group to', group_save_file)
-    #             s.nirs[0].probe.save(group_save_file)
+                print('Saving edited Probe group to', group_save_file)
+                s.nirs[0].probe.save(group_save_file)
                 
-    #             s.close()
+                s.close()
                 
-    #             for edited_filename in [snirf_save_file, group_save_file]:
+                for edited_filename in [snirf_save_file, group_save_file]:
                     
-    #                 print('Loading', edited_filename, 'for comparison with dynamic_loading=' + str(mode))
-    #                 s2 = Snirf(edited_filename, dynamic_loading=mode)
+                    print('Loading', edited_filename, 'for comparison with dynamic_loading=' + str(mode))
+                    s2 = Snirf(edited_filename, dynamic_loading=mode)
                     
-    #                 self.assertTrue((s2.nirs[0].probe.sourceLabels == desired_probe_sourcelabels).all(), msg='Failed to edit sourceLabels properly in ' + edited_filename) 
-    #                 self.assertTrue(s2.nirs[0].probe.useLocalIndex == desired_probe_uselocalindex, msg='Failed to edit sourceLabels properly in ' + edited_filename) 
-    #                 self.assertTrue((s2.nirs[0].probe.sourcePos3D == desired_probe_sourcepos3d).all(), msg='Failed to edit sourceLabels properly in ' + edited_filename) 
+                    self.assertTrue((s2.nirs[0].probe.sourceLabels == desired_probe_sourcelabels).all(), msg='Failed to edit sourceLabels properly in ' + edited_filename) 
+                    self.assertTrue(s2.nirs[0].probe.useLocalIndex == desired_probe_uselocalindex, msg='Failed to edit sourceLabels properly in ' + edited_filename) 
+                    self.assertTrue((s2.nirs[0].probe.sourcePos3D == desired_probe_sourcepos3d).all(), msg='Failed to edit sourceLabels properly in ' + edited_filename) 
                     
-    #                 s2.close()
+                    s2.close()
                 
-    # def test_add_remove_stim(self):
-    #     """
-    #     Use the interface to add a stim group. Verify it is added to a reloaded file.
-    #     """
-    #     for i, mode in enumerate([False, True]):
-    #         for file in self._test_files:
-    #             file = self._test_files[0].split('.')[0]
-    #             if VERBOSE:
-    #                 print('Loading', file + '.snirf', 'with dynamic_loading=' + str(mode))
-    #             s = Snirf(file, dynamic_loading=mode)
-    #             nstim = len(s.nirs[0].stim)
-    #             s.nirs[0].stim.appendGroup()
-    #             if VERBOSE:
-    #                 print('Adding stim to', file + '.stim')
-    #             self.assertTrue(len(s.nirs[0].stim) == nstim + 1, msg='IndexedGroup.appendGroup() failed')
-    #             s.nirs[0].stim[-1].data = [[0, 10, 1], [5, 10, 1]]
-    #             s.nirs[0].stim[-1].dataLabels = ['Onset', 'Duration', 'Amplitude']
-    #             s.nirs[0].stim[-1].name = 'newCondition'
-    #             newfile = file + '_added_stim_' + str(i)
-    #             if VERBOSE:
-    #                 print('Save As edited file to', newfile + '.stim')
-    #             s.save(newfile)
-    #             s.close()
-    #             s2 = Snirf(newfile, dynamic_loading=mode)
-    #             self.assertTrue(len(s2.nirs[0].stim) == nstim + 1, msg='The new stim Group was not Saved As to ' + newfile + '.snirf')
-    #             if VERBOSE:
-    #                 print('Adding another stim group to', newfile + '.snirf and reloading it')
-    #             s2.nirs[0].stim.appendGroup()
-    #             s2.nirs[0].stim[-1].data = [[0, 10, 1], [5, 10, 1]]
-    #             s2.nirs[0].stim[-1].dataLabels = ['Onset', 'Duration', 'Amplitude']
-    #             s2.nirs[0].stim[-1].name = 'newCondition2'
-    #             s2.save()
-    #             s2.close()
-    #             s3 = Snirf(newfile, dynamic_loading=mode)
-    #             self.assertTrue(len(s3.nirs[0].stim) == nstim + 2, msg='The new stim Group was not Saved to ' + newfile + '.snirf')
-    #             if VERBOSE:
-    #                 print('Removing all but one stim Group from', newfile + '.snirf and reloading it')
-    #             name_to_keep = s3.nirs[0].stim[0].name
-    #             while s3.nirs[0].stim[-1].name != name_to_keep:
-    #                 if VERBOSE:
-    #                     print('Deleting stim Group with name:', s3.nirs[0].stim[-1].name)
-    #                 del s3.nirs[0].stim[-1]
-    #             s3.close()
-    #             s4 = Snirf(newfile, dynamic_loading=mode)
-    #             self.assertTrue(s4.nirs[0].stim[0].name == name_to_keep, msg='Failed to remove desired stim Groups from ' + newfile + '.snirf') 
-    #             s4.close()
+    def test_add_remove_stim(self):
+        """
+        Use the interface to add a stim group. Verify it is added to a reloaded file.
+        """
+        for i, mode in enumerate([False, True]):
+            for file in self._test_files:
+                file = self._test_files[0].split('.')[0]
+                if VERBOSE:
+                    print('Loading', file + '.snirf', 'with dynamic_loading=' + str(mode))
+                s = Snirf(file, dynamic_loading=mode)
+                nstim = len(s.nirs[0].stim)
+                s.nirs[0].stim.appendGroup()
+                if VERBOSE:
+                    print('Adding stim to', file + '.stim')
+                self.assertTrue(len(s.nirs[0].stim) == nstim + 1, msg='IndexedGroup.appendGroup() failed')
+                s.nirs[0].stim[-1].data = [[0, 10, 1], [5, 10, 1]]
+                s.nirs[0].stim[-1].dataLabels = ['Onset', 'Duration', 'Amplitude']
+                s.nirs[0].stim[-1].name = 'newCondition'
+                newfile = file + '_added_stim_' + str(i)
+                if VERBOSE:
+                    print('Save As edited file to', newfile + '.stim')
+                s.save(newfile)
+                s.close()
+                s2 = Snirf(newfile, dynamic_loading=mode)
+                self.assertTrue(len(s2.nirs[0].stim) == nstim + 1, msg='The new stim Group was not Saved As to ' + newfile + '.snirf')
+                if VERBOSE:
+                    print('Adding another stim group to', newfile + '.snirf and reloading it')
+                s2.nirs[0].stim.appendGroup()
+                s2.nirs[0].stim[-1].data = [[0, 10, 1], [5, 10, 1]]
+                s2.nirs[0].stim[-1].dataLabels = ['Onset', 'Duration', 'Amplitude']
+                s2.nirs[0].stim[-1].name = 'newCondition2'
+                s2.save()
+                s2.close()
+                s3 = Snirf(newfile, dynamic_loading=mode)
+                self.assertTrue(len(s3.nirs[0].stim) == nstim + 2, msg='The new stim Group was not Saved to ' + newfile + '.snirf')
+                if VERBOSE:
+                    print('Removing all but one stim Group from', newfile + '.snirf and reloading it')
+                name_to_keep = s3.nirs[0].stim[0].name
+                while s3.nirs[0].stim[-1].name != name_to_keep:
+                    if VERBOSE:
+                        print('Deleting stim Group with name:', s3.nirs[0].stim[-1].name)
+                    del s3.nirs[0].stim[-1]
+                s3.close()
+                s4 = Snirf(newfile, dynamic_loading=mode)
+                self.assertTrue(s4.nirs[0].stim[0].name == name_to_keep, msg='Failed to remove desired stim Groups from ' + newfile + '.snirf') 
+                s4.close()
         
     
-    # def test_loading_saving(self):
-    #     """
-    #     Loads all files in filenames using Snirf in both dynamic and static mode, 
-    #     saves them to a new file, compares the results using h5py and a naive cast.
-    #     If returns True, all specified datasets are equivalent in the resaved files.
-    #     """
-    #     for i, mode in enumerate([False, True]):
-    #         s1_paths = []
-    #         s2_paths = []
-    #         start = time.time()
-    #         for file in self._test_files:
-    #             snirf = Snirf(file, dynamic_loading=mode)
-    #             s1_paths.append(file)
-    #             new_path = file.split('.')[0] + '_unedited.snirf'
-    #             snirf.save(new_path)
-    #             s2_paths.append(new_path)
-    #             snirf.close()
-    #         if VERBOSE:
-    #             print('Read and rewrote', len(self._test_files), 'SNIRF files in',
-    #             str(time.time() - start)[0:6], 'seconds with dynamic_loading =', mode)
+    def test_loading_saving(self):
+        """
+        Loads all files in filenames using Snirf in both dynamic and static mode, 
+        saves them to a new file, compares the results using h5py and a naive cast.
+        If returns True, all specified datasets are equivalent in the resaved files.
+        """
+        for i, mode in enumerate([False, True]):
+            s1_paths = []
+            s2_paths = []
+            start = time.time()
+            for file in self._test_files:
+                snirf = Snirf(file, dynamic_loading=mode)
+                s1_paths.append(file)
+                new_path = file.split('.')[0] + '_unedited.snirf'
+                snirf.save(new_path)
+                s2_paths.append(new_path)
+                snirf.close()
+            if VERBOSE:
+                print('Read and rewrote', len(self._test_files), 'SNIRF files in',
+                str(time.time() - start)[0:6], 'seconds with dynamic_loading =', mode)
             
-    #         for (fname1, fname2) in zip(s1_paths, s2_paths):
-    #             dataset_equal_test(self, fname1, fname2)
+            for (fname1, fname2) in zip(s1_paths, s2_paths):
+                dataset_equal_test(self, fname1, fname2)
     
 
-    # def test_dynamic(self):
-    #     """
-    #     Confirm that dynamically loaded files have smaller memory footprints
-    #     and faster load-times than non dynamically loaded files
-    #     """
-    #     times = [-1, -1]
-    #     sizes = [-1, -1]
-    #     for i, mode in enumerate([False, True]):
-    #         s = []
-    #         start = time.time()
-    #         for file in self._test_files:
-    #             s.append(Snirf(file, dynamic_loading=mode))
-    #         times[i] = time.time() - start
-    #         sizes[i] = getsize(s)
-    #         for snirf in s:
-    #             snirf.close()
-    #         if VERBOSE:
-    #             print('Loaded', len(self._test_files), 'SNIRF files of total size', sizes[i],
-    #                   'in', str(times[i])[0:6], 'seconds with dynamic_loading =', mode)
-    #     self.assertTrue(times[1] < times[0], msg='Dynamically-loaded files not loaded faster')
-    #     self.assertTrue(sizes[1] < sizes[0], msg='Dynamically-loaded files not smaller in memory')
+    def test_dynamic(self):
+        """
+        Confirm that dynamically loaded files have smaller memory footprints
+        and faster load-times than non dynamically loaded files
+        """
+        times = [-1, -1]
+        sizes = [-1, -1]
+        for i, mode in enumerate([False, True]):
+            s = []
+            start = time.time()
+            for file in self._test_files:
+                s.append(Snirf(file, dynamic_loading=mode))
+            times[i] = time.time() - start
+            sizes[i] = getsize(s)
+            for snirf in s:
+                snirf.close()
+            if VERBOSE:
+                print('Loaded', len(self._test_files), 'SNIRF files of total size', sizes[i],
+                      'in', str(times[i])[0:6], 'seconds with dynamic_loading =', mode)
+        self.assertTrue(times[1] < times[0], msg='Dynamically-loaded files not loaded faster')
+        self.assertTrue(sizes[1] < sizes[0], msg='Dynamically-loaded files not smaller in memory')
             
         
     def setUp(self):        
