@@ -13,6 +13,8 @@ Generates SNIRF interface and validator from the summary table of the specificat
 hosted at SPEC_SRC.
 """
 
+LIB_VERSION = '0.5.0'  # Version for this script
+
 if __name__ == '__main__':
     
     cwd = os.path.abspath(os.getcwd())
@@ -30,7 +32,6 @@ if __name__ == '__main__':
     from data import *
     
     sys.path.append(cwd)
-    from pysnirf2.__version__ import __version__ as LIB_VERSION
     
     print('-------------------------------------')
     print('pysnirf2 generation script v' + LIB_VERSION)
