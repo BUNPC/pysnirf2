@@ -1,3 +1,6 @@
+print('Crashed on purpose')
+import ModuleDoesNotExist
+
 import unittest
 import pysnirf2
 from pysnirf2 import Snirf, validateSnirf
