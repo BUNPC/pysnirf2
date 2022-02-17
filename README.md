@@ -19,6 +19,8 @@ pysnirf2 requires Python > 3.6
 
 # Features
 
+The library generated via metaprogramming, but the resulting classes explicitly implement each and every specified SNIRF field so as to provide an extensible object-oriented foundation for SNIRF applications.
+
 ## Open a SNIRF file
 `Snirf(<path>)` opens a SNIRF file at `<path>` _or creates a new one if it doesn't exist._
 ```python
