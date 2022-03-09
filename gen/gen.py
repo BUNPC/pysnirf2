@@ -13,7 +13,7 @@ Generates SNIRF interface and validator from the summary table of the specificat
 hosted at SPEC_SRC.
 """
 
-LIB_VERSION = '0.5.0'  # Version for this script
+LIB_VERSION = '0.5.1'  # Version for this script
 
 if __name__ == '__main__':
     
@@ -29,7 +29,10 @@ if __name__ == '__main__':
         pass
     open(output_path, 'w')
     
-    from data import *
+    try:
+        from data import *
+    except ModuleNotFoundError:
+        from gen.data import *
     
     sys.path.append(cwd)
     
@@ -47,7 +50,11 @@ if __name__ == '__main__':
         print('Attempting to retrieve spec from', SPEC_SRC, '...')
     
         # Retrieve the SNIRF specification from GitHub and parse it for the summary table
-        spec = requests.get(SPEC_SRC)
+        
+        try:
+            spec = requests.get(SPEC_SRC)
+        except (ConnectionError, requests.exceptions.ConnectionError):
+            sys.exit('No internet connection and no downloaded specification document. pysnirf2 generation aborted.')
         
         if spec.text == '404: Not Found':
             print(spec.text)
