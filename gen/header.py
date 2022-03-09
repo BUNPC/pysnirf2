@@ -812,8 +812,13 @@ class Group(ABC):
         else:
             if self._h != {}:
                 file = self._h.file
-            self._cfg.logger.info('Group-level save of %s in %s', self.location, file)
-            self._save(file)
+                if file.mode not in ['r+', 'w']:
+                    raise ValueError('{} not writeable.', file)  # TODO raise UnsupportedOperation
+                self._save(file)
+                self._cfg.logger.info('IndexedGroup-level save of %s at %s in %s', self.__class__.__name__,
+                          self._parent.location, self.filename)
+            else:
+                raise ValueError('File not saved. No file linked to {} instance. Call save with arguments to write to a file.'.format(self.__class__.__name__))
 
     @property
     def filename(self):
@@ -1026,9 +1031,13 @@ class IndexedGroup(MutableSequence, ABC):
         else:
             if self._parent._h != {}:
                 file = self._parent._h.file
-            self._save(file)
-            self._cfg.logger.info('IndexedGroup-level save of %s at %s in %s', self.__class__.__name__,
-                      self._parent.location, self.filename)
+                if file.mode not in ['r+', 'w']:
+                    raise ValueError('{} not writeable.', file)  # TODO raise UnsupportedOperation
+                self._save(file)
+                self._cfg.logger.info('IndexedGroup-level save of %s at %s in %s', self.__class__.__name__,
+                          self._parent.location, self.filename)
+            else:
+                raise ValueError('File not saved. No file linked to {} instance. Call save with arguments to write to a file.'.format(self.__class__.__name__))
 
     def appendGroup(self):
         """Insert a new Group at the end of the Indexed Group.
