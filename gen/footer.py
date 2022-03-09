@@ -124,7 +124,7 @@ class Snirf(Snirf):
         """Save a SNIRF file to disk.
 
         Args:
-            args (str or h5py.File): A path to a closed or nonexistant SNIRF file on disk or an open `h5py.File` instance
+            args (str or h5py.File or file-like): A path to a closed or nonexistant SNIRF file on disk or an open `h5py.File` instance
 
         Examples:
             save can overwrite the current contents of a Snirf file:
@@ -132,6 +132,9 @@ class Snirf(Snirf):
 
             or take a new filename to write the file there:
             >>> mysnirf.save(<new destination>)
+            
+            or write to an IO stream:
+            >>> mysnirf.save(<io.BytesIO stream>)
         """
         if len(args) > 0 and type(args[0]) is str:
             path = args[0]
@@ -140,6 +143,10 @@ class Snirf(Snirf):
             with h5py.File(path, 'w') as new_file:
                 self._save(new_file)
                 self._cfg.logger.info('Saved Snirf file at %s to copy at %s', self.filename, path)
+        elif len(args) > 0 and _isfilelike(args[0]):
+            with h5py.File(args[0], 'w') as stream:
+                self._save(stream)
+                self._cfg.logger.info('Saved Snirf file to filelike object')
         else:
             self._save(self._h.file)
 
