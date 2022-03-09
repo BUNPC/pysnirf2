@@ -11,7 +11,8 @@ Example:
     Load a file::
 
         >>> from pysnirf2 import Snirf
-        >>> s = Snirf(<filename>)
+        >>> with Snirf(<filename>) as s:
+            ...
 
 Maintained by the Boston University Neurophotonics Center
 """
@@ -29,6 +30,8 @@ import termcolor
 import colorama
 from typing import Tuple
 import time
+import io
+import json
 
 try:
     from pysnirf2.__version__ import __version__ as __version__
@@ -56,6 +59,15 @@ _printb = lambda x: termcolor.cprint(x, 'blue')
 _printm = lambda x: termcolor.cprint(x, 'magenta')
 
 
+def _isfilelike(o: object) -> bool:
+    """Returns True if object is an instance of a file-like object like `io.IOBase` or `io.BufferedIOBase`."""
+    return any([        
+                isinstance(o, io.TextIOBase),
+                isinstance(o, io.BufferedIOBase),
+                isinstance(o, io.RawIOBase),
+                isinstance(o, io.IOBase)
+            ])
+
 _loggers = {}
 def _create_logger(name, log_file, level=logging.INFO):
     if name in _loggers.keys():
@@ -73,12 +85,14 @@ def _create_logger(name, log_file, level=logging.INFO):
 _logfile = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'pysnirf2.log')
 
 if os.path.exists(_logfile):
-    if (time.time() - os.path.getctime(_logfile)) / 86400 > 10:  # Keep logs for only 10 days
-        try:
+    try:
+        if (time.time() - os.path.getctime(_logfile)) / 86400 > 10:  # Keep logs for only 10 days
             os.remove(_logfile)
-        except (FileNotFoundError, PermissionError):
-            pass
-_logger = _create_logger('pysnirf2', _logfile)
+        _logger = _create_logger('pysnirf2', _logfile)
+    except (FileNotFoundError, PermissionError):
+        _logger = _create_logger('pysnirf2', os.path.join(os.getcwd(), 'pysnirf2.log'))
+else:
+    _logger = _create_logger('pysnirf2', os.path.join(os.getcwd(), 'pysnirf2.log'))
 
 # -- methods to cast data prior to writing to and after reading from h5py interfaces------
 
@@ -431,6 +445,16 @@ class ValidationIssue:
         s += str(self.severity).ljust(4) + _SEVERITY_LEVELS[self.severity]
         s += '\nname:     ' + str(self.id).ljust(4) + self.name +  '\nmessage:  ' + self.message
         return s
+    
+    def dictize(self):
+        """Return dictionary representation of Issue."""
+        return {
+                'location': self.location,
+                'name': self.name,
+                'id': self.id,
+                'severity': self.severity,
+                'message': self.message
+            }
 
 
 class ValidationResult:
@@ -503,6 +527,15 @@ class ValidationResult:
             if issue.severity == 1:
                 info.append(issue)
         return info
+
+    def serialize(self, indent=4):
+        """Render serialized JSON ValidationResult."""
+        d = {}
+        for issue in self._issues:
+            d[issue.location] = issue.dictize()
+        return json.dumps(d, indent=indent)
+            
+        
 
     def display(self, severity=2):
         """Reads the contents of an `h5py.Dataset` to an array of `dtype=str`.
@@ -772,6 +805,10 @@ class Group(ABC):
                 self._cfg.logger.info('Group-level save of %s in %s to new file %s', self.location, self.filename, file)
                 self._save(file)
                 file.close()
+            elif _isfilelike(args[0]):
+                self._cfg.logger.info('Group-level write of %s in %s to filelike object', self.location, self.filename)
+                file = h5py.File(args[0], 'w')
+                self._save(file)
         else:
             if self._h != {}:
                 file = self._h.file
