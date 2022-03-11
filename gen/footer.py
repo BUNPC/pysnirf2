@@ -41,7 +41,7 @@ class StimElement(StimElement):
         
         if all(attr is not None for attr in [self.data, self.dataLabels]):
             try:
-                if np.shape(self.data)[1] != len(self.dataLabels):
+                if np.shape(self.data)[1] != self.dataLabels.size:
                     result._add(self.location + '/dataLabels', 'INVALID_STIM_DATALABELS')        
             except IndexError:  # If data doesn't have columns
                 result._add(self.location + '/data', 'INVALID_DATASET_SHAPE')    
@@ -57,7 +57,7 @@ class AuxElement(AuxElement):
         super()._validate(result)
         
         if all(attr is not None for attr in [self.time, self.dataTimeSeries]):
-            if len(self.time) != len(self.dataTimeSeries):
+            if self.time.size != self.dataTimeSeries.size:
                 result._add(self.location + '/time', 'INVALID_TIME')
 
 
@@ -71,7 +71,7 @@ class DataElement(DataElement):
         super()._validate(result)  
         
         if all(attr is not None for attr in [self.time, self.dataTimeSeries]):
-            if len(self.time) != np.shape(self.dataTimeSeries)[0]:
+            if self.time.size != np.shape(self.dataTimeSeries)[0]:
                 result._add(self.location + '/time', 'INVALID_TIME')
             
             if len(self.measurementList) != np.shape(self.dataTimeSeries)[1]:
@@ -124,7 +124,7 @@ class Snirf(Snirf):
         """Save a SNIRF file to disk.
 
         Args:
-            args (str or h5py.File): A path to a closed or nonexistant SNIRF file on disk or an open `h5py.File` instance
+            args (str or h5py.File or file-like): A path to a closed or nonexistant SNIRF file on disk or an open `h5py.File` instance
 
         Examples:
             save can overwrite the current contents of a Snirf file:
@@ -132,6 +132,9 @@ class Snirf(Snirf):
 
             or take a new filename to write the file there:
             >>> mysnirf.save(<new destination>)
+            
+            or write to an IO stream:
+            >>> mysnirf.save(<io.BytesIO stream>)
         """
         if len(args) > 0 and type(args[0]) is str:
             path = args[0]
@@ -140,6 +143,10 @@ class Snirf(Snirf):
             with h5py.File(path, 'w') as new_file:
                 self._save(new_file)
                 self._cfg.logger.info('Saved Snirf file at %s to copy at %s', self.filename, path)
+        elif len(args) > 0 and _isfilelike(args[0]):
+            with h5py.File(args[0], 'w') as stream:
+                self._save(stream)
+                self._cfg.logger.info('Saved Snirf file to filelike object')
         else:
             self._save(self._h.file)
 
@@ -198,15 +205,15 @@ class Snirf(Snirf):
         for nirs in self.nirs:
             if type(nirs.probe) not in [type(None), type(_AbsentGroup)]:
                 if nirs.probe.sourceLabels is not None:
-                    lenSourceLabels = len(nirs.probe.sourceLabels)
+                    lenSourceLabels = nirs.probe.sourceLabels.size
                 else:
                     lenSourceLabels = 0
                 if nirs.probe.detectorLabels is not None:
-                    lenDetectorLabels = len(nirs.probe.detectorLabels)
+                    lenDetectorLabels = nirs.probe.detectorLabels.size
                 else:
                     lenDetectorLabels = 0
                 if nirs.probe.wavelengths is not None:
-                    lenWavelengths = len(nirs.probe.wavelengths)
+                    lenWavelengths = nirs.probe.wavelengths.size
                 else:
                     lenWavelengths = 0
                 for data in nirs.data:

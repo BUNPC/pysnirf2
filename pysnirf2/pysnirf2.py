@@ -11,7 +11,8 @@ Example:
     Load a file::
 
         >>> from pysnirf2 import Snirf
-        >>> s = Snirf(<filename>)
+        >>> with Snirf(<filename>) as s:
+            ...
 
 Maintained by the Boston University Neurophotonics Center
 """
@@ -29,6 +30,8 @@ import termcolor
 import colorama
 from typing import Tuple
 import time
+import io
+import json
 
 try:
     from pysnirf2.__version__ import __version__ as __version__
@@ -56,6 +59,15 @@ _printb = lambda x: termcolor.cprint(x, 'blue')
 _printm = lambda x: termcolor.cprint(x, 'magenta')
 
 
+def _isfilelike(o: object) -> bool:
+    """Returns True if object is an instance of a file-like object like `io.IOBase` or `io.BufferedIOBase`."""
+    return any([        
+                isinstance(o, io.TextIOBase),
+                isinstance(o, io.BufferedIOBase),
+                isinstance(o, io.RawIOBase),
+                isinstance(o, io.IOBase)
+            ])
+
 _loggers = {}
 def _create_logger(name, log_file, level=logging.INFO):
     if name in _loggers.keys():
@@ -73,12 +85,14 @@ def _create_logger(name, log_file, level=logging.INFO):
 _logfile = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'pysnirf2.log')
 
 if os.path.exists(_logfile):
-    if (time.time() - os.path.getctime(_logfile)) / 86400 > 10:  # Keep logs for only 10 days
-        try:
+    try:
+        if (time.time() - os.path.getctime(_logfile)) / 86400 > 10:  # Keep logs for only 10 days
             os.remove(_logfile)
-        except (FileNotFoundError, PermissionError):
-            pass
-_logger = _create_logger('pysnirf2', _logfile)
+        _logger = _create_logger('pysnirf2', _logfile)
+    except (FileNotFoundError, PermissionError):
+        _logger = _create_logger('pysnirf2', os.path.join(os.getcwd(), 'pysnirf2.log'))
+else:
+    _logger = _create_logger('pysnirf2', os.path.join(os.getcwd(), 'pysnirf2.log'))
 
 # -- methods to cast data prior to writing to and after reading from h5py interfaces------
 
@@ -431,6 +445,16 @@ class ValidationIssue:
         s += str(self.severity).ljust(4) + _SEVERITY_LEVELS[self.severity]
         s += '\nname:     ' + str(self.id).ljust(4) + self.name +  '\nmessage:  ' + self.message
         return s
+    
+    def dictize(self):
+        """Return dictionary representation of Issue."""
+        return {
+                'location': self.location,
+                'name': self.name,
+                'id': self.id,
+                'severity': self.severity,
+                'message': self.message
+            }
 
 
 class ValidationResult:
@@ -503,6 +527,15 @@ class ValidationResult:
             if issue.severity == 1:
                 info.append(issue)
         return info
+
+    def serialize(self, indent=4):
+        """Render serialized JSON ValidationResult."""
+        d = {}
+        for issue in self._issues:
+            d[issue.location] = issue.dictize()
+        return json.dumps(d, indent=indent)
+            
+        
 
     def display(self, severity=2):
         """Reads the contents of an `h5py.Dataset` to an array of `dtype=str`.
@@ -772,11 +805,20 @@ class Group(ABC):
                 self._cfg.logger.info('Group-level save of %s in %s to new file %s', self.location, self.filename, file)
                 self._save(file)
                 file.close()
+            elif _isfilelike(args[0]):
+                self._cfg.logger.info('Group-level write of %s in %s to filelike object', self.location, self.filename)
+                file = h5py.File(args[0], 'w')
+                self._save(file)
         else:
             if self._h != {}:
                 file = self._h.file
-            self._cfg.logger.info('Group-level save of %s in %s', self.location, file)
-            self._save(file)
+                if file.mode not in ['r+', 'w']:
+                    raise ValueError('{} not writeable.', file)  # TODO raise UnsupportedOperation
+                self._save(file)
+                self._cfg.logger.info('IndexedGroup-level save of %s at %s in %s', self.__class__.__name__,
+                          self._parent.location, self.filename)
+            else:
+                raise ValueError('File not saved. No file linked to {} instance. Call save with arguments to write to a file.'.format(self.__class__.__name__))
 
     @property
     def filename(self):
@@ -989,9 +1031,13 @@ class IndexedGroup(MutableSequence, ABC):
         else:
             if self._parent._h != {}:
                 file = self._parent._h.file
-            self._save(file)
-            self._cfg.logger.info('IndexedGroup-level save of %s at %s in %s', self.__class__.__name__,
-                      self._parent.location, self.filename)
+                if file.mode not in ['r+', 'w']:
+                    raise ValueError('{} not writeable.', file)  # TODO raise UnsupportedOperation
+                self._save(file)
+                self._cfg.logger.info('IndexedGroup-level save of %s at %s in %s', self.__class__.__name__,
+                          self._parent.location, self.filename)
+            else:
+                raise ValueError('File not saved. No file linked to {} instance. Call save with arguments to write to a file.'.format(self.__class__.__name__))
 
     def appendGroup(self):
         """Insert a new Group at the end of the Indexed Group.
@@ -1104,7 +1150,7 @@ class IndexedGroup(MutableSequence, ABC):
         self._order_names(h=h)  # Enforce order in the group names
 
 
-# generated by sstucker on 2022-02-08
+# generated by sstucker on 2022-03-08
 # version v1.1-development SNIRF specification parsed from https://raw.githubusercontent.com/fNIRS/snirf/master/snirf_specification.md
 
 
@@ -4954,21 +5000,25 @@ class Snirf(Group):
     def __init__(self, *args, dynamic_loading: bool = False, logfile: bool = False):
         self._cfg = SnirfConfig()
         self._cfg.dynamic_loading = dynamic_loading
+        if logfile:
+            self._cfg.logger = _create_logger(path, path.split('.')[0] + '.log')
+        else:
+            self._cfg.logger = _logger  # Use global logger
         if len(args) > 0:
             path = args[0]
             if type(path) is str:
                 if not path.endswith('.snirf'):
                     path = path + '.snirf'
-                if logfile:
-                    self._cfg.logger = _create_logger(path, path.split('.')[0] + '.log')
-                else:
-                    self._cfg.logger = _logger  # Use global logger
                 if os.path.exists(path):
                     self._cfg.logger.info('Loading from file %s', path)
                     self._h = h5py.File(path, 'r+')
                 else:
                     self._cfg.logger.info('Creating new file at %s', path)
                     self._h = h5py.File(path, 'w')
+            elif _isfilelike(args[0]):
+                self._cfg.logger.info('Loading from filelike object')
+                self._h = h5py.File(path, 'r')
+            
             else:
                 raise TypeError(str(path) + ' is not a valid filename')
         else:
@@ -5151,7 +5201,7 @@ class StimElement(StimElement):
         
         if all(attr is not None for attr in [self.data, self.dataLabels]):
             try:
-                if np.shape(self.data)[1] != len(self.dataLabels):
+                if np.shape(self.data)[1] != self.dataLabels.size:
                     result._add(self.location + '/dataLabels', 'INVALID_STIM_DATALABELS')        
             except IndexError:  # If data doesn't have columns
                 result._add(self.location + '/data', 'INVALID_DATASET_SHAPE')    
@@ -5167,7 +5217,7 @@ class AuxElement(AuxElement):
         super()._validate(result)
         
         if all(attr is not None for attr in [self.time, self.dataTimeSeries]):
-            if len(self.time) != len(self.dataTimeSeries):
+            if self.time.size != self.dataTimeSeries.size:
                 result._add(self.location + '/time', 'INVALID_TIME')
 
 
@@ -5181,7 +5231,7 @@ class DataElement(DataElement):
         super()._validate(result)  
         
         if all(attr is not None for attr in [self.time, self.dataTimeSeries]):
-            if len(self.time) != np.shape(self.dataTimeSeries)[0]:
+            if self.time.size != np.shape(self.dataTimeSeries)[0]:
                 result._add(self.location + '/time', 'INVALID_TIME')
             
             if len(self.measurementList) != np.shape(self.dataTimeSeries)[1]:
@@ -5234,7 +5284,7 @@ class Snirf(Snirf):
         """Save a SNIRF file to disk.
 
         Args:
-            args (str or h5py.File): A path to a closed or nonexistant SNIRF file on disk or an open `h5py.File` instance
+            args (str or h5py.File or file-like): A path to a closed or nonexistant SNIRF file on disk or an open `h5py.File` instance
 
         Examples:
             save can overwrite the current contents of a Snirf file:
@@ -5242,6 +5292,9 @@ class Snirf(Snirf):
 
             or take a new filename to write the file there:
             >>> mysnirf.save(<new destination>)
+            
+            or write to an IO stream:
+            >>> mysnirf.save(<io.BytesIO stream>)
         """
         if len(args) > 0 and type(args[0]) is str:
             path = args[0]
@@ -5250,6 +5303,10 @@ class Snirf(Snirf):
             with h5py.File(path, 'w') as new_file:
                 self._save(new_file)
                 self._cfg.logger.info('Saved Snirf file at %s to copy at %s', self.filename, path)
+        elif len(args) > 0 and _isfilelike(args[0]):
+            with h5py.File(args[0], 'w') as stream:
+                self._save(stream)
+                self._cfg.logger.info('Saved Snirf file to filelike object')
         else:
             self._save(self._h.file)
 
@@ -5308,15 +5365,15 @@ class Snirf(Snirf):
         for nirs in self.nirs:
             if type(nirs.probe) not in [type(None), type(_AbsentGroup)]:
                 if nirs.probe.sourceLabels is not None:
-                    lenSourceLabels = len(nirs.probe.sourceLabels)
+                    lenSourceLabels = nirs.probe.sourceLabels.size
                 else:
                     lenSourceLabels = 0
                 if nirs.probe.detectorLabels is not None:
-                    lenDetectorLabels = len(nirs.probe.detectorLabels)
+                    lenDetectorLabels = nirs.probe.detectorLabels.size
                 else:
                     lenDetectorLabels = 0
                 if nirs.probe.wavelengths is not None:
-                    lenWavelengths = len(nirs.probe.wavelengths)
+                    lenWavelengths = nirs.probe.wavelengths.size
                 else:
                     lenWavelengths = 0
                 for data in nirs.data:

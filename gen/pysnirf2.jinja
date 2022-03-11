@@ -359,21 +359,25 @@ class Snirf(Group):
     def __init__(self, *args, dynamic_loading: bool = False, logfile: bool = False):
         self._cfg = SnirfConfig()
         self._cfg.dynamic_loading = dynamic_loading
+        if logfile:
+            self._cfg.logger = _create_logger(path, path.split('.')[0] + '.log')
+        else:
+            self._cfg.logger = _logger  # Use global logger
         if len(args) > 0:
             path = args[0]
             if type(path) is str:
                 if not path.endswith('.snirf'):
                     path = path + '.snirf'
-                if logfile:
-                    self._cfg.logger = _create_logger(path, path.split('.')[0] + '.log')
-                else:
-                    self._cfg.logger = _logger  # Use global logger
                 if os.path.exists(path):
                     self._cfg.logger.info('Loading from file %s', path)
                     self._h = h5py.File(path, 'r+')
                 else:
                     self._cfg.logger.info('Creating new file at %s', path)
                     self._h = h5py.File(path, 'w')
+            elif _isfilelike(args[0]):
+                self._cfg.logger.info('Loading from filelike object')
+                self._h = h5py.File(path, 'r')
+            
             else:
                 raise TypeError(str(path) + ' is not a valid filename')
         else:
