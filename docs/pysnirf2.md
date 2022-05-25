@@ -23,7 +23,7 @@ Maintained by the Boston University Neurophotonics Center
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L5399"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L5411"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `loadSnirf`
 
@@ -58,7 +58,7 @@ Returns a `Snirf` object loaded from path if a SNIRF file exists there. Takes th
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L5425"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L5437"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `saveSnirf`
 
@@ -78,7 +78,7 @@ Saves a SNIRF file to disk.
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L5439"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L5451"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `validateSnirf`
 
@@ -2601,7 +2601,7 @@ This group stores one set of NIRS data.  This can be extended by adding the coun
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L5339"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L5351"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `close`
 
@@ -2635,7 +2635,7 @@ If the Group has no member Groups or Datasets.
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L5287"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L5299"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `save`
 
@@ -2665,7 +2665,7 @@ Save a SNIRF file to disk.
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L5317"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L5329"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `validate`
 
