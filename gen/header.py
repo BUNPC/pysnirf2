@@ -290,10 +290,14 @@ def _read_string(dataset: h5py.Dataset) -> str:
     if type(dataset) is not h5py.Dataset:
         raise TypeError("'dataset' must be type h5py.Dataset")
     # Because many SNIRF files are saved with string values in length 1 arrays
-    if dataset.ndim > 0:
-        return str(dataset[0].decode('ascii'))
-    else:
-        return str(dataset[()].decode('ascii'))
+    try:
+        if dataset.ndim > 0:
+            return str(dataset[0].decode('ascii'))
+        else:
+            return str(dataset[()].decode('ascii'))
+    except AttributeError:  # If we expected a string and got something else, `decode` isn't there
+        warn('Expected dataset {} to be stringlike, is {} conversion may be incorrect'.format(dataset.name, dataset.dtype))    
+        return str(dataset[0])
 
 
 def _read_int(dataset: h5py.Dataset) -> int:
