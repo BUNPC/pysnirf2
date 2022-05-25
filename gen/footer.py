@@ -86,6 +86,18 @@ class Probe(Probe):
     
     def _validate(self, result: ValidationResult):
         
+        # Override sourceLabels validation, can be 1D or 2D
+        if type(self._sourceLabels) in [type(_AbsentDataset), type(None)]:
+            result._add(name, 'OPTIONAL_DATASET_MISSING')
+        else:
+            try:
+                if type(self._sourceLabels) is type(_PresentDataset) or 'sourceLabels' in self._h:
+                    dataset = self._h['sourceLabels']
+                else:
+                    dataset = _create_dataset_string_array(tmp, 'sourceLabels', self._sourceLabels)
+                result._add(name, _validate_string_array(dataset, ndims=[1, 2]))
+            except ValueError:  # If the _create_dataset function can't convert the data
+                result._add(name, 'INVALID_DATASET_TYPE')
         s2 = self.sourcePos2D is not None
         d2 = self.detectorPos2D is not None
         s3 = self.sourcePos3D is not None
