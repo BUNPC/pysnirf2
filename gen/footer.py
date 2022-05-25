@@ -95,9 +95,9 @@ class Probe(Probe):
                     dataset = self._h['sourceLabels']
                 else:
                     dataset = _create_dataset_string_array(tmp, 'sourceLabels', self._sourceLabels)
-                result._add(name, _validate_string_array(dataset, ndims=[1, 2]))
+                result._add('sourceLabels', _validate_string_array(dataset, ndims=[1, 2]))
             except ValueError:  # If the _create_dataset function can't convert the data
-                result._add(name, 'INVALID_DATASET_TYPE')
+                result._add('sourceLabels', 'INVALID_DATASET_TYPE')
         s2 = self.sourcePos2D is not None
         d2 = self.detectorPos2D is not None
         s3 = self.sourcePos3D is not None
