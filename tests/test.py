@@ -152,7 +152,7 @@ class PySnirf2_Test(unittest.TestCase):
             for file in self._test_files:
                 if VERBOSE:
                     print('Loading', file, 'with dynamic_loading=' + str(mode))
-                with Snirf(file, dynamic_loading=mode) as s:
+                with Snirf(file, 'r+', dynamic_loading=mode) as s:
                     if VERBOSE:    
                         print("Adding unrecognized coordinate system")
                     s.nirs[0].probe.coordinateSystem = 'MNIFoo27'
@@ -164,7 +164,7 @@ class PySnirf2_Test(unittest.TestCase):
                     s.save(newname)
                 if VERBOSE:
                     print('Loading', newname, 'with dynamic_loading=' + str(mode))
-                with Snirf(newname, dynamic_loading=mode) as s:
+                with Snirf(newname, 'r+', dynamic_loading=mode) as s:
                     result = s.validate()
                     if VERBOSE:
                         result.display(severity=2)
@@ -176,7 +176,7 @@ class PySnirf2_Test(unittest.TestCase):
             for file in self._test_files:
                 if VERBOSE:
                     print('Loading', file, 'with dynamic_loading=' + str(mode))
-                with Snirf(file, dynamic_loading=mode) as s:
+                with Snirf(file, 'r+', dynamic_loading=mode) as s:
                     if VERBOSE:    
                         print("Adding recognized coordinate system")
                     s.nirs[0].probe.coordinateSystem = 'MNIColin27'
@@ -188,7 +188,7 @@ class PySnirf2_Test(unittest.TestCase):
                     s.save(newname)
                 if VERBOSE:
                     print('Loading', newname, 'with dynamic_loading=' + str(mode))
-                with Snirf(newname, dynamic_loading=mode) as s:
+                with Snirf(newname, 'r+', dynamic_loading=mode) as s:
                     result = s.validate()
                     if VERBOSE:
                         result.display(severity=2)
@@ -200,7 +200,7 @@ class PySnirf2_Test(unittest.TestCase):
             for file in self._test_files:
                 if VERBOSE:
                     print('Loading', file, 'with dynamic_loading=' + str(mode))
-                with Snirf(file, dynamic_loading=mode) as s:
+                with Snirf(file, 'r+', dynamic_loading=mode) as s:
                     if VERBOSE:    
                         print("Adding metaDataTags 'foo', 'bar', and 'array_of_strings'")
                     s.nirs[0].metaDataTags.add('foo', 'Hello')
@@ -214,7 +214,7 @@ class PySnirf2_Test(unittest.TestCase):
                     s.save(newname)
                     if VERBOSE:
                         print('Loading', newname, 'with dynamic_loading=' + str(mode))
-                with Snirf(newname, dynamic_loading=mode) as s:
+                with Snirf(newname, 'r+', dynamic_loading=mode) as s:
                     self.assertTrue(s.nirs[0].metaDataTags.foo == 'Hello', msg='Failed to save the unspecified metadatatags to disk')
                     self.assertTrue(s.nirs[0].metaDataTags.Bar == 'World', msg='Failed to save the unspecified metadatatags to disk')
                     self.assertTrue(s.nirs[0].metaDataTags._array_of_strings[0] == 'foo', msg='Failed to save the unspecified metadatatags to disk')
@@ -229,7 +229,7 @@ class PySnirf2_Test(unittest.TestCase):
             for file in self._test_files:
                 if VERBOSE:
                     print('Loading', file, 'with dynamic_loading=' + str(mode))
-                with Snirf(file, dynamic_loading=mode) as s:
+                with Snirf(file, 'r+', dynamic_loading=mode) as s:
                     probloc = s.nirs[0].probe.location
                     del s.nirs[0].probe.sourcePos2D
                     del s.nirs[0].probe.detectorPos2D
@@ -271,7 +271,7 @@ class PySnirf2_Test(unittest.TestCase):
             for file in self._test_files:
                 if VERBOSE:
                     print('Loading', file, 'with dynamic_loading=' + str(mode))
-                with Snirf(file, dynamic_loading=mode) as s:
+                with Snirf(file, 'r+', dynamic_loading=mode) as s:
                     del s.nirs[0].probe
                     if VERBOSE:
                         print('Performing local validation on probeless', s)
@@ -296,7 +296,7 @@ class PySnirf2_Test(unittest.TestCase):
             for file in self._test_files[0:1]:
                 if VERBOSE:
                     print('Loading', file + '.snirf', 'with dynamic_loading=' + str(mode))
-                with Snirf(file, dynamic_loading=mode) as s:
+                with Snirf(file, 'r+', dynamic_loading=mode) as s:
                     del s.formatVersion
                     if VERBOSE:
                         print('Performing local validation on formatVersionless', s)
@@ -321,7 +321,7 @@ class PySnirf2_Test(unittest.TestCase):
             for file in self._test_files[0:1]:
                 if VERBOSE:
                     print('Loading', file + '.snirf', 'with dynamic_loading=' + str(mode))
-                s = Snirf(file, dynamic_loading=mode)
+                s = Snirf(file, 'r+', dynamic_loading=mode)
                 while len(s.nirs[0].data) > 0:
                     del s.nirs[0].data[0]
                 if VERBOSE:
@@ -347,7 +347,7 @@ class PySnirf2_Test(unittest.TestCase):
             for file in self._test_files[0:1]:
                 if VERBOSE:
                     print('Loading', file + '.snirf', 'with dynamic_loading=' + str(mode))
-                s = Snirf(file, dynamic_loading=mode)
+                s = Snirf(file, 'r+', dynamic_loading=mode)
                 s.nirs[0].data[0].measurementList.appendGroup()  # Add extra ml
                 if VERBOSE:
                     print('Performing local validation on invalid ml', s)
@@ -376,7 +376,7 @@ class PySnirf2_Test(unittest.TestCase):
             for file in self._test_files:
                 if VERBOSE:
                     print('Loading', file + '.snirf', 'with dynamic_loading=' + str(mode))
-                s = Snirf(file, dynamic_loading=mode)
+                s = Snirf(file, 'r+', dynamic_loading=mode)
                 
                 group_save_file = file.split('.')[0] + '_edited_group_save.snirf'
                 if VERBOSE:
@@ -406,7 +406,7 @@ class PySnirf2_Test(unittest.TestCase):
                 for edited_filename in [snirf_save_file, group_save_file]:
                     
                     print('Loading', edited_filename, 'for comparison with dynamic_loading=' + str(mode))
-                    s2 = Snirf(edited_filename, dynamic_loading=mode)
+                    s2 = Snirf(edited_filename, 'r+', dynamic_loading=mode)
                     
                     self.assertTrue((s2.nirs[0].probe.sourceLabels == desired_probe_sourcelabels).all(), msg='Failed to edit sourceLabels properly in ' + edited_filename) 
                     self.assertTrue(s2.nirs[0].probe.useLocalIndex == desired_probe_uselocalindex, msg='Failed to edit sourceLabels properly in ' + edited_filename) 
@@ -423,7 +423,7 @@ class PySnirf2_Test(unittest.TestCase):
                 file = self._test_files[0].split('.')[0]
                 if VERBOSE:
                     print('Loading', file + '.snirf', 'with dynamic_loading=' + str(mode))
-                s = Snirf(file, dynamic_loading=mode)
+                s = Snirf(file, 'r+', dynamic_loading=mode)
                 nstim = len(s.nirs[0].stim)
                 s.nirs[0].stim.appendGroup()
                 if VERBOSE:
@@ -437,7 +437,7 @@ class PySnirf2_Test(unittest.TestCase):
                     print('Save As edited file to', newfile + '.stim')
                 s.save(newfile)
                 s.close()
-                s2 = Snirf(newfile, dynamic_loading=mode)
+                s2 = Snirf(newfile, 'r+', dynamic_loading=mode)
                 self.assertTrue(len(s2.nirs[0].stim) == nstim + 1, msg='The new stim Group was not Saved As to ' + newfile + '.snirf')
                 if VERBOSE:
                     print('Adding another stim group to', newfile + '.snirf and reloading it')
@@ -447,7 +447,7 @@ class PySnirf2_Test(unittest.TestCase):
                 s2.nirs[0].stim[-1].name = 'newCondition2'
                 s2.save()
                 s2.close()
-                s3 = Snirf(newfile, dynamic_loading=mode)
+                s3 = Snirf(newfile, 'r+', dynamic_loading=mode)
                 self.assertTrue(len(s3.nirs[0].stim) == nstim + 2, msg='The new stim Group was not Saved to ' + newfile + '.snirf')
                 if VERBOSE:
                     print('Removing all but one stim Group from', newfile + '.snirf and reloading it')
@@ -457,7 +457,7 @@ class PySnirf2_Test(unittest.TestCase):
                         print('Deleting stim Group with name:', s3.nirs[0].stim[-1].name)
                     del s3.nirs[0].stim[-1]
                 s3.close()
-                s4 = Snirf(newfile, dynamic_loading=mode)
+                s4 = Snirf(newfile, 'r+', dynamic_loading=mode)
                 self.assertTrue(s4.nirs[0].stim[0].name == name_to_keep, msg='Failed to remove desired stim Groups from ' + newfile + '.snirf') 
                 s4.close()
         
@@ -473,7 +473,7 @@ class PySnirf2_Test(unittest.TestCase):
             s2_paths = []
             start = time.time()
             for file in self._test_files:
-                snirf = Snirf(file, dynamic_loading=mode)
+                snirf = Snirf(file, 'r+', dynamic_loading=mode)
                 s1_paths.append(file)
                 new_path = file.split('.')[0] + '_unedited.snirf'
                 snirf.save(new_path)
@@ -498,7 +498,7 @@ class PySnirf2_Test(unittest.TestCase):
             s = []
             start = time.time()
             for file in self._test_files:
-                s.append(Snirf(file, dynamic_loading=mode))
+                s.append(Snirf(file, 'r+', dynamic_loading=mode))
             times[i] = time.time() - start
             sizes[i] = getsize(s)
             for snirf in s:

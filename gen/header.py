@@ -26,8 +26,6 @@ from warnings import warn
 from collections.abc import MutableSequence
 from tempfile import TemporaryFile
 import logging
-import termcolor
-import colorama
 from typing import Tuple
 import time
 import io
@@ -44,20 +42,32 @@ if sys.version_info[0] < 3:
     raise ImportError('pysnirf2 requires Python > 3')
 
 
-class SnirfFormatError(Exception):
+class SnirfFormatError(Warning):
     """Raised when SNIRF-specific error prevents file from loading properly."""
     pass
 
 
 # Colored prints for validation output to console
-if os.name == 'nt':
-    colorama.init()
+try:
+    import termcolorz
+    import colorama
 
-_printr = lambda x: termcolor.cprint(x, 'red')
-_printg = lambda x: termcolor.cprint(x, 'green')
-_printb = lambda x: termcolor.cprint(x, 'blue')
-_printm = lambda x: termcolor.cprint(x, 'magenta')
-
+    if os.name == 'nt':
+        colorama.init()
+    
+    _printr = lambda x: termcolor.cprint(x, 'red')
+    _printg = lambda x: termcolor.cprint(x, 'green')
+    _printb = lambda x: termcolor.cprint(x, 'blue')
+    _printm = lambda x: termcolor.cprint(x, 'magenta')
+    _colored = termcolor.colored
+    
+except ImportError:
+    _printr = lambda x: print(x)
+    _printg = lambda x: print(x)
+    _printb = lambda x: print(x)
+    _printm = lambda x: print(x)
+    _colored = lambda x, c: x
+    
 
 def _isfilelike(o: object) -> bool:
     """Returns True if object is an instance of a file-like object like `io.IOBase` or `io.BufferedIOBase`."""
@@ -296,7 +306,7 @@ def _read_string(dataset: h5py.Dataset) -> str:
         else:
             return str(dataset[()].decode('ascii'))
     except AttributeError:  # If we expected a string and got something else, `decode` isn't there
-        warn('Expected dataset {} to be stringlike, is {} conversion may be incorrect'.format(dataset.name, dataset.dtype))    
+        warn('Expected dataset {} to be stringlike, is {} conversion may be incorrect'.format(dataset.name, dataset.dtype), SnirfFormatError)    
         return str(dataset[0])
 
 
@@ -566,9 +576,9 @@ class ValidationResult:
                 s += issue.location.ljust(longest_key) + ' ' + _SEVERITY_LEVELS[sev] + ' ' + issue.name.ljust(longest_code) + '\n'
         print(s)
         for i in range(0, severity):
-            [_printg, _printb, _printm, _printr][i]('Found ' + str(printed[i]) + ' ' + termcolor.colored(_SEVERITY_LEVELS[i], _SEVERITY_COLORS[i]) + ' (hidden)')
+            [_printg, _printb, _printm, _printr][i]('Found ' + str(printed[i]) + ' ' + _colored(_SEVERITY_LEVELS[i], _SEVERITY_COLORS[i]) + ' (hidden)')
         for i in range(severity, 4):
-            [_printg, _printb, _printm, _printr][i]('Found ' + str(printed[i]) + ' ' + termcolor.colored(_SEVERITY_LEVELS[i], _SEVERITY_COLORS[i]))
+            [_printg, _printb, _printm, _printr][i]('Found ' + str(printed[i]) + ' ' + _colored(_SEVERITY_LEVELS[i], _SEVERITY_COLORS[i]))
         i = int(self.is_valid())
         [_printr, _printg][i]('\nFile is ' +['INVALID', 'VALID'][i])
 
@@ -734,7 +744,7 @@ class SnirfConfig:
     def __init__(self):
         self.logger: logging.Logger = _logger  # The logger that the interface will write to
         self.dynamic_loading: bool = False  # If False, data is loaded in the constructor, if True, data is loaded on access
-
+        self.fmode: str = 'w'  # 'w' or 'r', mode to open HDF5 file with
 
 # Placeholder for a Dataset that is not on disk or in memory
 class _AbsentDatasetType():
@@ -816,8 +826,6 @@ class Group(ABC):
         else:
             if self._h != {}:
                 file = self._h.file
-                if file.mode not in ['r+', 'w']:
-                    raise ValueError('{} not writeable.', file)  # TODO raise UnsupportedOperation
                 self._save(file)
                 self._cfg.logger.info('IndexedGroup-level save of %s at %s in %s', self.__class__.__name__,
                           self._parent.location, self.filename)
@@ -1023,6 +1031,7 @@ class IndexedGroup(MutableSequence, ABC):
             elif type(args[0]) is str:
                 path = args[0]
                 if not path.endswith('.snirf'):
+                    path.replace('.', '')
                     path += '.snirf'
                 if os.path.exists(path):
                     file = h5py.File(path, 'w')
@@ -1035,8 +1044,6 @@ class IndexedGroup(MutableSequence, ABC):
         else:
             if self._parent._h != {}:
                 file = self._parent._h.file
-                if file.mode not in ['r+', 'w']:
-                    raise ValueError('{} not writeable.', file)  # TODO raise UnsupportedOperation
                 self._save(file)
                 self._cfg.logger.info('IndexedGroup-level save of %s at %s in %s', self.__class__.__name__,
                           self._parent.location, self.filename)
