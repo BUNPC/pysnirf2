@@ -26,8 +26,6 @@ from warnings import warn
 from collections.abc import MutableSequence
 from tempfile import TemporaryFile
 import logging
-import termcolor
-import colorama
 from typing import Tuple
 import time
 import io
@@ -44,20 +42,32 @@ if sys.version_info[0] < 3:
     raise ImportError('pysnirf2 requires Python > 3')
 
 
-class SnirfFormatError(Exception):
+class SnirfFormatError(Warning):
     """Raised when SNIRF-specific error prevents file from loading properly."""
     pass
 
 
 # Colored prints for validation output to console
-if os.name == 'nt':
-    colorama.init()
+try:
+    import termcolor
+    import colorama
 
-_printr = lambda x: termcolor.cprint(x, 'red')
-_printg = lambda x: termcolor.cprint(x, 'green')
-_printb = lambda x: termcolor.cprint(x, 'blue')
-_printm = lambda x: termcolor.cprint(x, 'magenta')
-
+    if os.name == 'nt':
+        colorama.init()
+    
+    _printr = lambda x: termcolor.cprint(x, 'red')
+    _printg = lambda x: termcolor.cprint(x, 'green')
+    _printb = lambda x: termcolor.cprint(x, 'blue')
+    _printm = lambda x: termcolor.cprint(x, 'magenta')
+    _colored = termcolor.colored
+    
+except ImportError:
+    _printr = lambda x: print(x)
+    _printg = lambda x: print(x)
+    _printb = lambda x: print(x)
+    _printm = lambda x: print(x)
+    _colored = lambda x, c: x
+    
 
 def _isfilelike(o: object) -> bool:
     """Returns True if object is an instance of a file-like object like `io.IOBase` or `io.BufferedIOBase`."""
@@ -290,10 +300,14 @@ def _read_string(dataset: h5py.Dataset) -> str:
     if type(dataset) is not h5py.Dataset:
         raise TypeError("'dataset' must be type h5py.Dataset")
     # Because many SNIRF files are saved with string values in length 1 arrays
-    if dataset.ndim > 0:
-        return str(dataset[0].decode('ascii'))
-    else:
-        return str(dataset[()].decode('ascii'))
+    try:
+        if dataset.ndim > 0:
+            return str(dataset[0].decode('ascii'))
+        else:
+            return str(dataset[()].decode('ascii'))
+    except AttributeError:  # If we expected a string and got something else, `decode` isn't there
+        warn('Expected dataset {} to be stringlike, is {} conversion may be incorrect'.format(dataset.name, dataset.dtype), SnirfFormatError)    
+        return str(dataset[0])
 
 
 def _read_int(dataset: h5py.Dataset) -> int:
@@ -562,9 +576,9 @@ class ValidationResult:
                 s += issue.location.ljust(longest_key) + ' ' + _SEVERITY_LEVELS[sev] + ' ' + issue.name.ljust(longest_code) + '\n'
         print(s)
         for i in range(0, severity):
-            [_printg, _printb, _printm, _printr][i]('Found ' + str(printed[i]) + ' ' + termcolor.colored(_SEVERITY_LEVELS[i], _SEVERITY_COLORS[i]) + ' (hidden)')
+            [_printg, _printb, _printm, _printr][i]('Found ' + str(printed[i]) + ' ' + _colored(_SEVERITY_LEVELS[i], _SEVERITY_COLORS[i]) + ' (hidden)')
         for i in range(severity, 4):
-            [_printg, _printb, _printm, _printr][i]('Found ' + str(printed[i]) + ' ' + termcolor.colored(_SEVERITY_LEVELS[i], _SEVERITY_COLORS[i]))
+            [_printg, _printb, _printm, _printr][i]('Found ' + str(printed[i]) + ' ' + _colored(_SEVERITY_LEVELS[i], _SEVERITY_COLORS[i]))
         i = int(self.is_valid())
         [_printr, _printg][i]('\nFile is ' +['INVALID', 'VALID'][i])
 
@@ -730,7 +744,7 @@ class SnirfConfig:
     def __init__(self):
         self.logger: logging.Logger = _logger  # The logger that the interface will write to
         self.dynamic_loading: bool = False  # If False, data is loaded in the constructor, if True, data is loaded on access
-
+        self.fmode: str = 'w'  # 'w' or 'r', mode to open HDF5 file with
 
 # Placeholder for a Dataset that is not on disk or in memory
 class _AbsentDatasetType():
@@ -812,8 +826,6 @@ class Group(ABC):
         else:
             if self._h != {}:
                 file = self._h.file
-                if file.mode not in ['r+', 'w']:
-                    raise ValueError('{} not writeable.', file)  # TODO raise UnsupportedOperation
                 self._save(file)
                 self._cfg.logger.info('IndexedGroup-level save of %s at %s in %s', self.__class__.__name__,
                           self._parent.location, self.filename)
@@ -1019,6 +1031,7 @@ class IndexedGroup(MutableSequence, ABC):
             elif type(args[0]) is str:
                 path = args[0]
                 if not path.endswith('.snirf'):
+                    path.replace('.', '')
                     path += '.snirf'
                 if os.path.exists(path):
                     file = h5py.File(path, 'w')
@@ -1031,8 +1044,6 @@ class IndexedGroup(MutableSequence, ABC):
         else:
             if self._parent._h != {}:
                 file = self._parent._h.file
-                if file.mode not in ['r+', 'w']:
-                    raise ValueError('{} not writeable.', file)  # TODO raise UnsupportedOperation
                 self._save(file)
                 self._cfg.logger.info('IndexedGroup-level save of %s at %s in %s', self.__class__.__name__,
                           self._parent.location, self.filename)
@@ -1150,7 +1161,7 @@ class IndexedGroup(MutableSequence, ABC):
         self._order_names(h=h)  # Enforce order in the group names
 
 
-# generated by sstucker on 2022-03-08
+# generated by sstucker on 2022-05-26
 # version v1.1-development SNIRF specification parsed from https://raw.githubusercontent.com/fNIRS/snirf/master/snirf_specification.md
 
 
@@ -1633,7 +1644,7 @@ class Probe(Group):
         self._momentOrders = _AbsentDataset  # [<f>,...]
         self._correlationTimeDelays = _AbsentDataset  # [<f>,...]
         self._correlationTimeDelayWidths = _AbsentDataset  # [<f>,...]
-        self._sourceLabels = _AbsentDataset  # ["s",...]
+        self._sourceLabels = _AbsentDataset  # [["s",...]]
         self._detectorLabels = _AbsentDataset  # ["s",...]
         self._landmarkPos2D = _AbsentDataset  # [[<f>,...]]
         self._landmarkPos3D = _AbsentDataset  # [[<f>,...]]
@@ -2834,7 +2845,7 @@ class Probe(Group):
                         dataset = self._h['sourceLabels']
                     else:
                         dataset = _create_dataset_string_array(tmp, 'sourceLabels', self._sourceLabels)
-                    result._add(name, _validate_string_array(dataset, ndims=[1]))
+                    result._add(name, _validate_string_array(dataset, ndims=[2]))
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/detectorLabels'
@@ -3261,15 +3272,15 @@ class DataElement(Group):
         The `time` variable. This provides the acquisition time of the measurement 
         relative to the time origin.  This will usually be a straight line with slope 
         equal to the acquisition frequency, but does not need to be equal spacing.  For 
-        the special case of equal sample spacing a shorthand `<2x1>` array is allowed 
+        the special case of equal sample spacing an array of length `<2>` is allowed 
         where the first entry is the start time and the 
         second entry is the sample time spacing in `TimeUnit` specified in the 
         `metaDataTags`. The default time unit is in second ("s"). For example, 
         a time spacing of 0.2 (s) indicates a sampling rate of 5 Hz.
           
-        * **Option 1** - The size of this variable is `<number of time points x 1>` and 
+        * **Option 1** - The size of this variable is `<number of time points>` and 
                      corresponds to the sample time of every data point
-        * **Option 2**-  The size of this variable is `<2x1>` and corresponds to the start
+        * **Option 2**-  The size of this variable is `<2>` and corresponds to the start
               time and sample spacing.
 
         Chunked data is allowed to support real-time streaming of data in this array.
@@ -3799,7 +3810,7 @@ class MeasurementListElement(Group):
         If dynamic_loading=True, the data is loaded from the SNIRF file only
         when accessed through the getter
 
-        Source power in milliwatt (mW). 
+        The units are not defined, unless the user takes the option of using a `metaDataTag` as described below.
 
         """
         if type(self._sourcePower) is type(_AbsentDataset):
@@ -4778,7 +4789,7 @@ class AuxElement(Group):
         of the aux measurement relative to the time origin.  This will usually be 
         a straight line with slope equal to the acquisition frequency, but does 
         not need to be equal spacing. The size of this variable is 
-        `<number of time points> x 1` or `<2x1>` similar  to definition of the 
+        `<number of time points>` or `<2>` similar  to definition of the 
         `/nirs(i)/data(j)/time` field.
 
         Chunked data is allowed to support real-time data streaming
@@ -5000,23 +5011,44 @@ class Snirf(Group):
     def __init__(self, *args, dynamic_loading: bool = False, logfile: bool = False):
         self._cfg = SnirfConfig()
         self._cfg.dynamic_loading = dynamic_loading
+        self._cfg.fmode = ''
         if logfile:
             self._cfg.logger = _create_logger(path, path.split('.')[0] + '.log')
         else:
             self._cfg.logger = _logger  # Use global logger
         if len(args) > 0:
             path = args[0]
+            if len(args) > 1:
+                assert type(args[1]) is str, 'Positional argument 2 must be "r"/"w" mode'
+                if args[1] == 'r':
+                    self._cfg.fmode = 'r'
+                elif args[1] == 'r+':
+                    self._cfg.fmode = 'r+'
+                elif args[1] == 'w':
+                    self._cfg.fmode = 'w'
+                else:
+                    raise ValueError("Invalid mode: '{}'. Only 'r', 'r+' and 'w' are supported.".format(args[1]))
+            else:
+                warn('Use `Snirf(<path>, <mode>)` to open SNIRF file from path. Path-only construction is deprecated.', DeprecationWarning)
+                # fmode is ''
             if type(path) is str:
                 if not path.endswith('.snirf'):
+                    path.replace('.', '')
                     path = path + '.snirf'
                 if os.path.exists(path):
                     self._cfg.logger.info('Loading from file %s', path)
-                    self._h = h5py.File(path, 'r+')
+                    if self._cfg.fmode == '':
+                        self._cfg.fmode = 'r+'
+                    self._h = h5py.File(path, self._cfg.fmode)
                 else:
                     self._cfg.logger.info('Creating new file at %s', path)
-                    self._h = h5py.File(path, 'w')
+                    if self._cfg.fmode == '':
+                        self._cfg.fmode = 'w'
+                    self._h = h5py.File(path, self._cfg.fmode)
             elif _isfilelike(args[0]):
                 self._cfg.logger.info('Loading from filelike object')
+                if self._cfg.fmode == '':
+                    self._cfg.fmode = 'r'
                 self._h = h5py.File(path, 'r')
             
             else:
@@ -5025,6 +5057,7 @@ class Snirf(Group):
             self._cfg.logger = _logger
             self._cfg.logger.info('Created Snirf object based on tempfile')
             path = None
+            self._cfg.fmode = 'w'
             self._h = h5py.File(TemporaryFile(), 'w')
         self._formatVersion = _AbsentDataset  # "s"*
         self._nirs = _AbsentDataset  # {i}*
@@ -5246,6 +5279,20 @@ class Probe(Probe):
     
     def _validate(self, result: ValidationResult):
         
+        # Override sourceLabels validation, can be 1D or 2D
+        with h5py.File(TemporaryFile(), 'w') as tmp:
+            if type(self._sourceLabels) in [type(_AbsentDataset), type(None)]:
+                result._add(self.location + '/sourceLabels', 'OPTIONAL_DATASET_MISSING')
+            else:
+                try:
+                    if type(self._sourceLabels) is type(_PresentDataset) or 'sourceLabels' in self._h:
+                        dataset = self._h['sourceLabels']
+                    else:
+                        dataset = _create_dataset_string_array(tmp, 'sourceLabels', self._sourceLabels)
+                    result._add(self.location + '/sourceLabels', _validate_string_array(dataset, ndims=[1, 2]))
+                except ValueError:  # If the _create_dataset function can't convert the data
+                    result._add(self.location + '/sourceLabels', 'INVALID_DATASET_TYPE')
+        
         s2 = self.sourcePos2D is not None
         d2 = self.detectorPos2D is not None
         s3 = self.sourcePos3D is not None
@@ -5299,6 +5346,7 @@ class Snirf(Snirf):
         if len(args) > 0 and type(args[0]) is str:
             path = args[0]
             if not path.endswith('.snirf'):
+                path.replace('.', '')
                 path += '.snirf'
             with h5py.File(path, 'w') as new_file:
                 self._save(new_file)
@@ -5365,7 +5413,7 @@ class Snirf(Snirf):
         for nirs in self.nirs:
             if type(nirs.probe) not in [type(None), type(_AbsentGroup)]:
                 if nirs.probe.sourceLabels is not None:
-                    lenSourceLabels = nirs.probe.sourceLabels.size
+                    lenSourceLabels = nirs.probe.sourceLabels.shape[0]
                 else:
                     lenSourceLabels = 0
                 if nirs.probe.detectorLabels is not None:
@@ -5413,7 +5461,7 @@ def loadSnirf(path: str, dynamic_loading: bool=False, logfile: bool=False) -> Sn
     if not path.endswith('.snirf'):
         path += '.snirf'
     if os.path.exists(path):
-        return Snirf(path, dynamic_loading=dynamic_loading, logfile=logfile)
+        return Snirf(path, 'r+', dynamic_loading=dynamic_loading, logfile=logfile)
     else:
         raise FileNotFoundError('No SNIRF file at ' + path)
                     
@@ -5442,7 +5490,7 @@ def validateSnirf(path: str) -> ValidationResult:
     if not path.endswith('.snirf'):
         path += '.snirf'
     if os.path.exists(path):
-        with Snirf(path) as snirf:
+        with Snirf(path, 'r') as snirf:
             return snirf.validate()
     else:
         raise FileNotFoundError('No SNIRF file at ' + path)

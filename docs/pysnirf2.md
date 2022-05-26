@@ -23,7 +23,7 @@ Maintained by the Boston University Neurophotonics Center
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L5395"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L5443"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `loadSnirf`
 
@@ -58,7 +58,7 @@ Returns a `Snirf` object loaded from path if a SNIRF file exists there. Takes th
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L5421"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L5469"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `saveSnirf`
 
@@ -78,7 +78,7 @@ Saves a SNIRF file to disk.
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L5435"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L5483"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `validateSnirf`
 
@@ -93,7 +93,7 @@ Returns truthy ValidationResult instance which holds detailed results of validat
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L47"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L45"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `SnirfFormatError`
 Raised when SNIRF-specific error prevents file from loading properly. 
@@ -104,14 +104,14 @@ Raised when SNIRF-specific error prevents file from loading properly.
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L420"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L434"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `ValidationIssue`
 Information about the validity of a given SNIRF file location. 
 
 Properties:  location: A relative HDF5 name corresponding to the location of the issue  name: A string describing the issue. Must be predefined in `_CODES`  id: An integer corresponding to the predefined error type  severity: An integer ranking the serverity level of the issue.  0 OK, Nothing remarkable  1 Potentially useful `INFO`  2 `WARNING`, the file is valid but exhibits undefined behavior or features marked deprecation  3 `FATAL`, The file is invalid.  message: A string containing a more verbose description of the issue 
 
-<a href="../pysnirf2/pysnirf2.py#L435"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L449"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -128,7 +128,7 @@ __init__(name:str, location:str)
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L449"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L463"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `dictize`
 
@@ -141,7 +141,7 @@ Return dictionary representation of Issue.
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L460"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L474"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `ValidationResult`
 The result of Snirf file validation routines. 
@@ -153,7 +153,7 @@ Validation results in a list of issues. Each issue records information about the
  <ValidationResult> = validateSnirf(<path>)
 ``` 
 
-<a href="../pysnirf2/pysnirf2.py#L474"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L488"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -204,7 +204,7 @@ A list of the `WARNING` issues catalogued during validation.
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L540"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L554"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `display`
 
@@ -222,7 +222,7 @@ Reads the contents of an `h5py.Dataset` to an array of `dtype=str`.
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L482"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L496"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `is_valid`
 
@@ -234,7 +234,7 @@ Returns True if no `FATAL` issues were catalogued during validation.
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L531"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L545"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `serialize`
 
@@ -247,14 +247,14 @@ Render serialized JSON ValidationResult.
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L723"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L737"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `SnirfConfig`
 Structure containing Snirf-wide data and settings. 
 
 Properties:  logger (logging.Logger): The logger that the Snirf instance writes to  dynamic_loading (bool): If True, data is loaded from the HDF5 file only on access via property 
 
-<a href="../pysnirf2/pysnirf2.py#L730"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L744"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -272,14 +272,14 @@ __init__()
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L756"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L770"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `Group`
 
 
 
 
-<a href="../pysnirf2/pysnirf2.py#L758"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L772"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -319,7 +319,7 @@ None if not associataed with a Group on disk.
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L845"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L857"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `is_empty`
 
@@ -337,7 +337,7 @@ If the Group has no member Groups or Datasets.
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L780"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L794"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `save`
 
@@ -365,14 +365,14 @@ Group level save to a SNIRF file on disk.
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L893"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L905"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `IndexedGroup`
 
 
 
 
-<a href="../pysnirf2/pysnirf2.py#L898"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L910"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -406,7 +406,7 @@ The filename the Snirf object was loaded from and will save to.
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L987"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L999"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `append`
 
@@ -424,7 +424,7 @@ Append a new Group to the IndexedGroup.
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L1042"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L1053"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `appendGroup`
 
@@ -438,7 +438,7 @@ Creates an empty Group with the appropriate name at the end of the list of Group
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L975"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L987"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `insert`
 
@@ -457,7 +457,7 @@ Insert a new Group into the IndexedGroup.
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L1053"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L1064"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `insertGroup`
 
@@ -477,7 +477,7 @@ Creates an empty Group with a placeholder name within the list of Groups managed
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L963"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L975"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `is_empty`
 
@@ -495,7 +495,7 @@ Returns True if the Indexed Group has no member Groups with contents.
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L998"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L1010"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `save`
 
@@ -525,14 +525,14 @@ When saving, the naming convention defined by the SNIRF spec is enforced: groups
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L1157"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L1168"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `MetaDataTags`
 
 
 
 
-<a href="../pysnirf2/pysnirf2.py#L1169"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L1180"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -645,7 +645,7 @@ None if not associataed with a Group on disk.
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L5165"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L5198"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `add`
 
@@ -664,7 +664,7 @@ Add a new tag to the list.
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L845"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L857"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `is_empty`
 
@@ -682,7 +682,7 @@ If the Group has no member Groups or Datasets.
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L5181"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L5214"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `remove`
 
@@ -700,7 +700,7 @@ Remove a tag from the list. You cannot remove a required tag.
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L780"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L794"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `save`
 
@@ -728,14 +728,14 @@ Group level save to a SNIRF file on disk.
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L1615"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L1626"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `Probe`
 
 
 
 
-<a href="../pysnirf2/pysnirf2.py#L1622"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L1633"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -978,7 +978,7 @@ Please note that this field stores the "nominal" emission wavelengths. If the pr
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L845"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L857"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `is_empty`
 
@@ -996,7 +996,7 @@ If the Group has no member Groups or Datasets.
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L780"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L794"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `save`
 
@@ -1024,12 +1024,12 @@ Group level save to a SNIRF file on disk.
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L2939"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L2950"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `NirsElement`
 Wrapper for an element of indexed group `Nirs`. 
 
-<a href="../pysnirf2/pysnirf2.py#L2941"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L2952"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -1118,7 +1118,7 @@ This is an array describing any stimulus conditions. Each element of the array  
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L845"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L857"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `is_empty`
 
@@ -1136,7 +1136,7 @@ If the Group has no member Groups or Datasets.
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L780"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L794"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `save`
 
@@ -1164,7 +1164,7 @@ Group level save to a SNIRF file on disk.
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L3166"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L3177"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `Nirs`
 Interface for indexed group `Nirs`. 
@@ -1175,7 +1175,7 @@ To add or remove an element from the list, use the `appendGroup` method and the 
 
 This group stores one set of NIRS data.  This can be extended by adding the count  number (e.g. `/nirs1`, `/nirs2`,...) to the group name. This is intended to  allow the storage of 1 or more complete NIRS datasets inside a single SNIRF  document.  For example, a two-subject hyperscanning can be stored using the notation * `/nirs1` =  first subject's data * `/nirs2` =  second subject's data The use of a non-indexed (e.g. `/nirs`) entry is allowed when only one entry  is present and is assumed to be entry 1. 
 
-<a href="../pysnirf2/pysnirf2.py#L3187"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L3198"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -1198,7 +1198,7 @@ The filename the Snirf object was loaded from and will save to.
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L987"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L999"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `append`
 
@@ -1216,7 +1216,7 @@ Append a new Group to the IndexedGroup.
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L1042"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L1053"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `appendGroup`
 
@@ -1230,7 +1230,7 @@ Creates an empty Group with the appropriate name at the end of the list of Group
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L975"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L987"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `insert`
 
@@ -1249,7 +1249,7 @@ Insert a new Group into the IndexedGroup.
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L1053"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L1064"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `insertGroup`
 
@@ -1269,7 +1269,7 @@ Creates an empty Group with a placeholder name within the list of Groups managed
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L963"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L975"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `is_empty`
 
@@ -1287,7 +1287,7 @@ Returns True if the Indexed Group has no member Groups with contents.
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L998"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L1010"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `save`
 
@@ -1317,14 +1317,14 @@ When saving, the naming convention defined by the SNIRF spec is enforced: groups
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L3191"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L3202"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `DataElement`
 
 
 
 
-<a href="../pysnirf2/pysnirf2.py#L3193"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L3204"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -1387,9 +1387,9 @@ SNIRF field `time`.
 
 If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter 
 
-The `time` variable. This provides the acquisition time of the measurement  relative to the time origin.  This will usually be a straight line with slope  equal to the acquisition frequency, but does not need to be equal spacing.  For  the special case of equal sample spacing a shorthand `<2x1>` array is allowed  where the first entry is the start time and the  second entry is the sample time spacing in `TimeUnit` specified in the  `metaDataTags`. The default time unit is in second ("s"). For example,  a time spacing of 0.2 (s) indicates a sampling rate of 5 Hz.  
+The `time` variable. This provides the acquisition time of the measurement  relative to the time origin.  This will usually be a straight line with slope  equal to the acquisition frequency, but does not need to be equal spacing.  For  the special case of equal sample spacing an array of length `<2>` is allowed  where the first entry is the start time and the  second entry is the sample time spacing in `TimeUnit` specified in the  `metaDataTags`. The default time unit is in second ("s"). For example,  a time spacing of 0.2 (s) indicates a sampling rate of 5 Hz.  
 
-* **Option 1** - The size of this variable is `<number of time points x 1>` and   corresponds to the sample time of every data point * **Option 2**-  The size of this variable is `<2x1>` and corresponds to the start  time and sample spacing. 
+* **Option 1** - The size of this variable is `<number of time points>` and   corresponds to the sample time of every data point * **Option 2**-  The size of this variable is `<2>` and corresponds to the start  time and sample spacing. 
 
 Chunked data is allowed to support real-time streaming of data in this array. 
 
@@ -1397,7 +1397,7 @@ Chunked data is allowed to support real-time streaming of data in this array.
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L845"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L857"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `is_empty`
 
@@ -1415,7 +1415,7 @@ If the Group has no member Groups or Datasets.
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L780"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L794"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `save`
 
@@ -1443,14 +1443,14 @@ Group level save to a SNIRF file on disk.
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L3406"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L3417"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `Data`
 
 
 
 
-<a href="../pysnirf2/pysnirf2.py#L3425"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L3436"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -1473,7 +1473,7 @@ The filename the Snirf object was loaded from and will save to.
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L987"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L999"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `append`
 
@@ -1491,7 +1491,7 @@ Append a new Group to the IndexedGroup.
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L1042"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L1053"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `appendGroup`
 
@@ -1505,7 +1505,7 @@ Creates an empty Group with the appropriate name at the end of the list of Group
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L975"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L987"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `insert`
 
@@ -1524,7 +1524,7 @@ Insert a new Group into the IndexedGroup.
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L1053"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L1064"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `insertGroup`
 
@@ -1544,7 +1544,7 @@ Creates an empty Group with a placeholder name within the list of Groups managed
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L963"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L975"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `is_empty`
 
@@ -1562,7 +1562,7 @@ Returns True if the Indexed Group has no member Groups with contents.
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L998"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L1010"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `save`
 
@@ -1592,12 +1592,12 @@ When saving, the naming convention defined by the SNIRF spec is enforced: groups
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L3429"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L3440"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `MeasurementListElement`
 Wrapper for an element of indexed group `MeasurementList`. 
 
-<a href="../pysnirf2/pysnirf2.py#L3431"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L3442"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -1744,7 +1744,7 @@ SNIRF field `sourcePower`.
 
 If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter 
 
-Source power in milliwatt (mW).  
+The units are not defined, unless the user takes the option of using a `metaDataTag` as described below. 
 
 ---
 
@@ -1782,7 +1782,7 @@ Index of the "nominal" wavelength (in `probe.wavelengths`).
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L845"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L857"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `is_empty`
 
@@ -1800,7 +1800,7 @@ If the Group has no member Groups or Datasets.
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L780"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L794"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `save`
 
@@ -1828,7 +1828,7 @@ Group level save to a SNIRF file on disk.
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L4367"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L4378"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `MeasurementList`
 Interface for indexed group `MeasurementList`. 
@@ -1841,7 +1841,7 @@ The measurement list. This variable serves to map the data array onto the probe 
 
 Each element of the array is a structure which describes the measurement  conditions for this data with the following fields: 
 
-<a href="../pysnirf2/pysnirf2.py#L4389"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L4400"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -1864,7 +1864,7 @@ The filename the Snirf object was loaded from and will save to.
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L987"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L999"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `append`
 
@@ -1882,7 +1882,7 @@ Append a new Group to the IndexedGroup.
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L1042"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L1053"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `appendGroup`
 
@@ -1896,7 +1896,7 @@ Creates an empty Group with the appropriate name at the end of the list of Group
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L975"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L987"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `insert`
 
@@ -1915,7 +1915,7 @@ Insert a new Group into the IndexedGroup.
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L1053"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L1064"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `insertGroup`
 
@@ -1935,7 +1935,7 @@ Creates an empty Group with a placeholder name within the list of Groups managed
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L963"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L975"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `is_empty`
 
@@ -1953,7 +1953,7 @@ Returns True if the Indexed Group has no member Groups with contents.
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L998"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L1010"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `save`
 
@@ -1983,14 +1983,14 @@ When saving, the naming convention defined by the SNIRF spec is enforced: groups
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L4393"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L4404"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `StimElement`
 
 
 
 
-<a href="../pysnirf2/pysnirf2.py#L4395"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L4406"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -2057,7 +2057,7 @@ This is a string describing the j<sup>th</sup> stimulus condition.
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L845"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L857"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `is_empty`
 
@@ -2075,7 +2075,7 @@ If the Group has no member Groups or Datasets.
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L780"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L794"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `save`
 
@@ -2103,14 +2103,14 @@ Group level save to a SNIRF file on disk.
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L4619"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L4630"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `Stim`
 
 
 
 
-<a href="../pysnirf2/pysnirf2.py#L4634"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L4645"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -2133,7 +2133,7 @@ The filename the Snirf object was loaded from and will save to.
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L987"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L999"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `append`
 
@@ -2151,7 +2151,7 @@ Append a new Group to the IndexedGroup.
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L1042"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L1053"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `appendGroup`
 
@@ -2165,7 +2165,7 @@ Creates an empty Group with the appropriate name at the end of the list of Group
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L975"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L987"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `insert`
 
@@ -2184,7 +2184,7 @@ Insert a new Group into the IndexedGroup.
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L1053"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L1064"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `insertGroup`
 
@@ -2204,7 +2204,7 @@ Creates an empty Group with a placeholder name within the list of Groups managed
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L963"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L975"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `is_empty`
 
@@ -2222,7 +2222,7 @@ Returns True if the Indexed Group has no member Groups with contents.
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L998"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L1010"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `save`
 
@@ -2252,14 +2252,14 @@ When saving, the naming convention defined by the SNIRF spec is enforced: groups
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L4638"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L4649"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `AuxElement`
 
 
 
 
-<a href="../pysnirf2/pysnirf2.py#L4640"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L4651"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -2328,7 +2328,7 @@ SNIRF field `time`.
 
 If dynamic_loading=True, the data is loaded from the SNIRF file only when accessed through the getter 
 
-The time variable. This provides the acquisition time (in `TimeUnit` units)  of the aux measurement relative to the time origin.  This will usually be  a straight line with slope equal to the acquisition frequency, but does  not need to be equal spacing. The size of this variable is  `<number of time points> x 1` or `<2x1>` similar  to definition of the  `/nirs(i)/data(j)/time` field. 
+The time variable. This provides the acquisition time (in `TimeUnit` units)  of the aux measurement relative to the time origin.  This will usually be  a straight line with slope equal to the acquisition frequency, but does  not need to be equal spacing. The size of this variable is  `<number of time points>` or `<2>` similar  to definition of the  `/nirs(i)/data(j)/time` field. 
 
 Chunked data is allowed to support real-time data streaming 
 
@@ -2346,7 +2346,7 @@ This variable specifies the offset of the file time origin relative to absolute 
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L845"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L857"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `is_empty`
 
@@ -2364,7 +2364,7 @@ If the Group has no member Groups or Datasets.
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L780"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L794"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `save`
 
@@ -2392,14 +2392,14 @@ Group level save to a SNIRF file on disk.
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L4977"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L4988"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `Aux`
 
 
 
 
-<a href="../pysnirf2/pysnirf2.py#L4991"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L5002"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -2422,7 +2422,7 @@ The filename the Snirf object was loaded from and will save to.
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L987"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L999"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `append`
 
@@ -2440,7 +2440,7 @@ Append a new Group to the IndexedGroup.
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L1042"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L1053"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `appendGroup`
 
@@ -2454,7 +2454,7 @@ Creates an empty Group with the appropriate name at the end of the list of Group
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L975"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L987"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `insert`
 
@@ -2473,7 +2473,7 @@ Insert a new Group into the IndexedGroup.
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L1053"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L1064"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `insertGroup`
 
@@ -2493,7 +2493,7 @@ Creates an empty Group with a placeholder name within the list of Groups managed
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L963"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L975"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `is_empty`
 
@@ -2511,7 +2511,7 @@ Returns True if the Indexed Group has no member Groups with contents.
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L998"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L1010"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `save`
 
@@ -2541,14 +2541,14 @@ When saving, the naming convention defined by the SNIRF spec is enforced: groups
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L4995"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L5006"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `Snirf`
 
 
 
 
-<a href="../pysnirf2/pysnirf2.py#L5000"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L5011"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -2601,7 +2601,7 @@ This group stores one set of NIRS data.  This can be extended by adding the coun
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L5335"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L5383"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `close`
 
@@ -2617,7 +2617,7 @@ After closing, the underlying SNIRF file cannot be accessed from this interface 
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L845"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L857"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `is_empty`
 
@@ -2635,7 +2635,7 @@ If the Group has no member Groups or Datasets.
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L5283"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L5330"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `save`
 
@@ -2665,7 +2665,7 @@ Save a SNIRF file to disk.
 
 ---
 
-<a href="../pysnirf2/pysnirf2.py#L5313"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../pysnirf2/pysnirf2.py#L5361"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `validate`
 

@@ -86,6 +86,20 @@ class Probe(Probe):
     
     def _validate(self, result: ValidationResult):
         
+        # Override sourceLabels validation, can be 1D or 2D
+        with h5py.File(TemporaryFile(), 'w') as tmp:
+            if type(self._sourceLabels) in [type(_AbsentDataset), type(None)]:
+                result._add(self.location + '/sourceLabels', 'OPTIONAL_DATASET_MISSING')
+            else:
+                try:
+                    if type(self._sourceLabels) is type(_PresentDataset) or 'sourceLabels' in self._h:
+                        dataset = self._h['sourceLabels']
+                    else:
+                        dataset = _create_dataset_string_array(tmp, 'sourceLabels', self._sourceLabels)
+                    result._add(self.location + '/sourceLabels', _validate_string_array(dataset, ndims=[1, 2]))
+                except ValueError:  # If the _create_dataset function can't convert the data
+                    result._add(self.location + '/sourceLabels', 'INVALID_DATASET_TYPE')
+        
         s2 = self.sourcePos2D is not None
         d2 = self.detectorPos2D is not None
         s3 = self.sourcePos3D is not None
@@ -139,6 +153,7 @@ class Snirf(Snirf):
         if len(args) > 0 and type(args[0]) is str:
             path = args[0]
             if not path.endswith('.snirf'):
+                path.replace('.', '')
                 path += '.snirf'
             with h5py.File(path, 'w') as new_file:
                 self._save(new_file)
@@ -205,7 +220,7 @@ class Snirf(Snirf):
         for nirs in self.nirs:
             if type(nirs.probe) not in [type(None), type(_AbsentGroup)]:
                 if nirs.probe.sourceLabels is not None:
-                    lenSourceLabels = nirs.probe.sourceLabels.size
+                    lenSourceLabels = nirs.probe.sourceLabels.shape[0]
                 else:
                     lenSourceLabels = 0
                 if nirs.probe.detectorLabels is not None:
@@ -253,7 +268,7 @@ def loadSnirf(path: str, dynamic_loading: bool=False, logfile: bool=False) -> Sn
     if not path.endswith('.snirf'):
         path += '.snirf'
     if os.path.exists(path):
-        return Snirf(path, dynamic_loading=dynamic_loading, logfile=logfile)
+        return Snirf(path, 'r+', dynamic_loading=dynamic_loading, logfile=logfile)
     else:
         raise FileNotFoundError('No SNIRF file at ' + path)
                     
@@ -282,7 +297,7 @@ def validateSnirf(path: str) -> ValidationResult:
     if not path.endswith('.snirf'):
         path += '.snirf'
     if os.path.exists(path):
-        with Snirf(path) as snirf:
+        with Snirf(path, 'r') as snirf:
             return snirf.validate()
     else:
         raise FileNotFoundError('No SNIRF file at ' + path)
