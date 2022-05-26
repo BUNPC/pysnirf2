@@ -368,12 +368,11 @@ class Snirf(Group):
             path = args[0]
             if len(args) > 1:
                 assert type(args[1]) is str, 'Positional argument 2 must be "r"/"w" mode'
-                rw = args[1]
-                if 'r' in args[1]:
+                if args[1] == 'r':
                     self._cfg.fmode = 'r'
-                if 'r+' in args[1]:
+                elif args[1] == 'r+':
                     self._cfg.fmode = 'r+'
-                elif 'w' in args[1]:
+                elif args[1] == 'w':
                     self._cfg.fmode = 'w'
                 else:
                     raise ValueError("Invalid mode: '{}'. Only 'r', 'r+' and 'w' are supported.".format(args[1]))

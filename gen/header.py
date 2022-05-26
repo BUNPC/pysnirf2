@@ -49,7 +49,7 @@ class SnirfFormatError(Warning):
 
 # Colored prints for validation output to console
 try:
-    import termcolorz
+    import termcolor
     import colorama
 
     if os.name == 'nt':
