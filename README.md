@@ -22,10 +22,10 @@ pysnirf2 requires Python > 3.6
 The library generated via metaprogramming, but the resulting classes explicitly implement each and every specified SNIRF field so as to provide an extensible object-oriented foundation for SNIRF applications.
 
 ## Open a SNIRF file
-`Snirf(<path>)` opens a SNIRF file at `<path>` _or creates a new one if it doesn't exist._
+`Snirf(<path>, <mode>)` opens a SNIRF file at `<path>` _or creates a new one if it doesn't exist._ Use mode 'w' to create a new file, 'r' to read a file, and 'r+' to edit an existing file.
 ```python
 from pysnirf2 import Snirf
->>> snirf = Snirf(r'some\path\subj1_run01.snirf')
+>>> snirf = Snirf(r'some\path\subj1_run01.snirf', 'r+')
 ```
 ## Create a SNIRF file object
 `Snirf()` with no arguments creates a temporary file which can be written later using `save()`.
@@ -40,7 +40,7 @@ A `Snirf` instance wraps a file on disk. It should be closed when you're done re
 ```
 Use a `with` statement to ensure that the file is closed when you're done with it:
 ```python
->>> with Snirf(r'some\path\subj1_run01.snirf') as snirf:
+>>> with Snirf(r'some\path\subj1_run01.snirf', 'r+') as snirf:
 >>>      # Read/write
 >>>      snirf.save()
 ```
@@ -141,11 +141,11 @@ The `save()` function can be called for any group or indexed group:
 ## Dynamic loading mode
 For larger files, it may be useful to load data dynamically: data will only be loaded on access, and only changed datasets will be written on `save()`. When creating a new `Snirf` instance, set `dynamic_loading` to `True` (Default `False`).
 ```python
->>> snirf = Snirf(r'some\path\subj1_run01.snirf', dynamic_loading=True)
+>>> snirf = Snirf(r'some\path\subj1_run01.snirf', 'r+', dynamic_loading=True)
 ```
 > Note: in dynamic loading mode, array data cannot be modified with indices like in the example above:
 > ```python
-> >>> snirf = Snirf(TESTPATH, dynamic_loading=True)
+> >>> snirf = Snirf(TESTPATH, 'r+', dynamic_loading=True)
 > >>> snirf.nirs[0].probe.detectorPos3D
 > array([[30.,  0.,  0.],
 >       [ 0., 30.,  0.]])
@@ -173,13 +173,13 @@ To validate a SNIRF file on disk
 ```python
 >> from pysnirf2 import validateSnirf
 >> result = validateSnirf(r'some\path\subj1_run01.snirf')
->> assert result
+>> assert result, 'Invalid SNIRF file!\n' + result.display()  # Crash and display issues if the file is invalid.
 ```
 ## Validation results
 The validation functions return a [`ValidationResult`](https://github.com/BUNPC/pysnirf2/blob/main/docs/pysnirf2.md#class-validationresult) instance which contains details about the SNIRF file.
 To view the validation result:
 ```python
->> result.display(severity=3)
+>> result.display(severity=3)  # Display all fatal errors
 <pysnirf2.pysnirf2.ValidationResult object at 0x000001C0CCF05A00>
 /nirs1/data1/measurementList103/dataType                 FATAL   REQUIRED_DATASET_MISSING
 /nirs1/data1/measurementList103/dataTypeIndex            FATAL   REQUIRED_DATASET_MISSING
