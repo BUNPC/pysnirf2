@@ -147,6 +147,28 @@ def _print_keys(group):
 
 class PySnirf2_Test(unittest.TestCase):
     
+    def test_disabled_logging(self):
+        for file in self._test_files:
+            if VERBOSE:
+                print('Loading', file)
+            logfile = file.replace('.snirf', '.log')
+            with Snirf(file, 'r', enable_logging=False) as s: 
+                self.assertFalse(os.path.exists(logfile), msg='{} created even though enable_logging=False'.format(logfile))
+    
+    def test_enabled_logging(self):
+        for file in self._test_files:
+            if VERBOSE:
+                print('Loading', file)
+            logfile = file.replace('.snirf', '.log')
+            with Snirf(file, 'r', enable_logging=True) as s:
+                self.assertTrue(os.path.exists(logfile), msg='{} was not created with enable_logging=True'.format(logfile))
+                if VERBOSE:
+                    print(logfile, 'contents:')
+                    print('---------------------------------------------')
+                    with open(logfile, 'r') as f:
+                        [print(line) for line in f.readlines()]
+                    print('---------------------------------------------')
+    
     def test_unknown_coordsys_name(self):
         for i, mode in enumerate([False, True]):
             for file in self._test_files:

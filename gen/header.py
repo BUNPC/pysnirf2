@@ -82,7 +82,10 @@ _loggers = {}
 def _create_logger(name, log_file, level=logging.INFO):
     if name in _loggers.keys():
         return _loggers[name]
-    handler = logging.FileHandler(log_file)
+    if log_file == '' or log_file is None:
+        handler = logging.NullHandler()
+    else:
+        handler = logging.FileHandler(log_file)
     handler.setFormatter(logging.Formatter('%(asctime)s | %(name)s v%(version)s | %(message)s'))
     logger = logging.getLogger(name)
     logger.setLevel(level)
@@ -90,6 +93,16 @@ def _create_logger(name, log_file, level=logging.INFO):
     logger = logging.LoggerAdapter(logger, {'version': __version__})
     _loggers[name] = logger
     return logger
+
+def _close_logger(logger: logging.LoggerAdapter):
+    if type(logger) is logging.LoggerAdapter:
+        handlers = logger.logger.handlers[:]
+    elif type(logger) is logging.Logger:
+        handlers = logger.handlers[:]
+    else:
+        raise TypeError('logger must be logging.LoggerAdapter or logging.Logger')
+    for handler in handlers:
+        handler.close()
 
 # Package-wide logger
 _logfile = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'pysnirf2.log')
@@ -100,9 +113,10 @@ if os.path.exists(_logfile):
             os.remove(_logfile)
         _logger = _create_logger('pysnirf2', _logfile)
     except (FileNotFoundError, PermissionError):
-        _logger = _create_logger('pysnirf2', os.path.join(os.getcwd(), 'pysnirf2.log'))
+        _logger = _create_logger('pysnirf2', None)  # Null logger
 else:
     _logger = _create_logger('pysnirf2', os.path.join(os.getcwd(), 'pysnirf2.log'))
+_logger.info('Library loaded by process {}'.format(os.getpid()))
 
 # -- methods to cast data prior to writing to and after reading from h5py interfaces------
 

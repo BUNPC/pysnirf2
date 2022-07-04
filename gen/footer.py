@@ -196,6 +196,7 @@ class Snirf(Snirf):
         `close` is called automatically by the destructor.
         """
         self._cfg.logger.info('Closing Snirf file %s', self.filename)
+        _close_logger(self._cfg.logger)
         self._h.close()
 
     def __enter__(self):
