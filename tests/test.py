@@ -1,6 +1,6 @@
 import unittest
 import pysnirf2
-from pysnirf2 import Snirf, validateSnirf
+from pysnirf2 import Snirf, validateSnirf, loadSnirf, saveSnirf
 import h5py
 import os
 import sys
@@ -146,6 +146,20 @@ def _print_keys(group):
 # -- Tests --------------------------------------------------------------------
 
 class PySnirf2_Test(unittest.TestCase):
+    
+    def test_loading_saving_functions(self):
+        s1_paths = []
+        s2_paths = []
+        start = time.time()
+        for file in self._test_files:
+            s1 = loadSnirf(file)
+            s1_paths.append(file)
+            new_path = file.split('.')[0] + '_unedited.snirf'
+            saveSnirf(new_path, s1)
+            s2_paths.append(new_path)
+            s1.close()
+        for (fname1, fname2) in zip(s1_paths, s2_paths):
+            dataset_equal_test(self, fname1, fname2)
     
     def test_disabled_logging(self):
         for file in self._test_files:
