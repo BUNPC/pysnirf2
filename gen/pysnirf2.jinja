@@ -110,7 +110,13 @@
 
     @{{ CHILD.name }}.setter
     def {{ CHILD.name }}(self, value):
+        {% if TYPES.INDEXED_GROUP in CHILD.type %}
         self._{{ CHILD.name }} = value
+        {% elif TYPES.GROUP in CHILD.type %}
+        self._{{ CHILD.name }} = value
+        {% else %}
+        self._{{ CHILD.name }} = value
+        {% endif %}
         # self._cfg.logger.info('Assignment to %s/{{ CHILD.name }} in %s', self.location, self.filename)
 
     @{{ CHILD.name }}.deleter
