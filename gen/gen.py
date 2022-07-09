@@ -1,4 +1,5 @@
 from jinja2 import Environment, FileSystemLoader, select_autoescape
+from yapf.yapflib.yapf_api import FormatFile 
 import requests
 from unidecode import unidecode
 from pathlib import Path
@@ -7,13 +8,14 @@ import getpass
 import os
 import sys
 import warnings
+from pylint import lint
 
 """
 Generates SNIRF interface and validator from the summary table of the specification
 hosted at SPEC_SRC.
 """
 
-LIB_VERSION = '0.5.1'  # Version for this script
+LIB_VERSION = '0.5.2'  # Version for this script
 
 if __name__ == '__main__':
     
@@ -241,5 +243,8 @@ if __name__ == '__main__':
                 print('ERROR on line', i, '\n', line)
         if errors == 0:
             print('pysnirf2.py generated with', errors, 'errors.')
+    
+    FormatFile(output_path, in_place=True)[:2]
+    lint.Run(['--errors-only', output_path])
     
     
