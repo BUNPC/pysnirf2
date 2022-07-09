@@ -538,7 +538,7 @@ class PySnirf2_Test(unittest.TestCase):
             shutil.copy(os.path.join(snirf_directory, file),  os.path.join(working_directory, file))
             time.sleep(0.5)  # Sleep while executing copy operation
         
-        self._test_files = [working_directory + '/' + file for file in os.listdir(working_directory)]
+        self._test_files = [os.join(working_directory, file) for file in os.listdir(working_directory)]
         if len(self._test_files) == 0:
             sys.exit('Failed to set up test data working directory at '+ working_directory)
             
@@ -546,7 +546,7 @@ class PySnirf2_Test(unittest.TestCase):
         print('Deleting all files in', working_directory)
         for file in os.listdir(working_directory):
             os.remove(os.path.join(working_directory, file))
-            print('Deleted', working_directory + '/' + file)
+            print('Deleted', os.join(working_directory, file))
 
 # -- Set up test working-directory --------------------------------------------
 
