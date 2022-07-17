@@ -15,7 +15,7 @@ Generates SNIRF interface and validator from the summary table of the specificat
 hosted at SPEC_SRC.
 """
 
-LIB_VERSION = '0.5.2'  # Version for this script
+LIB_VERSION = '0.6.2'  # Version for this script
 
 if __name__ == '__main__':
     
