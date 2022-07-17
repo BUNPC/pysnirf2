@@ -147,6 +147,60 @@ def _print_keys(group):
 
 class PySnirf2_Test(unittest.TestCase):
     
+    def test_group_assignment(self):
+        for i, mode in enumerate([False, True]):
+            s2_paths = []
+            start = time.time()
+            for file in self._test_files:
+                if VERBOSE:
+                    print('Loading', file, 'with dynamic_loading=' + str(mode))
+                # Reassignment of same probe
+                with Snirf(file, 'r+', dynamic_loading=mode) as s:
+                    same_probe = s.nirs[0].probe
+                    self.assertTrue(isinstance(same_probe, pysnirf2.Probe), msg="Could not assign Probe reference")
+                    same_probe.sourcePos3D = np.random.random([31, 3])
+                    try:
+                        s.nirs[0].probe = "foo"
+                    except Exception as e:
+                        self.assertTrue(type(e) is ValueError, msg="Faulty assignment to ProbeClass did not raise ValueError")
+                    s.nirs[0].probe = same_probe
+                # Assignment of new probe
+                new_path = file.split('.')[0] + '_2.snirf'
+                with Snirf(file, 'r+', dynamic_loading=mode) as s:
+                    s.save(new_path)
+                    for mode2 in [False, True]:
+                        print('Loading', new_path, 'with dynamic_loading=' + str(mode2))
+                        with Snirf(file, 'r+', dynamic_loading=mode2) as s2:
+                            new_srcpos3 = np.random.random([31, 3])
+                            s2.nirs[0].probe.sourcePos3D = new_srcpos3
+                            if VERBOSE:
+                                print('Assigning probe from', new_path, 'to', file)
+                            s.nirs[0].probe = s2.nirs[0].probe
+                            s_location = str(s.nirs[0].probe._h.file.filename)
+                            self.assertTrue(s_location == file, msg='Probe assignment unsuccessful, HDF5 file is ' + s_location + ', not ' + file)
+                            self.assertTrue(np.all(s.nirs[0].probe.sourcePos3D == s2.nirs[0].probe.sourcePos3D), msg='Probe assignment unsuccessful: data not copied.')
+
+
+    # def test_copying(self):
+    #     """
+    #     Loads all files in filenames using Snirf in both dynamic and static mode, 
+    #     saves copies to new files, compares the results using h5py and a naive cast.
+    #     If returns True, all specified datasets are equivalent in the copied files.
+    #     """
+    #     for i, mode in enumerate([False, True]):
+    #         s2_paths = []
+    #         for file in self._test_files:
+    #             new_path = file.split('.')[0] + '_copied.snirf'
+    #             if VERBOSE:
+    #                 print('Loading', file, 'with dynamic_loading=' + str(mode))
+    #                 print('Making a copy of', file)
+    #             with Snirf(file, 'r+', dynamic_loading=mode) as s:
+    #                 s2 = s.copy()
+    #                 s2.save(new_path)
+    #         for (fname1, fname2) in zip(self._test_files, s2_paths):
+    #             dataset_equal_test(self, fname1, fname2)
+    
+    
     def test_loading_saving_functions(self):
         s1_paths = []
         s2_paths = []
@@ -161,6 +215,7 @@ class PySnirf2_Test(unittest.TestCase):
         for (fname1, fname2) in zip(s1_paths, s2_paths):
             dataset_equal_test(self, fname1, fname2)
     
+    
     def test_disabled_logging(self):
         for file in self._test_files:
             if VERBOSE:
@@ -168,6 +223,7 @@ class PySnirf2_Test(unittest.TestCase):
             logfile = file.replace('.snirf', '.log')
             with Snirf(file, 'r', enable_logging=False) as s: 
                 self.assertFalse(os.path.exists(logfile), msg='{} created even though enable_logging=False'.format(logfile))
+    
     
     def test_enabled_logging(self):
         for file in self._test_files:
@@ -182,6 +238,7 @@ class PySnirf2_Test(unittest.TestCase):
                     with open(logfile, 'r') as f:
                         [print(line) for line in f.readlines()]
                     print('---------------------------------------------')
+    
     
     def test_unknown_coordsys_name(self):
         for i, mode in enumerate([False, True]):
@@ -207,6 +264,7 @@ class PySnirf2_Test(unittest.TestCase):
                     self.assertTrue('UNRECOGNIZED_COORDINATE_SYSTEM' in [issue.name for issue in result.warnings], msg='Failed to raise warning about unknown coordinate system in file saved to disk')
                     self.assertTrue(s.validate(), msg='File was incorrectly invalidated')
 
+
     def test_known_coordsys_name(self):
         for i, mode in enumerate([False, True]):
             for file in self._test_files:
@@ -230,6 +288,7 @@ class PySnirf2_Test(unittest.TestCase):
                         result.display(severity=2)
                     self.assertFalse('UNRECOGNIZED_COORDINATE_SYSTEM' in [issue.name for issue in result.warnings], msg='Failed to recognize known coordinate system in file saved to disk')
                     self.assertTrue(s.validate(), msg='File was incorrectly invalidated')
+    
     
     def test_unspecified_metadatatags(self):
         for i, mode in enumerate([False, True]):
@@ -259,6 +318,7 @@ class PySnirf2_Test(unittest.TestCase):
                     s.nirs[0].metaDataTags.remove('_array_of_strings')
                     s.save()
                 dataset_equal_test(self, file, newname + '.snirf')
+    
     
     def test_validator_required_probe_dataset_missing(self):
         for i, mode in enumerate([False, True]):
@@ -302,6 +362,7 @@ class PySnirf2_Test(unittest.TestCase):
                 self.assertTrue(result[probloc + '/sourcePos3D'].name == 'REQUIRED_DATASET_MISSING', msg='REQUIRED_DATASET_MISSING expected')
                 self.assertTrue(result[probloc + '/detectorPos3D'].name == 'REQUIRED_DATASET_MISSING', msg='REQUIRED_DATASET_MISSING expected')
     
+    
     def test_validator_required_group_missing(self):
         for i, mode in enumerate([False, True]):
             for file in self._test_files:
@@ -327,6 +388,7 @@ class PySnirf2_Test(unittest.TestCase):
                 self.assertFalse(result, msg='The file was incorrectly validated')
                 self.assertTrue('REQUIRED_GROUP_MISSING' in [issue.name for issue in result.errors], msg='REQUIRED_GROUP_MISSING not found')
     
+    
     def test_validator_required_dataset_missing(self):
         for i, mode in enumerate([False, True]):
             for file in self._test_files[0:1]:
@@ -351,6 +413,7 @@ class PySnirf2_Test(unittest.TestCase):
                     result.display(severity=3)
                 self.assertFalse(result, msg='The file was incorrectly validated')
                 self.assertTrue('REQUIRED_DATASET_MISSING' in [issue.name for issue in result.errors], msg='REQUIRED_DATASET_MISSING not found')
+    
     
     def test_validator_required_indexed_group_empty(self):
         for i, mode in enumerate([False, True]):
@@ -378,6 +441,7 @@ class PySnirf2_Test(unittest.TestCase):
                 self.assertFalse(result, msg='The file was incorrectly validated')
                 self.assertTrue('REQUIRED_INDEXED_GROUP_EMPTY' in [issue.name for issue in result.errors], msg='REQUIRED_INDEXED_GROUP_EMPTY not found')
     
+    
     def test_validator_invalid_measurement_list(self):
         for i, mode in enumerate([False, True]):
             for file in self._test_files[0:1]:
@@ -402,6 +466,7 @@ class PySnirf2_Test(unittest.TestCase):
                     result.display(severity=3)
                 self.assertFalse(result, msg='The file was incorrectly validated')
                 self.assertTrue('INVALID_MEASUREMENTLIST' in [issue.name for issue in result.errors], msg='INVALID_MEASUREMENTLIST not found')
+    
     
     def test_edit_probe_group(self):
         """
@@ -450,6 +515,7 @@ class PySnirf2_Test(unittest.TestCase):
                     
                     s2.close()
                 
+
     def test_add_remove_stim(self):
         """
         Use the interface to add a stim group. Verify it is added to a reloaded file.
@@ -555,6 +621,7 @@ class PySnirf2_Test(unittest.TestCase):
         self._test_files = [os.path.join(working_directory, file) for file in os.listdir(working_directory)]
         if len(self._test_files) == 0:
             sys.exit('Failed to set up test data working directory at '+ working_directory)
+   
             
     def tearDown(self):
         print('Deleting all files in', working_directory)

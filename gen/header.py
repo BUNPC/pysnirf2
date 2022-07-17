@@ -30,6 +30,7 @@ from typing import Tuple
 import time
 import io
 import json
+import copy
 
 try:
     from pysnirf2.__version__ import __version__ as __version__
