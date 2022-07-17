@@ -264,7 +264,7 @@ def _create_dataset_string_array(file: h5py.File,
         An h5py.Dataset instance created
     """
     array = np.array(data).astype('O')
-    shape = _get_padded_shape(name, data, ndim)
+    shape = _get_padded_shape(name, array, ndim)
     return file.create_dataset(name, dtype=_varlen_str_type, data=array)
 
 
@@ -283,7 +283,7 @@ def _create_dataset_int_array(file: h5py.File,
         An h5py.Dataset instance created
     """
     array = np.array(data).astype(int)
-    shape = _get_padded_shape(name, data, ndim)
+    shape = _get_padded_shape(name, array, ndim)
     return file.create_dataset(name, dtype=_DTYPE_INT32, data=array)
 
 
@@ -302,7 +302,7 @@ def _create_dataset_float_array(file: h5py.File,
         An h5py.Dataset instance created
     """
     array = np.array(data).astype(float)
-    shape = _get_padded_shape(name, data, ndim)
+    shape = _get_padded_shape(name, array, ndim)
     return file.create_dataset(name,
                                dtype=_DTYPE_FLOAT64,
                                shape=shape,
@@ -1097,7 +1097,10 @@ class IndexedGroup(MutableSequence, ABC):
     def __setitem__(self, i, item):
         self._check_type(item)
         if not item.location in [e.location for e in self._list]:
+            tmp_h = self._list[i]._h
             self._list[i] = item
+            self._list[i] = copy.copy(item)
+            self._list[i]._h = tmp_h
         else:
             raise SnirfFormatError(item.location + ' already an element of ' +
                                    self.__class__.__name__)
