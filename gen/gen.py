@@ -244,7 +244,13 @@ if __name__ == '__main__':
         if errors == 0:
             print('pysnirf2.py generated with', errors, 'errors.')
     
-    FormatFile(output_path, in_place=True)[:2]
-    lint.Run(['--errors-only', output_path])
+    ans = input('Format the generated code? y/n\n')
+    if ans in ['y', 'Y']:
+        FormatFile(output_path, in_place=True)[:2]
     
+    ans = input('Lint the generated code? y/n\n')
+    if ans in ['y', 'Y']:
+        lint.Run(['--errors-only', output_path])
+        
+    print('pysnirf2 generation complete.')
     
