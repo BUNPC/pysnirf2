@@ -31,8 +31,8 @@ FOOTER = 'gen/footer.py'  # The contents of the file and appended to the end of 
 These strings are used to identify the beginning and end of the table
 and definitions sections of the spec document
 """
-TABLE_DELIM_START = '### SNIRF data format summary'
-TABLE_DELIM_END = 'In the above table, the used notations are explained below'
+TABLE_DELIM_START = '[//]: # (SCHEMA BEGIN)'
+TABLE_DELIM_END = '[//]: # (SCHEMA END)'
 
 DEFINITIONS_DELIM_START = '### SNIRF data container definitions'
 DEFINITIONS_DELIM_END = '## Appendix'
