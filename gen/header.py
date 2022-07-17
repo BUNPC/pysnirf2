@@ -135,6 +135,18 @@ _STR_DTYPES = [str, np.string_]
 # -- Dataset creators  ---------------------------------------
 
 
+def _get_padded_shape(name: str, data: np.ndarray, desired_ndim: int) -> np.ndarray:
+    """Utility function which pads data shape to ndim."""
+    if desired_ndim is None:
+        return data.shape
+    elif desired_ndim > data.ndim:
+        return np.concatenate([data.shape, np.ones(int(desired_ndim) - int(data.ndim))])
+    elif data.ndim == desired_ndim:
+        return np.shape(data)
+    else:
+        raise ValueError("Could not create dataset {}: ndim={} is incompatible with data which has shape {}.".format(name, desired_ndim, data.shape))
+
+
 def _create_dataset(file: h5py.File, name: str, data):
     """Saves a variable to an h5py.File on disk as a new Dataset.
 
@@ -217,7 +229,7 @@ def _create_dataset_float(file: h5py.File, name: str, data: float):
     return file.create_dataset(name, dtype=_DTYPE_FLOAT64, data=float(data))
 
 
-def _create_dataset_string_array(file: h5py.File, name: str, data: np.ndarray):
+def _create_dataset_string_array(file: h5py.File, name: str, data: np.ndarray, ndim=None):
     """Saves a NumPy array to an h5py.File on disk as a new SNIRF compliant array of variable length strings.
 
     Args:
@@ -229,10 +241,11 @@ def _create_dataset_string_array(file: h5py.File, name: str, data: np.ndarray):
         An h5py.Dataset instance created
     """
     array = np.array(data).astype('O')
+    shape = _get_padded_shape(name, data, ndim)
     return file.create_dataset(name, dtype=_varlen_str_type, data=array)
 
 
-def _create_dataset_int_array(file: h5py.File, name: str, data: np.ndarray):
+def _create_dataset_int_array(file: h5py.File, name: str, data: np.ndarray, ndim=None):
     """Saves a NumPy array to an h5py.File on disk as a new SNIRF compliant array of 32-bit integers.
 
     Args:
@@ -244,10 +257,11 @@ def _create_dataset_int_array(file: h5py.File, name: str, data: np.ndarray):
         An h5py.Dataset instance created
     """
     array = np.array(data).astype(int)
+    shape = _get_padded_shape(name, data, ndim)
     return file.create_dataset(name, dtype=_DTYPE_INT32, data=array)
 
 
-def _create_dataset_float_array(file: h5py.File, name: str, data: np.ndarray):
+def _create_dataset_float_array(file: h5py.File, name: str, data: np.ndarray, ndim=None):
     """Saves a NumPy array to an h5py.File on disk as a new SNIRF compliant array of 64-bit floats.
 
     Args:
@@ -259,7 +273,8 @@ def _create_dataset_float_array(file: h5py.File, name: str, data: np.ndarray):
         An h5py.Dataset instance created
     """
     array = np.array(data).astype(float)
-    return file.create_dataset(name, dtype=_DTYPE_FLOAT64, data=array)
+    shape = _get_padded_shape(name, data, ndim)
+    return file.create_dataset(name, dtype=_DTYPE_FLOAT64, shape=shape, data=array)
 
 
 # -- Dataset readers  ---------------------------------------

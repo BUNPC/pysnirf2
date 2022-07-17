@@ -164,13 +164,23 @@
             data = self.{{ CHILD.name }}  # Use loader function via getter
             if name in file:
                 del file[name]
-        {% if (TYPES.ARRAY_1D in CHILD.type) or (TYPES.ARRAY_2D in CHILD.type) %}
+        {% if TYPES.ARRAY_1D in CHILD.type %}
             {% if TYPES.VARLEN_STRING in CHILD.type %}
-            _create_dataset_string_array(file, name, data)
+            _create_dataset_string_array(file, name, data, ndim=1)
             {% elif TYPES.INT_VALUE in CHILD.type %}
-            _create_dataset_int_array(file, name, data)
+            _create_dataset_int_array(file, name, data, ndim=1)
             {% elif TYPES.FLOAT_VALUE in CHILD.type %}
-            _create_dataset_float_array(file, name, data)
+            _create_dataset_float_array(file, name, data, ndim=1)
+            {% else %}
+            _create_dataset(file, name, data)
+            {% endif %}
+        {% elif TYPES.ARRAY_2D in CHILD.type %}
+            {% if TYPES.VARLEN_STRING in CHILD.type %}
+            _create_dataset_string_array(file, name, data, ndim=2)
+            {% elif TYPES.INT_VALUE in CHILD.type %}
+            _create_dataset_int_array(file, name, data, ndim=2)
+            {% elif TYPES.FLOAT_VALUE in CHILD.type %}
+            _create_dataset_float_array(file, name, data, ndim=2)
             {% else %}
             _create_dataset(file, name, data)
             {% endif %}
