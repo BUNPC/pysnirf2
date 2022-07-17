@@ -1096,7 +1096,9 @@ class IndexedGroup(MutableSequence, ABC):
 
     def __setitem__(self, i, item):
         self._check_type(item)
-        if not item.location in [e.location for e in self._list]:
+        if not item.location in [
+                e.location for e in self._list
+        ] or item._h.file.filename != self._list[i]._h.file.filename:
             tmp_h = self._list[i]._h
             self._list[i] = item
             self._list[i] = copy.copy(item)

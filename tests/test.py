@@ -147,7 +147,8 @@ def _print_keys(group):
 
 class PySnirf2_Test(unittest.TestCase):
     
-    def test_group_assignment(self):
+    def test_assignment(self):
+        """Assign a Group and IndexedGroup element from one Snirf object to another."""
         for i, mode in enumerate([False, True]):
             s2_paths = []
             start = time.time()
@@ -164,13 +165,14 @@ class PySnirf2_Test(unittest.TestCase):
                     except Exception as e:
                         self.assertTrue(type(e) is ValueError, msg="Faulty assignment to ProbeClass did not raise ValueError")
                     s.nirs[0].probe = same_probe
-                # Assignment of new probe
+                # Assignment of new probe and measurement list element
                 new_path = file.split('.')[0] + '_2.snirf'
                 with Snirf(file, 'r+', dynamic_loading=mode) as s:
                     s.save(new_path)
                     for mode2 in [False, True]:
                         print('Loading', new_path, 'with dynamic_loading=' + str(mode2))
-                        with Snirf(file, 'r+', dynamic_loading=mode2) as s2:
+                        with Snirf(new_path, 'r+', dynamic_loading=mode2) as s2:
+                            # Group
                             new_srcpos3 = np.random.random([31, 3])
                             s2.nirs[0].probe.sourcePos3D = new_srcpos3
                             if VERBOSE:
@@ -179,7 +181,16 @@ class PySnirf2_Test(unittest.TestCase):
                             s_location = str(s.nirs[0].probe._h.file.filename)
                             self.assertTrue(s_location == file, msg='Probe assignment unsuccessful, HDF5 file is ' + s_location + ', not ' + file)
                             self.assertTrue(np.all(s.nirs[0].probe.sourcePos3D == s2.nirs[0].probe.sourcePos3D), msg='Probe assignment unsuccessful: data not copied.')
-
+                            # Indexed Group element
+                            new_dataTypeLabel = str(int(np.random.random() * 10**5))[0:6]  # Random phony dataTypeLabel
+                            s2.nirs[0].data[0].measurementList[0].dataTypeLabel = new_dataTypeLabel
+                            if VERBOSE:
+                                print('Assigning measurementList[0] from', new_path, 'to', file)
+                            s.nirs[0].data[0].measurementList[0] = s2.nirs[0].data[0].measurementList[0]
+                            s_location = str(s.nirs[0].data[0].measurementList[0]._h.file.filename)
+                            self.assertTrue(s_location == file, msg='measurementList[0] assignment unsuccessful, HDF5 file is ' + s_location + ', not ' + file)
+                            self.assertTrue(s.nirs[0].data[0].measurementList[0].dataTypeLabel == s2.nirs[0].data[0].measurementList[0].dataTypeLabel, msg='measurementList[0] assignment unsuccessful: data not copied.')
+                            
 
     # def test_copying(self):
     #     """
