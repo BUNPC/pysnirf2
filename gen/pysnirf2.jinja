@@ -114,8 +114,7 @@
         self._{{ CHILD.name }} = value
         {% elif TYPES.GROUP in CHILD.type %}
         if isinstance(value, {{ sentencecase(CHILD.name) }}):
-            self._{{ CHILD.name }} = copy.copy(value)
-            self._{{ CHILD.name }}._h = self._h['{{ CHILD.name }}']  # Link the copy to this object's file
+            self._{{ CHILD.name }} = _recursive_hdf5_copy(self._{{ CHILD.name }}, value)
         else:
             raise ValueError("Only a Group of type {{ sentencecase(CHILD.name) }} can be assigned to {{ CHILD.name }}.")
         {% else %}

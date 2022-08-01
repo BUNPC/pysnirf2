@@ -133,6 +133,7 @@ _INT_DTYPES = [int, np.int32, np.int64]
 _FLOAT_DTYPES = [float, np.float64]
 _STR_DTYPES = [str, np.string_]
 
+
 # -- Dataset creators  ---------------------------------------
 
 
@@ -930,7 +931,7 @@ class Group(ABC):
 
     def __contains__(self, key):
         return key in self._h
-
+    
 
 class IndexedGroup(MutableSequence, ABC):
 
@@ -982,13 +983,7 @@ class IndexedGroup(MutableSequence, ABC):
 
     def __setitem__(self, i, item):
         self._check_type(item)
-        if not item.location in [e.location for e in self._list] or item._h.file.filename != self._list[i]._h.file.filename:
-            tmp_h = self._list[i]._h
-            self._list[i] = item
-            self._list[i] = copy.copy(item)
-            self._list[i]._h = tmp_h
-        else:
-            raise SnirfFormatError(item.location + ' already an element of ' + self.__class__.__name__)
+        self._list[i] = _recursive_hdf5_copy(self._list[i], item)
 
     def __getattr__(self, name):
         # If user tries to access an element's properties, raise informative exception
@@ -1025,7 +1020,8 @@ class IndexedGroup(MutableSequence, ABC):
             item: must be of type _element
         """
         self._check_type(item)
-        self._list.insert(i, item)
+        self.insertGroup(i)
+        self._list[i] = _recursive_hdf5_copy(self._list[i], item)
         self._cfg.logger.info('%i th element inserted into IndexedGroup %s at %s in %s at %i', len(self._list),
                               self.__class__.__name__, self._parent.location, self.filename, i)
 
@@ -1036,7 +1032,8 @@ class IndexedGroup(MutableSequence, ABC):
             item: must be of type _element
         """
         self._check_type(item)
-        self._list.append(item)
+        self.appendGroup()
+        self._list[-1] = _recursive_hdf5_copy(self._list[-1], item)
         self._cfg.logger.info('%i th element appended to IndexedGroup %s at %s in %s', len(self._list),
                               self.__class__.__name__, self._parent.location, self.filename)
 
@@ -1192,3 +1189,20 @@ class IndexedGroup(MutableSequence, ABC):
         for e in self._list:
             e._save(*args)  # Group save functions handle the write to disk
         self._order_names(h=h)  # Enforce order in the group names
+
+
+def _recursive_hdf5_copy(g_dst: Group, g_src: Group):
+    """Copy a Group to a new Group, modifying the h5py interfaces accordingly."""
+    print("src", g_src.location, "at", g_src.filename)
+    print("dst", g_dst.location, "at", g_dst.filename)
+    for subgroup_src, name in [(getattr(g_src, name), name) for name in g_src._snirf_names if isinstance(getattr(g_src, name), Group)]:
+        setattr(g_dst, name, subgroup_src)  # Recursion is continued in the setter
+    for subigroup_src, name in [(getattr(g_src, name), name) for name in g_src._snirf_names if isinstance(getattr(g_src, name), IndexedGroup)]:
+        getattr(g_dst, name)._list.clear()  # Delete entire list and replace it. IndexedGroup methods continue the recursion
+        for e in subigroup_src:
+            getattr(g_dst, name).append(e)
+    dst_h = g_dst._h
+    g_copied = copy.copy(g_src)
+    g_copied._h = dst_h
+    return g_copied
+
