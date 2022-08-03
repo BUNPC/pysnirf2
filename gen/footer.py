@@ -155,6 +155,9 @@ class Snirf(Snirf):
             if not path.endswith('.snirf'):
                 path.replace('.', '')
                 path += '.snirf'
+            if self.filename == path:
+                self._save(self._h.file)
+                return
             with h5py.File(path, 'w') as new_file:
                 self._save(new_file)
                 self._cfg.logger.info('Saved Snirf file at %s to copy at %s', self.filename, path)
@@ -293,9 +296,9 @@ def saveSnirf(path: str, snirf: Snirf):
         snirf (Snirf): `Snirf` instance to write to disk.
     """
     if type(path) is not str:
-        raise TypeError('path must be str, not '+ type(path))
+        raise TypeError('path must be str, not '+ str(type(path)))
     if not isinstance(snirf, Snirf):
-        raise TypeError('snirf must be Snirf, not ' + type(snirf))
+        raise TypeError('snirf must be Snirf, not ' + str(type(snirf)))
     snirf.save(path)
 
 
@@ -305,7 +308,7 @@ def validateSnirf(path: str) -> ValidationResult:
     Returns truthy ValidationResult instance which holds detailed results of validation
     """
     if type(path) is not str:
-        raise TypeError('path must be str, not '+ type(path))
+        raise TypeError('path must be str, not '+ str(type(path)))
     if not path.endswith('.snirf'):
         path += '.snirf'
     if os.path.exists(path):
