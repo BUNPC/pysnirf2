@@ -1,5 +1,5 @@
-SPEC_SRC = 'https://raw.githubusercontent.com/fNIRS/snirf/master/snirf_specification.md'
-SPEC_VERSION = 'v1.1-development'  # Version of the spec linked above
+SPEC_SRC = 'https://raw.githubusercontent.com/fNIRS/snirf/v1.1/snirf_specification.md'
+SPEC_VERSION = 'v1.1'  # Version of the spec linked above
 
 """
 These types are fragments of the string codes used to describe the types of
@@ -11,8 +11,8 @@ TYPELUT = {
         'GROUP': '{.}',
         'INDEXED_GROUP': '{i}',
         'REQUIRED': '*',
-        'ARRAY_1D': '...]',
-        'ARRAY_2D': '...]]',
+        'ARRAY_2D': '...]]',  
+        'ARRAY_1D': '...]',  # Parsed with if-else so these can be distinguished with a simple "in"
         'INT_VALUE': '<i>',
         'FLOAT_VALUE': '<f>',
         'VARLEN_STRING': '"s"'
