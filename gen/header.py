@@ -1193,16 +1193,18 @@ class IndexedGroup(MutableSequence, ABC):
 
 def _recursive_hdf5_copy(g_dst: Group, g_src: Group):
     """Copy a Group to a new Group, modifying the h5py interfaces accordingly."""
-    print("src", g_src.location, "at", g_src.filename)
-    print("dst", g_dst.location, "at", g_dst.filename)
-    for subgroup_src, name in [(getattr(g_src, name), name) for name in g_src._snirf_names if isinstance(getattr(g_src, name), Group)]:
-        setattr(g_dst, name, subgroup_src)  # Recursion is continued in the setter
-    for subigroup_src, name in [(getattr(g_src, name), name) for name in g_src._snirf_names if isinstance(getattr(g_src, name), IndexedGroup)]:
-        getattr(g_dst, name)._list.clear()  # Delete entire list and replace it. IndexedGroup methods continue the recursion
-        for e in subigroup_src:
-            getattr(g_dst, name).append(e)
-    dst_h = g_dst._h
-    g_copied = copy.copy(g_src)
-    g_copied._h = dst_h
-    return g_copied
+    for sub_src, name in [(getattr(g_src, name), name) for name in g_src._snirf_names]:
+        if isinstance(getattr(g_src, name), Group):
+            setattr(g_dst, name, sub_src)  # Recursion is continued in the setter
+        elif isinstance(getattr(g_src, name), IndexedGroup):
+            getattr(g_dst, name)._list.clear()  # Delete entire list and replace it. IndexedGroup methods continue the recursion
+            for e in sub_src:
+                getattr(g_dst, name).append(e)
+        else:  # Other datasets
+            setattr(g_dst, name, sub_src)
+        if hasattr(g_src, '_unspecified_names'):
+            for sub_src_unspec, name in [(getattr(g_src, name), name) for name in g_src._unspecified_names]:
+                g_dst.add(name, sub_src_unspec)  # If a Group hasattr _unspecified names, it should have add
+    return g_dst
+            
 
