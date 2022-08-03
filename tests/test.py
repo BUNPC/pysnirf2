@@ -147,6 +147,27 @@ def _print_keys(group):
 
 class PySnirf2_Test(unittest.TestCase):
     
+    def test_multidimensional_aux(self):
+        """
+        Test to ensure the validator permits multidimensional aux
+        
+        """
+        for i, mode in enumerate([False, True]):
+            for file in self._test_files:
+                with Snirf(file, 'r+', dynamic_loading=mode) as s:
+                    s.nirs[0].aux.appendGroup()
+                    s.nirs[0].aux[-1].name = 'My2DAux'
+                    s.nirs[0].aux[-1].time = np.linspace(0, 10, 100)
+                    s.nirs[0].aux[-1].dataTimeSeries = np.random.random([100, 2])
+                    if VERBOSE:
+                        print("Created new aux channel:", s.nirs[0].aux[-1])
+                    s.save()
+                    if VERBOSE:
+                        
+                        s.validate().display()
+                    self.assertTrue(s.validate(), msg="Incorrectly invalidated multidimensional aux signal!")
+                self.assertTrue(validateSnirf(file), msg="Incorrectly invalidated multidimensional aux signal in file on disk!")
+    
     def test_assignment(self):
         """
         Assign a Group and IndexedGroup element from one Snirf object to another. Validate that Datasets,
@@ -264,6 +285,7 @@ class PySnirf2_Test(unittest.TestCase):
         for file in self._test_files:
             s1 = loadSnirf(file)
             s1_paths.append(file)
+            saveSnirf(file, s1)  # Otherwise, nirs/nirs1 inconsistencies will cause test to fail
             new_path = file.split('.')[0] + '_unedited.snirf'
             saveSnirf(new_path, s1)
             s2_paths.append(new_path)
@@ -359,6 +381,7 @@ class PySnirf2_Test(unittest.TestCase):
                 with Snirf(file, 'r+', dynamic_loading=mode) as s:
                     if VERBOSE:    
                         print("Adding metaDataTags 'foo', 'bar', and 'array_of_strings'")
+                    s.save()  # Otherwise, nirs/nirs1 inconsistencies will cause test to fail
                     s.nirs[0].metaDataTags.add('foo', 'Hello')
                     s.nirs[0].metaDataTags.add('Bar', 'World')
                     s.nirs[0].metaDataTags.add('_array_of_strings', ['foo', 'bar'])
@@ -389,6 +412,10 @@ class PySnirf2_Test(unittest.TestCase):
                     print('Loading', file, 'with dynamic_loading=' + str(mode))
                 with Snirf(file, 'r+', dynamic_loading=mode) as s:
                     probloc = s.nirs[0].probe.location
+                    # Otherwise probloc will not find issue
+                    if len(s.nirs) == 1:
+                        probloc = probloc.replace('nirs1', 'nirs')
+                    s.save()
                     del s.nirs[0].probe.sourcePos2D
                     del s.nirs[0].probe.detectorPos2D
                     if VERBOSE:
@@ -407,7 +434,6 @@ class PySnirf2_Test(unittest.TestCase):
                     del s.nirs[0].probe.sourcePos3D
                     del s.nirs[0].probe.detectorPos3D
                     s.save(newname2)
-
                 result = validateSnirf(newname)
                 if VERBOSE:
                     result.display(severity=3)
@@ -643,6 +669,7 @@ class PySnirf2_Test(unittest.TestCase):
             for file in self._test_files:
                 snirf = Snirf(file, 'r+', dynamic_loading=mode)
                 s1_paths.append(file)
+                snirf.save()  # Otherwise, nirs/nirs1 will cause dataset_equal_test to fail
                 new_path = file.split('.')[0] + '_unedited.snirf'
                 snirf.save(new_path)
                 s2_paths.append(new_path)
