@@ -13,7 +13,7 @@ from setuptools import find_packages, setup, Command
 
 from pysnirf2.__version__ import __version__ as VERSION
 
-NAME = 'pysnirf2'
+NAME = 'snirf'
 
 about = {}
 about['__version__'] = VERSION
