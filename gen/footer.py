@@ -155,6 +155,9 @@ class Snirf(Snirf):
             if not path.endswith('.snirf'):
                 path.replace('.', '')
                 path += '.snirf'
+            if self.filename == path:
+                self._save(self._h.file)
+                return
             with h5py.File(path, 'w') as new_file:
                 self._save(new_file)
                 self._cfg.logger.info('Saved Snirf file at %s to copy at %s', self.filename, path)
@@ -165,6 +168,17 @@ class Snirf(Snirf):
         else:
             self._save(self._h.file)
 
+    def copy(self) -> Snirf:
+        """Return a copy of the Snirf instance.
+            
+        A copy of a Snirf instance is a brand new HDF5 file in memory. This can 
+        be expensive to create. Note that in lieu of copying you can make assignments
+        between Snirf instances. 
+        """
+        s = Snirf('r+')
+        s = _recursive_hdf5_copy(s, self)
+        return s
+        
     def validate(self) -> ValidationResult:
         """Validate a `Snirf` instance.
 
@@ -196,6 +210,7 @@ class Snirf(Snirf):
         `close` is called automatically by the destructor.
         """
         self._cfg.logger.info('Closing Snirf file %s', self.filename)
+        _close_logger(self._cfg.logger)
         self._h.close()
 
     def __enter__(self):
@@ -247,7 +262,7 @@ class Snirf(Snirf):
 # -- Interface functions ----------------------------------------------------
             
         
-def loadSnirf(path: str, dynamic_loading: bool=False, logfile: bool=False) -> Snirf:
+def loadSnirf(path: str, dynamic_loading: bool=False, enable_logging: bool=False) -> Snirf:
     """Load a SNIRF file from disk.
     
     Returns a `Snirf` object loaded from path if a SNIRF file exists there. Takes
@@ -257,7 +272,7 @@ def loadSnirf(path: str, dynamic_loading: bool=False, logfile: bool=False) -> Sn
         path (str): Path to a SNIRF file on disk.
         dynamic_loading (bool): If True, Datasets will not be read from the SNIRF file
             unless accessed with a property, conserving memory and loading time with larger datasets. Default False.
-        logfile (bool): If True, the `Snirf` instance will write to a log file which shares its name. Default False.
+        enable_logging (bool): If True, the `Snirf` instance will write to a log file which shares its name. Default False.
     
     Returns:
         `Snirf`: a `Snirf` instance loaded from the SNIRF file.   
@@ -268,7 +283,7 @@ def loadSnirf(path: str, dynamic_loading: bool=False, logfile: bool=False) -> Sn
     if not path.endswith('.snirf'):
         path += '.snirf'
     if os.path.exists(path):
-        return Snirf(path, 'r+', dynamic_loading=dynamic_loading, logfile=logfile)
+        return Snirf(path, 'r+', dynamic_loading=dynamic_loading, enable_logging=enable_logging)
     else:
         raise FileNotFoundError('No SNIRF file at ' + path)
                     
@@ -281,10 +296,10 @@ def saveSnirf(path: str, snirf: Snirf):
         snirf (Snirf): `Snirf` instance to write to disk.
     """
     if type(path) is not str:
-        raise TypeError('path must be str, not '+ type(path))
-    if not isinstance(snirfobj, Snirf):
-        raise TypeError('snirfobj must be Snirf, not ' + type(snirfobj))
-    snirfobj.save(path)
+        raise TypeError('path must be str, not '+ str(type(path)))
+    if not isinstance(snirf, Snirf):
+        raise TypeError('snirf must be Snirf, not ' + str(type(snirf)))
+    snirf.save(path)
 
 
 def validateSnirf(path: str) -> ValidationResult:
@@ -293,7 +308,7 @@ def validateSnirf(path: str) -> ValidationResult:
     Returns truthy ValidationResult instance which holds detailed results of validation
     """
     if type(path) is not str:
-        raise TypeError('path must be str, not '+ type(path))
+        raise TypeError('path must be str, not '+ str(type(path)))
     if not path.endswith('.snirf'):
         path += '.snirf'
     if os.path.exists(path):

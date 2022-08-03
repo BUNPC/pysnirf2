@@ -110,7 +110,16 @@
 
     @{{ CHILD.name }}.setter
     def {{ CHILD.name }}(self, value):
+        {% if TYPES.INDEXED_GROUP in CHILD.type %}
         self._{{ CHILD.name }} = value
+        {% elif TYPES.GROUP in CHILD.type %}
+        if isinstance(value, {{ sentencecase(CHILD.name) }}):
+            self._{{ CHILD.name }} = _recursive_hdf5_copy(self._{{ CHILD.name }}, value)
+        else:
+            raise ValueError("Only a Group of type {{ sentencecase(CHILD.name) }} can be assigned to {{ CHILD.name }}.")
+        {% else %}
+        self._{{ CHILD.name }} = value
+        {% endif %}
         # self._cfg.logger.info('Assignment to %s/{{ CHILD.name }} in %s', self.location, self.filename)
 
     @{{ CHILD.name }}.deleter
@@ -158,13 +167,23 @@
             data = self.{{ CHILD.name }}  # Use loader function via getter
             if name in file:
                 del file[name]
-        {% if (TYPES.ARRAY_1D in CHILD.type) or (TYPES.ARRAY_2D in CHILD.type) %}
+        {% if TYPES.ARRAY_2D in CHILD.type %}
             {% if TYPES.VARLEN_STRING in CHILD.type %}
-            _create_dataset_string_array(file, name, data)
+            _create_dataset_string_array(file, name, data, ndim=2)
             {% elif TYPES.INT_VALUE in CHILD.type %}
-            _create_dataset_int_array(file, name, data)
+            _create_dataset_int_array(file, name, data, ndim=2)
             {% elif TYPES.FLOAT_VALUE in CHILD.type %}
-            _create_dataset_float_array(file, name, data)
+            _create_dataset_float_array(file, name, data, ndim=2)
+            {% else %}
+            _create_dataset(file, name, data)
+            {% endif %}
+        {% elif TYPES.ARRAY_1D in CHILD.type %}
+            {% if TYPES.VARLEN_STRING in CHILD.type %}
+            _create_dataset_string_array(file, name, data, ndim=1)
+            {% elif TYPES.INT_VALUE in CHILD.type %}
+            _create_dataset_int_array(file, name, data, ndim=1)
+            {% elif TYPES.FLOAT_VALUE in CHILD.type %}
+            _create_dataset_float_array(file, name, data, ndim=1)
             {% else %}
             _create_dataset(file, name, data)
             {% endif %}
@@ -356,16 +375,16 @@ class Snirf(Group):
     _name = '/'
 
     # overload
-    def __init__(self, *args, dynamic_loading: bool = False, logfile: bool = False):
+    def __init__(self, *args, dynamic_loading: bool = False, enable_logging: bool = False):
         self._cfg = SnirfConfig()
         self._cfg.dynamic_loading = dynamic_loading
         self._cfg.fmode = ''
-        if logfile:
-            self._cfg.logger = _create_logger(path, path.split('.')[0] + '.log')
-        else:
-            self._cfg.logger = _logger  # Use global logger
         if len(args) > 0:
             path = args[0]
+            if enable_logging:
+                self._cfg.logger = _create_logger(path, path.split('.')[0] + '.log')
+            else:
+                self._cfg.logger = _create_logger('', None)  # Do not log to file
             if len(args) > 1:
                 assert type(args[1]) is str, 'Positional argument 2 must be "r"/"w" mode'
                 if args[1] == 'r':
@@ -398,13 +417,15 @@ class Snirf(Group):
                 if self._cfg.fmode == '':
                     self._cfg.fmode = 'r'
                 self._h = h5py.File(path, 'r')
-            
             else:
                 raise TypeError(str(path) + ' is not a valid filename')
         else:
-            self._cfg.logger = _logger
-            self._cfg.logger.info('Created Snirf object based on tempfile')
             path = None
+            if enable_logging:
+                self._cfg.logger = _logger
+                self._cfg.logger.info('Created Snirf object based on tempfile')
+            else:
+                self._cfg.logger = _create_logger('', None)  # Do not log to file
             self._cfg.fmode = 'w'
             self._h = h5py.File(TemporaryFile(), 'w')
     {{ declare_members(ROOT) | indent }}

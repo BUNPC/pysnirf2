@@ -8,7 +8,7 @@ This library wraps each HDF5 Group and offers a Pythonic interface on lists
 of like-Groups which the SNIRF specification calls "indexed Groups".
 
 Example:
-    Load a file::
+    Load a file:
 
         >>> from pysnirf2 import Snirf
         >>> with Snirf(<filename>) as s:
@@ -30,6 +30,7 @@ from typing import Tuple
 import time
 import io
 import json
+import copy
 
 try:
     from pysnirf2.__version__ import __version__ as __version__
@@ -82,7 +83,10 @@ _loggers = {}
 def _create_logger(name, log_file, level=logging.INFO):
     if name in _loggers.keys():
         return _loggers[name]
-    handler = logging.FileHandler(log_file)
+    if log_file == '' or log_file is None:
+        handler = logging.NullHandler()
+    else:
+        handler = logging.FileHandler(log_file)
     handler.setFormatter(logging.Formatter('%(asctime)s | %(name)s v%(version)s | %(message)s'))
     logger = logging.getLogger(name)
     logger.setLevel(level)
@@ -90,6 +94,16 @@ def _create_logger(name, log_file, level=logging.INFO):
     logger = logging.LoggerAdapter(logger, {'version': __version__})
     _loggers[name] = logger
     return logger
+
+def _close_logger(logger: logging.LoggerAdapter):
+    if type(logger) is logging.LoggerAdapter:
+        handlers = logger.logger.handlers[:]
+    elif type(logger) is logging.Logger:
+        handlers = logger.handlers[:]
+    else:
+        raise TypeError('logger must be logging.LoggerAdapter or logging.Logger')
+    for handler in handlers:
+        handler.close()
 
 # Package-wide logger
 _logfile = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'pysnirf2.log')
@@ -100,9 +114,10 @@ if os.path.exists(_logfile):
             os.remove(_logfile)
         _logger = _create_logger('pysnirf2', _logfile)
     except (FileNotFoundError, PermissionError):
-        _logger = _create_logger('pysnirf2', os.path.join(os.getcwd(), 'pysnirf2.log'))
+        _logger = _create_logger('pysnirf2', None)  # Null logger
 else:
     _logger = _create_logger('pysnirf2', os.path.join(os.getcwd(), 'pysnirf2.log'))
+_logger.info('Library loaded by process {}'.format(os.getpid()))
 
 # -- methods to cast data prior to writing to and after reading from h5py interfaces------
 
@@ -118,7 +133,20 @@ _INT_DTYPES = [int, np.int32, np.int64]
 _FLOAT_DTYPES = [float, np.float64]
 _STR_DTYPES = [str, np.string_]
 
+
 # -- Dataset creators  ---------------------------------------
+
+
+def _get_padded_shape(name: str, data: np.ndarray, desired_ndim: int) -> np.ndarray:
+    """Utility function which pads data shape to ndim."""
+    if desired_ndim is None:
+        return data.shape
+    elif desired_ndim > data.ndim:
+        return np.concatenate([data.shape, np.ones(int(desired_ndim) - int(data.ndim))])
+    elif data.ndim == desired_ndim:
+        return np.shape(data)
+    else:
+        raise ValueError("Could not create dataset {}: ndim={} is incompatible with data which has shape {}.".format(name, desired_ndim, data.shape))
 
 
 def _create_dataset(file: h5py.File, name: str, data):
@@ -203,7 +231,7 @@ def _create_dataset_float(file: h5py.File, name: str, data: float):
     return file.create_dataset(name, dtype=_DTYPE_FLOAT64, data=float(data))
 
 
-def _create_dataset_string_array(file: h5py.File, name: str, data: np.ndarray):
+def _create_dataset_string_array(file: h5py.File, name: str, data: np.ndarray, ndim=None):
     """Saves a NumPy array to an h5py.File on disk as a new SNIRF compliant array of variable length strings.
 
     Args:
@@ -215,10 +243,11 @@ def _create_dataset_string_array(file: h5py.File, name: str, data: np.ndarray):
         An h5py.Dataset instance created
     """
     array = np.array(data).astype('O')
+    shape = _get_padded_shape(name, array, ndim)
     return file.create_dataset(name, dtype=_varlen_str_type, data=array)
 
 
-def _create_dataset_int_array(file: h5py.File, name: str, data: np.ndarray):
+def _create_dataset_int_array(file: h5py.File, name: str, data: np.ndarray, ndim=None):
     """Saves a NumPy array to an h5py.File on disk as a new SNIRF compliant array of 32-bit integers.
 
     Args:
@@ -230,10 +259,11 @@ def _create_dataset_int_array(file: h5py.File, name: str, data: np.ndarray):
         An h5py.Dataset instance created
     """
     array = np.array(data).astype(int)
+    shape = _get_padded_shape(name, array, ndim)
     return file.create_dataset(name, dtype=_DTYPE_INT32, data=array)
 
 
-def _create_dataset_float_array(file: h5py.File, name: str, data: np.ndarray):
+def _create_dataset_float_array(file: h5py.File, name: str, data: np.ndarray, ndim=None):
     """Saves a NumPy array to an h5py.File on disk as a new SNIRF compliant array of 64-bit floats.
 
     Args:
@@ -245,7 +275,8 @@ def _create_dataset_float_array(file: h5py.File, name: str, data: np.ndarray):
         An h5py.Dataset instance created
     """
     array = np.array(data).astype(float)
-    return file.create_dataset(name, dtype=_DTYPE_FLOAT64, data=array)
+    shape = _get_padded_shape(name, array, ndim)
+    return file.create_dataset(name, dtype=_DTYPE_FLOAT64, shape=shape, data=array)
 
 
 # -- Dataset readers  ---------------------------------------
@@ -746,6 +777,7 @@ class SnirfConfig:
         self.dynamic_loading: bool = False  # If False, data is loaded in the constructor, if True, data is loaded on access
         self.fmode: str = 'w'  # 'w' or 'r', mode to open HDF5 file with
 
+
 # Placeholder for a Dataset that is not on disk or in memory
 class _AbsentDatasetType():
     pass
@@ -900,7 +932,7 @@ class Group(ABC):
 
     def __contains__(self, key):
         return key in self._h
-
+    
 
 class IndexedGroup(MutableSequence, ABC):
 
@@ -952,10 +984,7 @@ class IndexedGroup(MutableSequence, ABC):
 
     def __setitem__(self, i, item):
         self._check_type(item)
-        if not item.location in [e.location for e in self._list]:
-            self._list[i] = item
-        else:
-            raise SnirfFormatError(item.location + ' already an element of ' + self.__class__.__name__)
+        self._list[i] = _recursive_hdf5_copy(self._list[i], item)
 
     def __getattr__(self, name):
         # If user tries to access an element's properties, raise informative exception
@@ -992,7 +1021,8 @@ class IndexedGroup(MutableSequence, ABC):
             item: must be of type _element
         """
         self._check_type(item)
-        self._list.insert(i, item)
+        self.insertGroup(i)
+        self._list[i] = _recursive_hdf5_copy(self._list[i], item)
         self._cfg.logger.info('%i th element inserted into IndexedGroup %s at %s in %s at %i', len(self._list),
                               self.__class__.__name__, self._parent.location, self.filename, i)
 
@@ -1003,7 +1033,8 @@ class IndexedGroup(MutableSequence, ABC):
             item: must be of type _element
         """
         self._check_type(item)
-        self._list.append(item)
+        self.appendGroup()
+        self._list[-1] = _recursive_hdf5_copy(self._list[-1], item)
         self._cfg.logger.info('%i th element appended to IndexedGroup %s at %s in %s', len(self._list),
                               self.__class__.__name__, self._parent.location, self.filename)
 
@@ -1104,7 +1135,13 @@ class IndexedGroup(MutableSequence, ABC):
         """
         if h is None:
             h = self._parent._h
-        if all([len(e.location.split('/' + self._name)[-1]) > 0 for e in self._list]):
+        if len(self._list) == 1 and self._name == 'nirs':
+            e = self._list[0]
+            indexstr = e.location.split('/' + self._name)[-1]
+            if len(indexstr) > 0:  # Rename the element
+                h.move(e.location, '/'.join(e.location.split('/')[:-1]) + '/' + self._name)
+                self._cfg.logger.info(e.location, '--->', '/'.join(e.location.split('/')[:-1]) + '/' + self._name)
+        elif all([len(e.location.split('/' + self._name)[-1]) > 0 for e in self._list]):
             if not [int(e.location.split('/' + self._name)[-1]) for e in self._list] == list(range(1, len(self._list) + 1)):
                 self._cfg.logger.info('renaming elements of IndexedGroup ' + self.__class__.__name__ + ' at '
                                       + self._parent.location + ' in ' + self.filename + ' to agree with naming format')
@@ -1159,3 +1196,21 @@ class IndexedGroup(MutableSequence, ABC):
         for e in self._list:
             e._save(*args)  # Group save functions handle the write to disk
         self._order_names(h=h)  # Enforce order in the group names
+
+
+def _recursive_hdf5_copy(g_dst: Group, g_src: Group):
+    """Copy a Group to a new Group, modifying the h5py interfaces accordingly."""
+    for sub_src, name in [(getattr(g_src, name), name) for name in g_src._snirf_names]:
+        if isinstance(getattr(g_src, name), Group):
+            setattr(g_dst, name, sub_src)  # Recursion is continued in the setter
+        elif isinstance(getattr(g_src, name), IndexedGroup):
+            getattr(g_dst, name)._list.clear()  # Delete entire list and replace it. IndexedGroup methods continue the recursion
+            for e in sub_src:
+                getattr(g_dst, name).append(e)
+        else:  # Other datasets
+            setattr(g_dst, name, sub_src)
+        if hasattr(g_src, '_unspecified_names'):
+            for sub_src_unspec, name in [(getattr(g_src, name), name) for name in g_src._unspecified_names]:
+                g_dst.add(name, sub_src_unspec)  # If a Group hasattr _unspecified names, it should have add
+    return g_dst
+            
