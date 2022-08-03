@@ -8,7 +8,7 @@ This library wraps each HDF5 Group and offers a Pythonic interface on lists
 of like-Groups which the SNIRF specification calls "indexed Groups".
 
 Example:
-    Load a file::
+    Load a file:
 
         >>> from pysnirf2 import Snirf
         >>> with Snirf(<filename>) as s:
@@ -1271,7 +1271,16 @@ class IndexedGroup(MutableSequence, ABC):
         """
         if h is None:
             h = self._parent._h
-        if all([
+        if len(self._list) == 1 and self._name == 'nirs':
+            e = self._list[0]
+            indexstr = e.location.split('/' + self._name)[-1]
+            if len(indexstr) > 0:  # Rename the element
+                h.move(e.location,
+                       '/'.join(e.location.split('/')[:-1]) + '/' + self._name)
+                self._cfg.logger.info(
+                    e.location, '--->',
+                    '/'.join(e.location.split('/')[:-1]) + '/' + self._name)
+        elif all([
                 len(e.location.split('/' + self._name)[-1]) > 0
                 for e in self._list
         ]):
@@ -6103,6 +6112,17 @@ class Snirf(Snirf):
                 self._cfg.logger.info('Saved Snirf file to filelike object')
         else:
             self._save(self._h.file)
+
+    def copy(self) -> Snirf:
+        """Return a copy of the Snirf instance.
+            
+        A copy of a Snirf instance is a brand new HDF5 file in memory. This can 
+        be expensive to create. Note that in lieu of copying you can make assignments
+        between Snirf instances. 
+        """
+        s = Snirf('r+')
+        s = _recursive_hdf5_copy(s, self)
+        return s
 
     def validate(self) -> ValidationResult:
         """Validate a `Snirf` instance.

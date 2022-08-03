@@ -8,7 +8,7 @@ This library wraps each HDF5 Group and offers a Pythonic interface on lists
 of like-Groups which the SNIRF specification calls "indexed Groups".
 
 Example:
-    Load a file::
+    Load a file:
 
         >>> from pysnirf2 import Snirf
         >>> with Snirf(<filename>) as s:
@@ -777,6 +777,7 @@ class SnirfConfig:
         self.dynamic_loading: bool = False  # If False, data is loaded in the constructor, if True, data is loaded on access
         self.fmode: str = 'w'  # 'w' or 'r', mode to open HDF5 file with
 
+
 # Placeholder for a Dataset that is not on disk or in memory
 class _AbsentDatasetType():
     pass
@@ -1134,7 +1135,13 @@ class IndexedGroup(MutableSequence, ABC):
         """
         if h is None:
             h = self._parent._h
-        if all([len(e.location.split('/' + self._name)[-1]) > 0 for e in self._list]):
+        if len(self._list) == 1 and self._name == 'nirs':
+            e = self._list[0]
+            indexstr = e.location.split('/' + self._name)[-1]
+            if len(indexstr) > 0:  # Rename the element
+                h.move(e.location, '/'.join(e.location.split('/')[:-1]) + '/' + self._name)
+                self._cfg.logger.info(e.location, '--->', '/'.join(e.location.split('/')[:-1]) + '/' + self._name)
+        elif all([len(e.location.split('/' + self._name)[-1]) > 0 for e in self._list]):
             if not [int(e.location.split('/' + self._name)[-1]) for e in self._list] == list(range(1, len(self._list) + 1)):
                 self._cfg.logger.info('renaming elements of IndexedGroup ' + self.__class__.__name__ + ' at '
                                       + self._parent.location + ' in ' + self.filename + ' to agree with naming format')
@@ -1207,4 +1214,3 @@ def _recursive_hdf5_copy(g_dst: Group, g_src: Group):
                 g_dst.add(name, sub_src_unspec)  # If a Group hasattr _unspecified names, it should have add
     return g_dst
             
-

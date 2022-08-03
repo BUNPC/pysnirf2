@@ -232,24 +232,28 @@ class PySnirf2_Test(unittest.TestCase):
                             self.assertTrue(s.nirs[0].metaDataTags.foo == 'bar', msg='Assignment unsuccessful after saving, failed to set the unspecified metaDataTag \'foo\'')
                             
 
-    # def test_copying(self):
-    #     """
-    #     Loads all files in filenames using Snirf in both dynamic and static mode, 
-    #     saves copies to new files, compares the results using h5py and a naive cast.
-    #     If returns True, all specified datasets are equivalent in the copied files.
-    #     """
-    #     for i, mode in enumerate([False, True]):
-    #         s2_paths = []
-    #         for file in self._test_files:
-    #             new_path = file.split('.')[0] + '_copied.snirf'
-    #             if VERBOSE:
-    #                 print('Loading', file, 'with dynamic_loading=' + str(mode))
-    #                 print('Making a copy of', file)
-    #             with Snirf(file, 'r+', dynamic_loading=mode) as s:
-    #                 s2 = s.copy()
-    #                 s2.save(new_path)
-    #         for (fname1, fname2) in zip(self._test_files, s2_paths):
-    #             dataset_equal_test(self, fname1, fname2)
+    def test_copying(self):
+        """
+        Loads all files in filenames using Snirf in both dynamic and static mode, 
+        saves copies to new files, compares the results using h5py and a naive cast.
+        If returns True, all specified datasets are equivalent in the copied files.
+        """
+        for i, mode in enumerate([False, True]):
+            s2_paths = []
+            for file in self._test_files:
+                new_path = file.split('.')[0] + '_copied.snirf'
+                if VERBOSE:
+                    print('Loading', file, 'with dynamic_loading=' + str(mode))
+                    print('Making a copy of', file)
+                with Snirf(file, 'r+', dynamic_loading=mode) as s:
+                    s2 = s.copy()
+                    s.save()  # Save it, otherwise differences in IndexedGroup naming will raise issues with comparison
+                    s2.save(new_path)
+                    s2_paths.append(new_path)
+            for (fname1, fname2) in zip(self._test_files, s2_paths):
+                if VERBOSE:
+                    print('Testing equality between', fname1, 'and', fname2)
+                dataset_equal_test(self, fname1, fname2)
     
     
     def test_loading_saving_functions(self):

@@ -165,6 +165,17 @@ class Snirf(Snirf):
         else:
             self._save(self._h.file)
 
+    def copy(self) -> Snirf:
+        """Return a copy of the Snirf instance.
+            
+        A copy of a Snirf instance is a brand new HDF5 file in memory. This can 
+        be expensive to create. Note that in lieu of copying you can make assignments
+        between Snirf instances. 
+        """
+        s = Snirf('r+')
+        s = _recursive_hdf5_copy(s, self)
+        return s
+        
     def validate(self) -> ValidationResult:
         """Validate a `Snirf` instance.
 
