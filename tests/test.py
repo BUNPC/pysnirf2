@@ -183,7 +183,7 @@ class PySnirf2_Test(unittest.TestCase):
                 # Reassignment of same probe
                 with Snirf(file, 'r+', dynamic_loading=mode) as s:
                     same_probe = s.nirs[0].probe
-                    self.assertTrue(isinstance(same_probe, pysnirf2.Probe), msg="Could not assign Probe reference")
+                    self.assertTrue(isinstance(same_probe, snirf.Probe), msg="Could not assign Probe reference")
                     same_probe.sourcePos3D = np.random.random([31, 3])
                     try:
                         s.nirs[0].probe = "foo"

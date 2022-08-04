@@ -15,7 +15,7 @@ Generates SNIRF interface and validator from the summary table of the specificat
 hosted at SPEC_SRC.
 """
 
-LIB_VERSION = '0.6.2'  # Version for this script
+LIB_VERSION = '0.7.2'  # Version for this script
 
 if __name__ == '__main__':
     
@@ -23,7 +23,7 @@ if __name__ == '__main__':
     if not cwd.endswith('pysnirf2'):
         sys.exit('The gen script must be run from the pysnirf2 project root, not ' + cwd)    
     
-    output_path = cwd + '/pysnirf2/' + 'pysnirf2.py'
+    output_path = cwd + '/snirf/' + 'pysnirf2.py'
     
     try:
         os.remove(output_path)

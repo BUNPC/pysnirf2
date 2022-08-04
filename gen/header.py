@@ -10,7 +10,7 @@ of like-Groups which the SNIRF specification calls "indexed Groups".
 Example:
     Load a file:
 
-        >>> from pysnirf2 import Snirf
+        >>> from snirf import Snirf
         >>> with Snirf(<filename>) as s:
             ...
 
@@ -33,7 +33,7 @@ import json
 import copy
 
 try:
-    from pysnirf2.__version__ import __version__ as __version__
+    from snirf.__version__ import __version__ as __version__
 except Exception:
     warn('Failed to load pysnirf2 library version')
     __version__ = '0.0.0'
