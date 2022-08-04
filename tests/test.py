@@ -1,6 +1,6 @@
 import unittest
-import pysnirf2
-from pysnirf2 import Snirf, validateSnirf, loadSnirf, saveSnirf
+import snirf
+from snirf import Snirf, validateSnirf, loadSnirf, saveSnirf
 import h5py
 import os
 import sys
