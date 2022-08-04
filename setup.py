@@ -11,7 +11,7 @@ from shutil import rmtree
 
 from setuptools import find_packages, setup, Command
 
-from pysnirf2.__version__ import __version__ as VERSION
+from snirf.__version__ import __version__ as VERSION
 
 NAME = 'snirf'
 
