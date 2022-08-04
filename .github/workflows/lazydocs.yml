@@ -23,7 +23,7 @@ jobs:
           pip install lazydocs
           pip install pydocstyle
       - name: Generate documentation
-        run: lazydocs --overview-file="README.md" --validate pysnirf2 docs
+        run: lazydocs --overview-file="README.md" --validate snirf docs
       - name: Commit
         run: |
           echo ${{ github.ref }}
