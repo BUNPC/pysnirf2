@@ -1,12 +1,8 @@
 [run]
 branch = True
-source = mne
+source = snirf
 omit =
-    */bin/*
     */setup.py
-    */mne/fixes*
-    */mne/utils/linalg.py
-    */mne/conftest.py
 
 [report]
 exclude_lines =
