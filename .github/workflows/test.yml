@@ -30,10 +30,10 @@ jobs:
         run: |
           python -m pip install --upgrade pip setuptools wheel
           pip install -r requirements.txt pytest pytest-cov
-          # TODO: This should work but it doesn't (can't import snirf).
-          # The --no-build-isolation should also work but requires h5py.
-          # pip install --no-build-isolation -ve .
-          python setup.py develop
+          # TODO: The requirements.txt is very out of date... let's install
+          # a newer setuptools that actually works on 3.9+.
+          pip install --upgrade pip setuptools
+          pip install --no-build-isolation -ve .
       - run: pytest tests/test.py
       - uses: codecov/codecov-action@v3
         if: success()
