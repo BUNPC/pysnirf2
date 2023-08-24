@@ -1278,7 +1278,7 @@ class IndexedGroup(MutableSequence, ABC):
                 h.move(e.location,
                        '/'.join(e.location.split('/')[:-1]) + '/' + self._name)
                 self._cfg.logger.info(
-                    e.location, '--->',
+                    e.location + '--->' +
                     '/'.join(e.location.split('/')[:-1]) + '/' + self._name)
         elif all([
                 len(e.location.split('/' + self._name)[-1]) > 0

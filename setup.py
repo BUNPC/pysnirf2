@@ -6,12 +6,16 @@
 
 import io
 import os
+from pathlib import Path
 import sys
 from shutil import rmtree
 
 from setuptools import find_packages, setup, Command
 
-from snirf.__version__ import __version__ as VERSION
+# Do not "import snirf" here because that requires h5py to be installed
+with open(Path(__file__).parent / "snirf" / "__version__.py") as f:
+    VERSION = f.readline().split("=")[1].strip().strip('()')
+VERSION = ".".join(VERSION.replace(' ', '').replace(',', '.').split(','))
 
 NAME = 'snirf'
 

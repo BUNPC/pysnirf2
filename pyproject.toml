@@ -4,3 +4,9 @@ requires = [
     "wheel"
 ]
 build-backend = "setuptools.build_meta"
+
+[tool.pytest.ini_options]
+addopts = """-ra --cov-report= --tb=short \
+    --junit-xml=junit-results.xml \
+    --color=yes --capture=sys"""
+junit_family = "xunit2"
