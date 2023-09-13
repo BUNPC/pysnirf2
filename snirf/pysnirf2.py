@@ -137,6 +137,8 @@ _DTYPE_FLOAT32 = 'f4'
 _DTYPE_FLOAT64 = 'f8'
 _DTYPE_INT32 = 'i4'
 _DTYPE_INT64 = 'i8'
+_DTYPE_UINT32 = 'u4'
+_DTYPE_UINT64 = 'u8'
 _DTYPE_FIXED_LEN_STR = 'S'  # Not sure how robust this is, but fixed length strings will always at least contain S
 _DTYPE_VAR_LEN_STR = 'O'  # Variable length string
 
@@ -762,8 +764,12 @@ def _validate_int(dataset: h5py.Dataset) -> str:
         return 'INVALID_DATASET_SHAPE'
     if _DTYPE_INT32 in dataset.dtype.str:
         return 'OK'
+    if _DTYPE_UINT32 in dataset.dtype.str:
+        return 'OK'
     if _DTYPE_INT64 in dataset.dtype.str:
-        return 'INT_64'
+        return 'OK'
+    if _DTYPE_UINT64 in dataset.dtype.str:
+        return 'OK'
     else:
         return 'INVALID_DATASET_TYPE'
 
@@ -840,7 +846,7 @@ def _validate_float_array(dataset: h5py.Dataset, ndims=[1]) -> str:
     """
     if type(dataset) is not h5py.Dataset:
         raise TypeError("'dataset' must be type h5py.Dataset")
-    if dataset.ndim not in ndims:
+    if dataset.ndim != ndims[0]:
         return 'INVALID_DATASET_SHAPE'
     if _DTYPE_FLOAT32 in dataset.dtype.str or _DTYPE_FLOAT64 in dataset.dtype.str:
         return 'OK'
@@ -6183,7 +6189,7 @@ class Snirf(Snirf):
         for nirs in self.nirs:
             if type(nirs.probe) not in [type(None), type(_AbsentGroup)]:
                 if nirs.probe.sourceLabels is not None:
-                    lenSourceLabels = nirs.probe.sourceLabels.shape[0]
+                    lenSourceLabels = nirs.probe.sourceLabels.size
                 else:
                     lenSourceLabels = 0
                 if nirs.probe.detectorLabels is not None:
@@ -6272,3 +6278,27 @@ def validateSnirf(path: str) -> ValidationResult:
             return snirf.validate()
     else:
         raise FileNotFoundError('No SNIRF file at ' + path)
+
+
+if __name__ == "__main__":
+    appdir = (os.path.dirname(os.path.abspath(__file__)) + '/').replace('\\','/')
+    sys.stdout.write('WELCOME to pysnirf2 test\n')
+    if len(sys.argv) < 2:
+        filename = 'testProbe_1S_4D.snirf'
+    else:
+        filename = sys.argv[1]
+
+    if not os.path.exists(filename):
+        filename = appdir + filename
+        if not os.path.exists(filename):
+            sys.stdout.write('ERROR: Cannot find file   "%s"\n'% filename)
+            quit()
+
+    sys.stdout.write('\n')
+    sys.stdout.write('Validating file   "%s"\n' % os.path.abspath(filename))
+    sys.stdout.write('\n')
+    snirf = Snirf(filename,'r')
+    r = snirf.validate()
+    r.display()
+
+
