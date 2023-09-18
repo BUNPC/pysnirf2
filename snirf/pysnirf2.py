@@ -5746,7 +5746,6 @@ class Snirf(Group):
                 warn(
                     'Use `Snirf(<path>, <mode>)` to open SNIRF file from path. Path-only construction is deprecated.',
                     DeprecationWarning)
-                # fmode is ''
             if type(path) is str:
                 if not path.endswith('.snirf'):
                     path.replace('.', '')
@@ -6139,7 +6138,7 @@ class Snirf(Snirf):
         be expensive to create. Note that in lieu of copying you can make assignments
         between Snirf instances. 
         """
-        s = Snirf('r+')
+        s = Snirf()
         s = _recursive_hdf5_copy(s, self)
         return s
 
@@ -6293,21 +6292,16 @@ def validateSnirf(path: str) -> ValidationResult:
 if __name__ == "__main__":
     appdir = (os.path.dirname(os.path.abspath(__file__)) + '/').replace(
         '\\', '/')
-    sys.stdout.write('WELCOME to pysnirf2 test\n')
     if len(sys.argv) < 2:
-        filename = 'testProbe_1S_4D.snirf'
+        sys.exit()
     else:
         filename = sys.argv[1]
-
     if not os.path.exists(filename):
-        filename = appdir + filename
+        filename = os.path.join(appdir, filename)
         if not os.path.exists(filename):
-            sys.stdout.write('ERROR: Cannot find file   "%s"\n' % filename)
-            quit()
-
-    sys.stdout.write('\n')
-    sys.stdout.write('Validating file   "%s"\n' % os.path.abspath(filename))
-    sys.stdout.write('\n')
+            raise FileNotFoundError('Cannot find {}\n'.format(filename))
+            sys.exit()
+    print('\nValidating file {}\n'.format(os.path.abspath(filename)))
     snirf = Snirf(filename, 'r')
     r = snirf.validate()
     r.display()
