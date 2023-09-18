@@ -218,9 +218,9 @@ if __name__ == '__main__':
     # Generate the complete Snirf library by inserting the template code into pysnirf2.py
     with open(library_path, "r") as f_in:
         b = f_in.read()
-        SNIRF['HEADER'] =  b.split(TEMPLATE_INSERT_BEGIN_STR)[0] + '\n' + TEMPLATE_INSERT_BEGIN_STR
+        SNIRF['HEADER'] =  b.split(TEMPLATE_INSERT_BEGIN_STR)[0] + TEMPLATE_INSERT_BEGIN_STR
         print('Loaded header code, {} lines'.format(len(SNIRF['HEADER'].split('\n'))))
-        SNIRF['FOOTER'] = TEMPLATE_INSERT_END_STR + '\n' +  b.split(TEMPLATE_INSERT_END_STR, 1)[1]
+        SNIRF['FOOTER'] = TEMPLATE_INSERT_END_STR +  b.split(TEMPLATE_INSERT_END_STR, 1)[1]
         print('Loaded footer code, {} lines'.format(len(SNIRF['FOOTER'].split('\n'))))
 
     ans = input('Proceed? LOCAL CHANGES MAY BE OVERWRITTEN OR LOST! y/n\n')
