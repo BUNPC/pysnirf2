@@ -15,7 +15,7 @@ Generates SNIRF interface and validator from the summary table of the specificat
 hosted at SPEC_SRC.
 """
 
-LIB_VERSION = '0.7.2'  # Version for this script
+LIB_VERSION = '0.8.2'  # Version for this script
 
 if __name__ == '__main__':
     
@@ -23,13 +23,7 @@ if __name__ == '__main__':
     if not cwd.endswith('pysnirf2'):
         sys.exit('The gen script must be run from the pysnirf2 project root, not ' + cwd)    
     
-    output_path = cwd + '/snirf/' + 'pysnirf2.py'
-    
-    try:
-        os.remove(output_path)
-    except FileNotFoundError:
-        pass
-    open(output_path, 'w')
+    library_path = cwd + '/snirf/' + 'pysnirf2.py'
     
     try:
         from data import *
@@ -127,9 +121,9 @@ if __name__ == '__main__':
     print('Found', len(locations), 'locations...')
     
     # Write locations to file
-    if os.path.exists('locations.txt'):
-        os.remove('locations.txt')
-    with open('locations.txt', 'w') as f:
+    if os.path.exists(os.path.join('gen', 'locations.txt')):
+        os.remove(os.path.join('gen', 'locations.txt'))
+    with open(os.path.join('gen', 'locations.txt'), 'w') as f:
         for location in locations:
             f.write(location.replace('(i)', '').replace('(j)', '').replace('(k)', '') + '\n')
     print('Wrote to locations.txt')
@@ -221,19 +215,29 @@ if __name__ == '__main__':
     print('Loading template from', TEMPLATE)
     template = env.get_template(TEMPLATE)
     
-    # Generate the complete Snirf interface from base.py and the template + data
-    with open(HEADER, 'r') as f_header:
-        with open(FOOTER, 'r') as f_footer:
-            print('Loading base class definitions and file header from', HEADER)
-            print('Loading file footer from', FOOTER)
-            with open(output_path, "w") as f_out:
-                SNIRF['HEADER'] = f_header.read()
-                SNIRF['FOOTER'] = f_footer.read()
-                f_out.write(template.render(SNIRF))
-            
-    print('\nWrote script to ' + output_path + '.')
+    # Generate the complete Snirf library by inserting the template code into pysnirf2.py
+    with open(library_path, "r") as f_in:
+        b = f_in.read()
+        SNIRF['HEADER'] =  b.split(TEMPLATE_INSERT_BEGIN_STR)[0] + '\n' + TEMPLATE_INSERT_BEGIN_STR
+        print('Loaded header code, {} lines'.format(len(SNIRF['HEADER'].split('\n'))))
+        SNIRF['FOOTER'] = TEMPLATE_INSERT_END_STR + '\n' +  b.split(TEMPLATE_INSERT_END_STR, 1)[1]
+        print('Loaded footer code, {} lines'.format(len(SNIRF['FOOTER'].split('\n'))))
+
+    ans = input('Proceed? LOCAL CHANGES MAY BE OVERWRITTEN OR LOST! y/n\n')
+    if ans not in ['y', 'Y']:
+        sys.exit('pysnirf2 generation aborted.')
+    try:
+        os.remove(library_path)
+    except FileNotFoundError:
+        pass
+    open(library_path, 'w')
     
-    with open(output_path) as generated:
+    with open(library_path, "w") as f_out:
+        f_out.write(template.render(SNIRF))
+            
+    print('\nWrote script to ' + library_path + '.')
+    
+    with open(library_path) as generated:
         lines = generated.read().split('\n')
         print('pysnirf2.py is', len(lines), 'lines long')
         errors = 0
@@ -246,11 +250,15 @@ if __name__ == '__main__':
     
     ans = input('Format the generated code? y/n\n')
     if ans in ['y', 'Y']:
-        FormatFile(output_path, in_place=True)[:2]
+        FormatFile(library_path, in_place=True)[:2]
     
     ans = input('Lint the generated code? y/n\n')
     if ans in ['y', 'Y']:
-        lint.Run(['--errors-only', output_path])
+        lint.Run(['--errors-only', library_path])
         
-    print('pysnirf2 generation complete.')
+    print('\npysnirf2 generation complete.')
     
+    # Cleanup
+    
+    if os.path.exists(os.path.join('gen', 'locations.txt')):
+        os.remove(os.path.join('gen', 'locations.txt'))
