@@ -6,7 +6,6 @@ pysnirf2
 
 </h1>
 
-
 ![testing](https://github.com/BUNPC/pysnirf2/actions/workflows/test.yml/badge.svg)
 ![lazydocs](https://github.com/BUNPC/pysnirf2/actions/workflows/lazydocs.yml/badge.svg)
 [![PyPI version](https://badge.fury.io/py/snirf.svg)](https://badge.fury.io/py/snirf)
