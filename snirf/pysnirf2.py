@@ -4416,7 +4416,7 @@ class DataElement(Group):
         super().__init__(gid, cfg)
         self._dataTimeSeries = _AbsentDataset  # [[<f>,...]]*
         self._dataOffset = _AbsentDataset  # [<f>,...]*
-        self._time = _AbsentDataset  # [<f>,...]*
+        self._time = _AbsentDataset  # [<f>,...]
         self._measurementList = _AbsentDataset  # {i}*
         self._measurementLists = _AbsentGroup  # {.}*
         self._snirf_names = [
@@ -4747,7 +4747,7 @@ class DataElement(Group):
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/time'
             if type(self._time) in [type(_AbsentDataset), type(None)]:
-                result._add(name, 'REQUIRED_DATASET_MISSING')
+                result._add(name, 'OPTIONAL_DATASET_MISSING')
             else:
                 try:
                     if type(self._time) is type(
