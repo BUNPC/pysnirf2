@@ -144,7 +144,7 @@ _DTYPE_VAR_LEN_STR = 'O'  # Variable length string
 
 _INT_DTYPES = [int, np.int32, np.int64]
 _FLOAT_DTYPES = [float, np.float64]
-_STR_DTYPES = [str, np.string_]
+_STR_DTYPES = [str, np.bytes_]
 
 # -- Dataset creators  ---------------------------------------
 
