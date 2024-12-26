@@ -38,7 +38,7 @@ if __name__ == '__main__':
     
     local_spec = SPEC_SRC.split('/')[-1].split('.')[0] + '_retrieved_' + datetime.now().strftime('%d_%m_%y') + '.txt'
     
-    if os.path.exists(local_spec):
+    if os.path.exists(local_spec) and input('Use local specification document ' + local_spec + '? y/n\n') == 'y':
         print('Loading specification from local document', local_spec, '...')
         with open(local_spec, 'r') as f:
             text = f.read()
