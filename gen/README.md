@@ -14,5 +14,5 @@ This ensures easy maintenance of the project as the specification develops.
 
 1. Ensure that [data.py](https://github.com/BUNPC/pysnirf2/blob/main/gen/data.py) contains correct data to parse the latest spec. Make sure `SPEC_SRC` and `VERSION` are up to date.
 2. IMPORTANT! Back up or commit local changes to the code via git. The generation process may delete your changes.
-3. Using a Python > 3.6 environment equipped with [gen/requirements.txt](https://github.com/BUNPC/pysnirf2/blob/main/gen/requirements.txt), run [gen.py](https://github.com/BUNPC/pysnirf2/blob/main/gen/gen.py) from the project root
+3. Using a Python > 3.9 environment equipped with [gen/requirements.txt](https://github.com/BUNPC/pysnirf2/blob/main/gen/requirements.txt), run [gen.py](https://github.com/BUNPC/pysnirf2/blob/main/gen/gen.py) from the project root
 4. Test the resulting library
