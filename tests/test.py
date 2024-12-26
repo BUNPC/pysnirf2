@@ -1,6 +1,4 @@
 import unittest
-import snirf
-from snirf import Snirf, validateSnirf, loadSnirf, saveSnirf
 import h5py
 import os
 import sys
@@ -10,6 +8,13 @@ from collections import deque
 from collections.abc import Set, Mapping
 import numpy as np
 import shutil
+try:
+    import snirf
+    from snirf import Snirf, validateSnirf, loadSnirf, saveSnirf
+except ImportError:
+    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+    import snirf
+    from snirf import Snirf, validateSnirf, loadSnirf, saveSnirf
 
 VERBOSE = True  # Additional print statements in each test
 
