@@ -6636,7 +6636,23 @@ class Aux(Aux):
 class DataElement(DataElement):
 
     def _validate(self, result: ValidationResult):
-        super()._validate(result)
+
+        # Override measurementList/measurementLists validation, only one is required
+        ml = self.measurementList is not None
+        mls = self.measurementLists is not None
+        if (ml and mls):
+            result._add(self.location + '/measurementList', 'OK')
+            result._add(self.location + '/measurementLists', 'OK')
+        elif (ml or mls):
+            result._add(self.location + '/measurementList',
+                ['OPTIONAL_DATASET_MISSING', 'OK'][int(ml)])
+            result._add(self.location + '/measurementLists',
+                ['OPTIONAL_DATASET_MISSING', 'OK'][int(mls)])
+        else:
+            result._add(self.location + '/measurementList',
+                ['REQUIRED_DATASET_MISSING', 'OK'][int(ml)])
+            result._add(self.location + '/measurementLists',
+                ['REQUIRED_DATASET_MISSING', 'OK'][int(mls)])
 
         if all(attr is not None for attr in [self.time, self.dataTimeSeries]):
             if self.time.size != np.shape(self.dataTimeSeries)[0]:
@@ -6644,6 +6660,8 @@ class DataElement(DataElement):
 
             if len(self.measurementList) != np.shape(self.dataTimeSeries)[1]:
                 result._add(self.location, 'INVALID_MEASUREMENTLIST')
+        
+        super()._validate(result)
 
 
 class Data(Data):
