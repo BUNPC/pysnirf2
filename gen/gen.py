@@ -87,7 +87,7 @@ if __name__ == '__main__':
             # Get name: format pairs for each name
             if len(name) > 1:  # Skip the empty row
                 type_code = delim[-2].replace(' ', '').replace('`', '')
-                type_codes.append(type_code)
+                type_codes.append((type_code, name))
         
     print('Found', len(type_codes), 'types in the table...')
     
@@ -128,8 +128,16 @@ if __name__ == '__main__':
             f.write(location.replace('(i)', '').replace('(j)', '').replace('(k)', '') + '\n')
     print('Wrote to locations.txt')
     
+    errf = False
+    for (type_code, location) in zip(type_codes, locations):
+        if type_code[1] not in location:
+            errf = True
+            print('Specification format issue: location {} aligned to name/type {} from schema table'.format(location, type_code))
+    if errf:
+        sys.exit('pysnirf2 generation aborted.')
+
     if len(locations) != len(type_codes) or len(locations) != len(descriptions):
-        sys.exit('Parsed ' + str(len(type_codes)) + ' type codes from the summary table but '
+        sys.exit('Parsed ' + str(len(type_codes[0])) + ' type codes from the summary table but '
                  + str(len(locations)) + ' names from the definitions and ' + str(len(descriptions))
                  + ' descriptions: the specification hosted at ' + SPEC_SRC +' was parsed incorrectly. Try adjusting the delimiters and then debug the parsing code (gen.py).')
     
@@ -144,7 +152,7 @@ if __name__ == '__main__':
                 })
     
     for i, (location, description) in enumerate(zip(locations, descriptions)):
-            type_code = type_codes[i]
+            type_code = type_codes[i][0]
             name = location.split('/')[-1].split('(')[0]  # Remove (i), (j)
             parent = location.split('/')[-2].split('(')[0]  # Remove (i), (j)
             print('Found', location, 'with type', type_code)
