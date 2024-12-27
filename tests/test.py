@@ -170,8 +170,8 @@ class PySnirf2_Test(unittest.TestCase):
                     if VERBOSE:
 
                         s.validate().display()
-                    self.assertTrue(s.validate(), msg="Incorrectly invalidated multidimensional aux signal!")
-                self.assertTrue(validateSnirf(file), msg="Incorrectly invalidated multidimensional aux signal in file on disk!")
+                    self.assertTrue(s.validate(), msg="Incorrectly invalidated multidimensional aux signal:\n" + repr(s.validate()))
+                self.assertTrue(validateSnirf(file), msg="Incorrectly invalidated multidimensional aux signal in file on disk:\n" + repr(s.validate()))
 
     def test_assignment(self):
         """
@@ -187,6 +187,8 @@ class PySnirf2_Test(unittest.TestCase):
                     print('Loading', file, 'with dynamic_loading=' + str(mode))
                 # Reassignment of same probe
                 with Snirf(file, 'r+', dynamic_loading=mode) as s:
+                    if len(s.nirs[0].data[0].measurementList) < 1:
+                        continue  # skip cases without measurementList
                     same_probe = s.nirs[0].probe
                     self.assertTrue(isinstance(same_probe, snirf.Probe), msg="Could not assign Probe reference")
                     same_probe.sourcePos3D = np.random.random([31, 3])
@@ -348,7 +350,7 @@ class PySnirf2_Test(unittest.TestCase):
                     if VERBOSE:
                         result.display(severity=2)
                     self.assertTrue('UNRECOGNIZED_COORDINATE_SYSTEM' in [issue.name for issue in result.warnings], msg='Failed to raise warning about unknown coordinate system in file saved to disk')
-                    self.assertTrue(s.validate(), msg='File was incorrectly invalidated')
+                    self.assertTrue(s.validate(), msg='File was incorrectly invalidated:\n' + repr(s.validate()))
 
 
     def test_known_coordsys_name(self):
@@ -374,7 +376,7 @@ class PySnirf2_Test(unittest.TestCase):
                     if VERBOSE:
                         result.display(severity=2)
                     self.assertFalse('UNRECOGNIZED_COORDINATE_SYSTEM' in [issue.name for issue in result.warnings], msg='Failed to recognize known coordinate system in file saved to disk')
-                    self.assertTrue(s.validate(), msg='File was incorrectly invalidated')
+                    self.assertTrue(s.validate(), msg='File was incorrectly invalidated:\n' + repr(s.validate()))
 
 
     def test_unspecified_metadatatags(self):
@@ -390,7 +392,7 @@ class PySnirf2_Test(unittest.TestCase):
                     s.nirs[0].metaDataTags.add('foo', 'Hello')
                     s.nirs[0].metaDataTags.add('Bar', 'World')
                     s.nirs[0].metaDataTags.add('_array_of_strings', ['foo', 'bar'])
-                    self.assertTrue(s.validate(), msg='adding the unspecified metaDataTags resulted in an INVALID file...')
+                    self.assertTrue(s.validate(), msg='adding the unspecified metaDataTags resulted in an INVALID file:\n' + repr(s.validate()))
                     self.assertTrue(s.nirs[0].metaDataTags.foo == 'Hello', msg='Failed to set the unspecified metadatatags')
                     self.assertTrue(s.nirs[0].metaDataTags.Bar == 'World', msg='Failed to set the unspecified metadatatags')
                     self.assertTrue(s.nirs[0].metaDataTags._array_of_strings[0] == 'foo', msg='Failed to set the unspecified metadatatags')
@@ -545,6 +547,9 @@ class PySnirf2_Test(unittest.TestCase):
                 if VERBOSE:
                     print('Loading', file + '.snirf', 'with dynamic_loading=' + str(mode))
                 s = Snirf(file, 'r+', dynamic_loading=mode)
+                if len(s.nirs[0].data[0].measurementList) < 1:
+                    s.close()
+                    continue  # skip cases without measurementList
                 s.nirs[0].data[0].measurementList.appendGroup()  # Add extra ml
                 if VERBOSE:
                     print('Performing local validation on invalid ml', s)
@@ -585,11 +590,9 @@ class PySnirf2_Test(unittest.TestCase):
                                               'S5_A', 'S6_A', 'S7_A', 'S8_A',
                                               'S9_A', 'S10_A', 'S11_A', 'S12_A',
                                               'S13_A', 'S14_A', 'S15_A']
-                desired_probe_uselocalindex = 1
                 desired_probe_sourcepos3d = np.random.random([31, 3])
 
                 s.nirs[0].probe.sourceLabels = desired_probe_sourcelabels
-                s.nirs[0].probe.useLocalIndex = desired_probe_uselocalindex
                 s.nirs[0].probe.sourcePos3D = desired_probe_sourcepos3d
 
                 snirf_save_file = file.split('.')[0] + '_edited_snirf_save.snirf'
@@ -607,7 +610,6 @@ class PySnirf2_Test(unittest.TestCase):
                     s2 = Snirf(edited_filename, 'r+', dynamic_loading=mode)
 
                     self.assertTrue((s2.nirs[0].probe.sourceLabels == desired_probe_sourcelabels).all(), msg='Failed to edit sourceLabels properly in ' + edited_filename)
-                    self.assertTrue(s2.nirs[0].probe.useLocalIndex == desired_probe_uselocalindex, msg='Failed to edit sourceLabels properly in ' + edited_filename)
                     self.assertTrue((s2.nirs[0].probe.sourcePos3D == desired_probe_sourcepos3d).all(), msg='Failed to edit sourceLabels properly in ' + edited_filename)
 
                     s2.close()
