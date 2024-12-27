@@ -43,7 +43,7 @@ if sys.version_info[0] < 3:
 
 
 class SnirfFormatError(Warning):
-    """Raised when SNIRF-specific error prevents file from loading properly."""
+    """Raised when SNIRF-specific error prevents file from loading or saving properly."""
     pass
 
 
@@ -149,21 +149,21 @@ _STR_DTYPES = [str, np.bytes_]
 # -- Dataset creators  ---------------------------------------
 
 
-def _get_padded_shape(name: str, data: np.ndarray,
-                      desired_ndim: int) -> np.ndarray:
+def _get_padded_shape(name: str, data: np.ndarray, desired_ndim: int) -> np.ndarray:
     """Utility function which pads data shape to ndim."""
     if desired_ndim is None:
         return data.shape
-    elif desired_ndim > data.ndim:
-        return np.concatenate(
-            [data.shape,
-             np.ones(int(desired_ndim) - int(data.ndim))])
-    elif data.ndim == desired_ndim:
+    if data.ndim == desired_ndim:
         return np.shape(data)
-    else:
-        raise ValueError(
-            "Could not create dataset {}: ndim={} is incompatible with data which has shape {}."
-            .format(name, desired_ndim, data.shape))
+    elif desired_ndim > data.ndim:
+        return np.concatenate([data.shape, np.ones(int(desired_ndim) - int(data.ndim))])
+    elif desired_ndim < data.ndim:
+        flattened = [x for x in data.shape if x > 1]
+        if len(flattened) == desired_ndim:
+            warn("Dataset '{}' must have ndim {} but had erroneous shape {}. Singular dimensions were removed.".format(name, desired_ndim, data.shape))
+            return flattened
+        else:
+            raise SnirfFormatError("Cannot coerce Dataset '{}' with shape {} to the required {} dimension(s)".format(name, data.shape, desired_ndim))
 
 
 def _create_dataset(file: h5py.File, name: str, data):
@@ -681,7 +681,7 @@ class ValidationResult:
             longest_code = max([len(code) for code in self.codes])
         except ValueError:
             print('Empty ValidationResult: nothing to display')
-        s = object.__repr__(self) + '\n'
+        s = repr(self) + '\n'
         printed = [0, 0, 0, 0]
         for issue in self._issues:
             sev = issue.severity
@@ -1335,9 +1335,12 @@ class IndexedGroup(MutableSequence, ABC):
         for key in h:
             numsplit = key.split(self._name)
             if len(numsplit) > 1 and len(numsplit[1]) > 0:
-                if len(numsplit[1]) == len(str(int(numsplit[1]))):
-                    unordered.append(key)
-                    indices.append(int(numsplit[1]))
+                try:
+                    index = int(numsplit[1])
+                except ValueError:  # if name is not really an indexed group member (e.g. `measurementLists`)
+                    continue
+                unordered.append(key)
+                indices.append(index)
             elif key.endswith(
                     self._name):  # Case of single Group with no index
                 unordered.append(key)
