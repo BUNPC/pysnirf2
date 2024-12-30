@@ -996,8 +996,7 @@ class Group(ABC):
 
     @property
     def location(self):
-        """The HDF5 relative location indentifier.
-        """
+        """The HDF5 relative location indentifier."""
         if self._h != {}:
             return self._h.name
         else:

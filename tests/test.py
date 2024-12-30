@@ -168,10 +168,9 @@ class PySnirf2_Test(unittest.TestCase):
                         print("Created new aux channel:", s.nirs[0].aux[-1])
                     s.save()
                     if VERBOSE:
-
                         s.validate().display()
-                    self.assertTrue(s.validate(), msg="Incorrectly invalidated multidimensional aux signal:\n" + repr(s.validate()))
-                self.assertTrue(validateSnirf(file), msg="Incorrectly invalidated multidimensional aux signal in file on disk:\n" + repr(s.validate()))
+                    self.assertTrue(s.validate(), msg="Incorrectly invalidated multidimensional aux signal")
+                self.assertTrue(validateSnirf(file), msg="Incorrectly invalidated multidimensional aux signal in file on disk")
 
     def test_assignment(self):
         """
@@ -350,7 +349,7 @@ class PySnirf2_Test(unittest.TestCase):
                     if VERBOSE:
                         result.display(severity=2)
                     self.assertTrue('UNRECOGNIZED_COORDINATE_SYSTEM' in [issue.name for issue in result.warnings], msg='Failed to raise warning about unknown coordinate system in file saved to disk')
-                    self.assertTrue(s.validate(), msg='File was incorrectly invalidated:\n' + repr(s.validate()))
+                    self.assertTrue(s.validate(), msg='File was incorrectly invalidated")
 
 
     def test_known_coordsys_name(self):
@@ -376,7 +375,7 @@ class PySnirf2_Test(unittest.TestCase):
                     if VERBOSE:
                         result.display(severity=2)
                     self.assertFalse('UNRECOGNIZED_COORDINATE_SYSTEM' in [issue.name for issue in result.warnings], msg='Failed to recognize known coordinate system in file saved to disk')
-                    self.assertTrue(s.validate(), msg='File was incorrectly invalidated:\n' + repr(s.validate()))
+                    self.assertTrue(s.validate(), msg='File was incorrectly invalidated")
 
 
     def test_unspecified_metadatatags(self):
@@ -392,7 +391,7 @@ class PySnirf2_Test(unittest.TestCase):
                     s.nirs[0].metaDataTags.add('foo', 'Hello')
                     s.nirs[0].metaDataTags.add('Bar', 'World')
                     s.nirs[0].metaDataTags.add('_array_of_strings', ['foo', 'bar'])
-                    self.assertTrue(s.validate(), msg='adding the unspecified metaDataTags resulted in an INVALID file:\n' + repr(s.validate()))
+                    self.assertTrue(s.validate(), msg='adding the unspecified metaDataTags resulted in an INVALID file")
                     self.assertTrue(s.nirs[0].metaDataTags.foo == 'Hello', msg='Failed to set the unspecified metadatatags')
                     self.assertTrue(s.nirs[0].metaDataTags.Bar == 'World', msg='Failed to set the unspecified metadatatags')
                     self.assertTrue(s.nirs[0].metaDataTags._array_of_strings[0] == 'foo', msg='Failed to set the unspecified metadatatags')
