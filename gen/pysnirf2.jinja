@@ -76,11 +76,11 @@
     {% if TYPES.INDEXED_GROUP in CHILD.type %}
         return self._{{ CHILD.name }}
     {% elif TYPES.GROUP in CHILD.type %}
-        if type(self._{{ CHILD.name }}) is type(_AbsentGroup):
+        if self._{{ CHILD.name }} is _AbsentGroup:
             return None
         return self._{{ CHILD.name }}
     {% else %}
-        if type(self._{{ CHILD.name }}) is type(_AbsentDataset):
+        if self._{{ CHILD.name }} is _AbsentDataset:
             return None
         if type(self._{{ CHILD.name }}) is type(_PresentDataset):
         {% if (TYPES.ARRAY_1D in CHILD.type) or (TYPES.ARRAY_2D in CHILD.type) %}
@@ -118,7 +118,8 @@
         else:
             raise ValueError("Only a Group of type {{ sentencecase(CHILD.name) }} can be assigned to {{ CHILD.name }}.")
         {% elif TYPES.ARRAY_1D in CHILD.type or TYPES.ARRAY_2D in CHILD.type %}
-        self._{{ CHILD.name }} = np.array(value)
+        if value is not None and any([v is not None for v in value]):
+            self._{{ CHILD.name }} = np.array(value)
         {% else %}
         self._{{ CHILD.name }} = value
         {% endif %}
@@ -157,7 +158,7 @@
     {% if TYPES.INDEXED_GROUP in CHILD.type %}
         self.{{ CHILD.name }}._save(*args)
     {% elif TYPES.GROUP in CHILD.type %}
-        if type(self._{{ CHILD.name }}) is type(_AbsentGroup) or self._{{ CHILD.name }}.is_empty():
+        if self._{{ CHILD.name }} is _AbsentGroup or self._{{ CHILD.name }}.is_empty():
             if '{{ CHILD.name }}' in file:
                 del file['{{ CHILD.name }}']
                 self._cfg.logger.info('Deleted Group %s/{{ CHILD.name }} from %s', self.location, file)
@@ -165,7 +166,7 @@
             self.{{ CHILD.name }}._save(*args)
     {% else %}
         name = self.location + '/{{ CHILD.name }}'
-        if type(self._{{ CHILD.name }}) not in [type(_AbsentDataset), type(None)]:
+        if not self._{{ CHILD.name }} is _AbsentDataset:
             data = self.{{ CHILD.name }}  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -239,7 +240,7 @@
                 self.{{ CHILD.name }}._validate(result)
         {% elif TYPES.GROUP in CHILD.type %}
             # If Group is not present in file and empty in the wrapper, it is missing
-            if type(self._{{ CHILD.name }}) in [type(_AbsentGroup), type(None)] or ('{{ CHILD.name }}' not in self._h and self._{{ CHILD.name }}.is_empty()):
+            if self._{{ CHILD.name }} is _AbsentGroup or ('{{ CHILD.name }}' not in self._h and self._{{ CHILD.name }}.is_empty()):
             {% if TYPES.REQUIRED in CHILD.type %}
                 result._add(name, 'REQUIRED_GROUP_MISSING')
             {% else %}
@@ -248,7 +249,7 @@
             else:
                 self._{{ CHILD.name }}._validate(result)
         {% else %}
-            if type(self._{{ CHILD.name }}) in [type(_AbsentDataset), type(None)]:
+            if self._{{ CHILD.name }} is _AbsentDataset:
             {% if TYPES.REQUIRED in CHILD.type %}
                 result._add(name, 'REQUIRED_DATASET_MISSING')
             {% else %}

@@ -192,6 +192,8 @@ def _create_dataset(file: h5py.File, name: str, data):
     Raises:
         TypeError: The data could not be mapped to a SNIRF compliant h5py format.
     """
+    if data is None:  # Don't create dataset from None
+        return
     data = np.array(data)  # Cast to numpy type to identify
     if data.size > 1:
         dtype = data[0].dtype
@@ -227,6 +229,8 @@ def _create_dataset_string(file: h5py.File, name: str, data: str):
     Returns:
         An h5py.Dataset instance created
     """
+    if data is None:
+        return None
     return file.create_dataset(name, dtype=_varlen_str_type, data=str(data))
 
 
@@ -241,6 +245,8 @@ def _create_dataset_int(file: h5py.File, name: str, data: int):
     Returns:
         An h5py.Dataset instance created
     """
+    if data is None:
+        return None
     return file.create_dataset(name, dtype=_DTYPE_INT32, data=int(data))
 
 
@@ -255,6 +261,8 @@ def _create_dataset_float(file: h5py.File, name: str, data: float):
     Returns:
         An h5py.Dataset instance created
     """
+    if data is None:
+        return None
     return file.create_dataset(name, dtype=_DTYPE_FLOAT64, data=float(data))
 
 
@@ -272,7 +280,11 @@ def _create_dataset_string_array(file: h5py.File,
     Returns:
         An h5py.Dataset instance created
     """
-    array = np.array(data).astype('O')
+    try:
+        array = np.array(data).astype('O')
+    except TypeError as e:
+        warn('Could not cast {} array to numpy "O": {}'.format(name, e))
+        return
     shape = _get_padded_shape(name, array, ndim)
     return file.create_dataset(name, dtype=_varlen_str_type, data=array)
 
@@ -291,7 +303,11 @@ def _create_dataset_int_array(file: h5py.File,
     Returns:
         An h5py.Dataset instance created
     """
-    array = np.array(data).astype(int)
+    try:
+        array = np.array(data).astype(int)
+    except TypeError as e:
+        warn('Could not cast {} array to int: {}'.format(name, e))
+        return
     shape = _get_padded_shape(name, array, ndim)
     return file.create_dataset(name, dtype=_DTYPE_INT32, data=array)
 
@@ -310,7 +326,11 @@ def _create_dataset_float_array(file: h5py.File,
     Returns:
         An h5py.Dataset instance created
     """
-    array = np.array(data).astype(float)
+    try:
+        array = np.array(data).astype(float)
+    except TypeError as e:
+        warn('Could not cast {} array to float: {}'.format(name, e))
+        return
     shape = _get_padded_shape(name, array, ndim)
     return file.create_dataset(name,
                                dtype=_DTYPE_FLOAT64,
@@ -748,6 +768,8 @@ def _validate_string(dataset: h5py.Dataset) -> str:
     Returns:
         An issue code describing the validity of the dataset based on its format and shape
     """
+    if dataset is None:
+        return 'REQUIRED_DATASET_MISSING'
     if type(dataset) is not h5py.Dataset:
         raise TypeError("'dataset' must be type h5py.Dataset")
     if dataset.size > 1 or dataset.ndim > 0:
@@ -769,6 +791,8 @@ def _validate_int(dataset: h5py.Dataset) -> str:
     Returns:
         An issue code describing the validity of the dataset based on its format and shape
     """
+    if dataset is None:
+        return 'REQUIRED_DATASET_MISSING'
     if type(dataset) is not h5py.Dataset:
         raise TypeError("'dataset' must be type h5py.Dataset")
     if dataset.size > 1 or dataset.ndim > 0:
@@ -794,6 +818,8 @@ def _validate_float(dataset: h5py.Dataset) -> str:
     Returns:
         An issue code describing the validity of the dataset based on its format and shape
     """
+    if dataset is None:
+        return 'REQUIRED_DATASET_MISSING'
     if type(dataset) is not h5py.Dataset:
         raise TypeError("'dataset' must be type h5py.Dataset")
     if dataset.size > 1 or dataset.ndim > 0:
@@ -813,6 +839,8 @@ def _validate_string_array(dataset: h5py.Dataset, ndims=[1]) -> str:
     Returns:
         An issue code describing the validity of the dataset based on its format and shape
     """
+    if dataset is None:
+        return 'REQUIRED_DATASET_MISSING'
     if type(dataset) is not h5py.Dataset:
         raise TypeError("'dataset' must be type h5py.Dataset")
     if dataset.ndim not in ndims:
@@ -834,6 +862,8 @@ def _validate_int_array(dataset: h5py.Dataset, ndims=[1]) -> str:
     Returns:
         An issue code describing the validity of the dataset based on its format and shape
     """
+    if dataset is None:
+        return 'REQUIRED_DATASET_MISSING'
     if type(dataset) is not h5py.Dataset:
         raise TypeError("'dataset' must be type h5py.Dataset")
     if dataset.ndim not in ndims:
@@ -855,6 +885,8 @@ def _validate_float_array(dataset: h5py.Dataset, ndims=[1]) -> str:
     Returns:
         An issue code describing the validity of the dataset based on its format and shape
     """
+    if dataset is None:
+        return 'REQUIRED_DATASET_MISSING'
     if type(dataset) is not h5py.Dataset:
         raise TypeError("'dataset' must be type h5py.Dataset")
     if dataset.ndim != ndims[0]:
@@ -1508,7 +1540,7 @@ class MetaDataTags(Group):
         This record stores the string-valued ID of the study subject or experiment.
 
         """
-        if type(self._SubjectID) is type(_AbsentDataset):
+        if self._SubjectID is _AbsentDataset:
             return None
         if type(self._SubjectID) is type(_PresentDataset):
             return _read_string(self._h['SubjectID'])
@@ -1541,7 +1573,7 @@ class MetaDataTags(Group):
         - `DD` is the 2-digit date (padding zero if a single digit)
 
         """
-        if type(self._MeasurementDate) is type(_AbsentDataset):
+        if self._MeasurementDate is _AbsentDataset:
             return None
         if type(self._MeasurementDate) is type(_PresentDataset):
             return _read_string(self._h['MeasurementDate'])
@@ -1577,7 +1609,7 @@ class MetaDataTags(Group):
         - `TZD` is the time zone designator (`Z` or `+hh:mm` or `-hh:mm`)
 
         """
-        if type(self._MeasurementTime) is type(_AbsentDataset):
+        if self._MeasurementTime is _AbsentDataset:
             return None
         if type(self._MeasurementTime) is type(_PresentDataset):
             return _read_string(self._h['MeasurementTime'])
@@ -1609,7 +1641,7 @@ class MetaDataTags(Group):
         "um" is the same as "mm", i.e. micrometer.
 
         """
-        if type(self._LengthUnit) is type(_AbsentDataset):
+        if self._LengthUnit is _AbsentDataset:
             return None
         if type(self._LengthUnit) is type(_PresentDataset):
             return _read_string(self._h['LengthUnit'])
@@ -1640,7 +1672,7 @@ class MetaDataTags(Group):
         is the same as "ms", i.e. microsecond.
 
         """
-        if type(self._TimeUnit) is type(_AbsentDataset):
+        if self._TimeUnit is _AbsentDataset:
             return None
         if type(self._TimeUnit) is type(_PresentDataset):
             return _read_string(self._h['TimeUnit'])
@@ -1706,7 +1738,7 @@ class MetaDataTags(Group):
         time in seconds since 1970-01-01T00:00:00Z (UTC) minus the leap seconds.
 
         """
-        if type(self._FrequencyUnit) is type(_AbsentDataset):
+        if self._FrequencyUnit is _AbsentDataset:
             return None
         if type(self._FrequencyUnit) is type(_PresentDataset):
             return _read_string(self._h['FrequencyUnit'])
@@ -1744,7 +1776,7 @@ class MetaDataTags(Group):
                                  self.__class__.__name__ +
                                  ' instance without a filename')
         name = self.location + '/SubjectID'
-        if type(self._SubjectID) not in [type(_AbsentDataset), type(None)]:
+        if not self._SubjectID is _AbsentDataset:
             data = self.SubjectID  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -1755,9 +1787,7 @@ class MetaDataTags(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/MeasurementDate'
-        if type(self._MeasurementDate) not in [
-                type(_AbsentDataset), type(None)
-        ]:
+        if not self._MeasurementDate is _AbsentDataset:
             data = self.MeasurementDate  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -1768,9 +1798,7 @@ class MetaDataTags(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/MeasurementTime'
-        if type(self._MeasurementTime) not in [
-                type(_AbsentDataset), type(None)
-        ]:
+        if not self._MeasurementTime is _AbsentDataset:
             data = self.MeasurementTime  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -1781,7 +1809,7 @@ class MetaDataTags(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/LengthUnit'
-        if type(self._LengthUnit) not in [type(_AbsentDataset), type(None)]:
+        if not self._LengthUnit is _AbsentDataset:
             data = self.LengthUnit  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -1792,7 +1820,7 @@ class MetaDataTags(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/TimeUnit'
-        if type(self._TimeUnit) not in [type(_AbsentDataset), type(None)]:
+        if not self._TimeUnit is _AbsentDataset:
             data = self.TimeUnit  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -1803,7 +1831,7 @@ class MetaDataTags(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/FrequencyUnit'
-        if type(self._FrequencyUnit) not in [type(_AbsentDataset), type(None)]:
+        if not self._FrequencyUnit is _AbsentDataset:
             data = self.FrequencyUnit  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -1831,7 +1859,7 @@ class MetaDataTags(Group):
                        driver='core',
                        backing_store=False) as tmp:
             name = self.location + '/SubjectID'
-            if type(self._SubjectID) in [type(_AbsentDataset), type(None)]:
+            if self._SubjectID is _AbsentDataset:
                 result._add(name, 'REQUIRED_DATASET_MISSING')
             else:
                 try:
@@ -1845,9 +1873,7 @@ class MetaDataTags(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/MeasurementDate'
-            if type(self._MeasurementDate) in [
-                    type(_AbsentDataset), type(None)
-            ]:
+            if self._MeasurementDate is _AbsentDataset:
                 result._add(name, 'REQUIRED_DATASET_MISSING')
             else:
                 try:
@@ -1861,9 +1887,7 @@ class MetaDataTags(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/MeasurementTime'
-            if type(self._MeasurementTime) in [
-                    type(_AbsentDataset), type(None)
-            ]:
+            if self._MeasurementTime is _AbsentDataset:
                 result._add(name, 'REQUIRED_DATASET_MISSING')
             else:
                 try:
@@ -1877,7 +1901,7 @@ class MetaDataTags(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/LengthUnit'
-            if type(self._LengthUnit) in [type(_AbsentDataset), type(None)]:
+            if self._LengthUnit is _AbsentDataset:
                 result._add(name, 'REQUIRED_DATASET_MISSING')
             else:
                 try:
@@ -1891,7 +1915,7 @@ class MetaDataTags(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/TimeUnit'
-            if type(self._TimeUnit) in [type(_AbsentDataset), type(None)]:
+            if self._TimeUnit is _AbsentDataset:
                 result._add(name, 'REQUIRED_DATASET_MISSING')
             else:
                 try:
@@ -1905,7 +1929,7 @@ class MetaDataTags(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/FrequencyUnit'
-            if type(self._FrequencyUnit) in [type(_AbsentDataset), type(None)]:
+            if self._FrequencyUnit is _AbsentDataset:
                 result._add(name, 'REQUIRED_DATASET_MISSING')
             else:
                 try:
@@ -2051,7 +2075,7 @@ class MeasurementLists(Group):
         Source indices for each channel. A 1-D array with length equal to the size of the second dimension of `/nirs(i)/data(j)/dataTimeSeries`.
          
         """
-        if type(self._sourceIndex) is type(_AbsentDataset):
+        if self._sourceIndex is _AbsentDataset:
             return None
         if type(self._sourceIndex) is type(_PresentDataset):
             return _read_int_array(self._h['sourceIndex'])
@@ -2061,7 +2085,8 @@ class MeasurementLists(Group):
 
     @sourceIndex.setter
     def sourceIndex(self, value):
-        self._sourceIndex = np.array(value)
+        if value is not None and any([v is not None for v in value]):
+            self._sourceIndex = np.array(value)
         # self._cfg.logger.info('Assignment to %s/sourceIndex in %s', self.location, self.filename)
 
     @sourceIndex.deleter
@@ -2080,7 +2105,7 @@ class MeasurementLists(Group):
         Detector indices for each channel. A 1-D array with length equal to the size of the second dimension of `/nirs(i)/data(j)/dataTimeSeries`.
 
         """
-        if type(self._detectorIndex) is type(_AbsentDataset):
+        if self._detectorIndex is _AbsentDataset:
             return None
         if type(self._detectorIndex) is type(_PresentDataset):
             return _read_int_array(self._h['detectorIndex'])
@@ -2091,7 +2116,8 @@ class MeasurementLists(Group):
 
     @detectorIndex.setter
     def detectorIndex(self, value):
-        self._detectorIndex = np.array(value)
+        if value is not None and any([v is not None for v in value]):
+            self._detectorIndex = np.array(value)
         # self._cfg.logger.info('Assignment to %s/detectorIndex in %s', self.location, self.filename)
 
     @detectorIndex.deleter
@@ -2110,7 +2136,7 @@ class MeasurementLists(Group):
         Index of the "nominal" wavelength (in `probe.wavelengths`) for each channel. A 1-D array with length equal to the size of the second dimension of `/nirs(i)/data(j)/dataTimeSeries`.
 
         """
-        if type(self._wavelengthIndex) is type(_AbsentDataset):
+        if self._wavelengthIndex is _AbsentDataset:
             return None
         if type(self._wavelengthIndex) is type(_PresentDataset):
             return _read_int_array(self._h['wavelengthIndex'])
@@ -2121,7 +2147,8 @@ class MeasurementLists(Group):
 
     @wavelengthIndex.setter
     def wavelengthIndex(self, value):
-        self._wavelengthIndex = np.array(value)
+        if value is not None and any([v is not None for v in value]):
+            self._wavelengthIndex = np.array(value)
         # self._cfg.logger.info('Assignment to %s/wavelengthIndex in %s', self.location, self.filename)
 
     @wavelengthIndex.deleter
@@ -2140,7 +2167,7 @@ class MeasurementLists(Group):
         Actual (measured) wavelength in nm, if available, for the source in each channel. A 1-D array with length equal to the size of the second dimension of `/nirs(i)/data(j)/dataTimeSeries`.
 
         """
-        if type(self._wavelengthActual) is type(_AbsentDataset):
+        if self._wavelengthActual is _AbsentDataset:
             return None
         if type(self._wavelengthActual) is type(_PresentDataset):
             return _read_float_array(self._h['wavelengthActual'])
@@ -2151,7 +2178,8 @@ class MeasurementLists(Group):
 
     @wavelengthActual.setter
     def wavelengthActual(self, value):
-        self._wavelengthActual = np.array(value)
+        if value is not None and any([v is not None for v in value]):
+            self._wavelengthActual = np.array(value)
         # self._cfg.logger.info('Assignment to %s/wavelengthActual in %s', self.location, self.filename)
 
     @wavelengthActual.deleter
@@ -2170,7 +2198,7 @@ class MeasurementLists(Group):
         Actual (measured) emission wavelength in nm, if available, for the source in each channel. A 1-D array with length equal to the size of the second dimension of `/nirs(i)/data(j)/dataTimeSeries`.
          
         """
-        if type(self._wavelengthEmissionActual) is type(_AbsentDataset):
+        if self._wavelengthEmissionActual is _AbsentDataset:
             return None
         if type(self._wavelengthEmissionActual) is type(_PresentDataset):
             return _read_float_array(self._h['wavelengthEmissionActual'])
@@ -2181,7 +2209,8 @@ class MeasurementLists(Group):
 
     @wavelengthEmissionActual.setter
     def wavelengthEmissionActual(self, value):
-        self._wavelengthEmissionActual = np.array(value)
+        if value is not None and any([v is not None for v in value]):
+            self._wavelengthEmissionActual = np.array(value)
         # self._cfg.logger.info('Assignment to %s/wavelengthEmissionActual in %s', self.location, self.filename)
 
     @wavelengthEmissionActual.deleter
@@ -2200,7 +2229,7 @@ class MeasurementLists(Group):
         A 1-D array with length equal to the size of the second dimension of `/nirs(i)/data(j)/dataTimeSeries`. See Appendix for list of possible values.
 
         """
-        if type(self._dataType) is type(_AbsentDataset):
+        if self._dataType is _AbsentDataset:
             return None
         if type(self._dataType) is type(_PresentDataset):
             return _read_int_array(self._h['dataType'])
@@ -2210,7 +2239,8 @@ class MeasurementLists(Group):
 
     @dataType.setter
     def dataType(self, value):
-        self._dataType = np.array(value)
+        if value is not None and any([v is not None for v in value]):
+            self._dataType = np.array(value)
         # self._cfg.logger.info('Assignment to %s/dataType in %s', self.location, self.filename)
 
     @dataType.deleter
@@ -2229,7 +2259,7 @@ class MeasurementLists(Group):
         International System of Units (SI units) identifier for each channel. A 1-D array with length equal to the size of the second dimension of `/nirs(i)/data(j)/dataTimeSeries`.
 
         """
-        if type(self._dataUnit) is type(_AbsentDataset):
+        if self._dataUnit is _AbsentDataset:
             return None
         if type(self._dataUnit) is type(_PresentDataset):
             return _read_string_array(self._h['dataUnit'])
@@ -2239,7 +2269,8 @@ class MeasurementLists(Group):
 
     @dataUnit.setter
     def dataUnit(self, value):
-        self._dataUnit = np.array(value)
+        if value is not None and any([v is not None for v in value]):
+            self._dataUnit = np.array(value)
         # self._cfg.logger.info('Assignment to %s/dataUnit in %s', self.location, self.filename)
 
     @dataUnit.deleter
@@ -2258,7 +2289,7 @@ class MeasurementLists(Group):
         Data-type label. A 1-D array with length equal to the size of the second dimension of `/nirs(i)/data(j)/dataTimeSeries`.
 
         """
-        if type(self._dataTypeLabel) is type(_AbsentDataset):
+        if self._dataTypeLabel is _AbsentDataset:
             return None
         if type(self._dataTypeLabel) is type(_PresentDataset):
             return _read_string_array(self._h['dataTypeLabel'])
@@ -2269,7 +2300,8 @@ class MeasurementLists(Group):
 
     @dataTypeLabel.setter
     def dataTypeLabel(self, value):
-        self._dataTypeLabel = np.array(value)
+        if value is not None and any([v is not None for v in value]):
+            self._dataTypeLabel = np.array(value)
         # self._cfg.logger.info('Assignment to %s/dataTypeLabel in %s', self.location, self.filename)
 
     @dataTypeLabel.deleter
@@ -2288,7 +2320,7 @@ class MeasurementLists(Group):
         Data-type specific parameter indices. A 1-D array with length equal to the size of the second dimension of `/nirs(i)/data(j)/dataTimeSeries`. Note that the Time Domain and Diffuse Correlation Spectroscopy data types have two additional parameters and so `dataTimeIndex` must be a 2-D array with 2 columns that index the additional parameters.
 
         """
-        if type(self._dataTypeIndex) is type(_AbsentDataset):
+        if self._dataTypeIndex is _AbsentDataset:
             return None
         if type(self._dataTypeIndex) is type(_PresentDataset):
             return _read_int_array(self._h['dataTypeIndex'])
@@ -2299,7 +2331,8 @@ class MeasurementLists(Group):
 
     @dataTypeIndex.setter
     def dataTypeIndex(self, value):
-        self._dataTypeIndex = np.array(value)
+        if value is not None and any([v is not None for v in value]):
+            self._dataTypeIndex = np.array(value)
         # self._cfg.logger.info('Assignment to %s/dataTypeIndex in %s', self.location, self.filename)
 
     @dataTypeIndex.deleter
@@ -2318,7 +2351,7 @@ class MeasurementLists(Group):
         A 1-D array with length equal to the size of the second dimension of `/nirs(i)/data(j)/dataTimeSeries`. Units are optionally defined in `metaDataTags`.
 
         """
-        if type(self._sourcePower) is type(_AbsentDataset):
+        if self._sourcePower is _AbsentDataset:
             return None
         if type(self._sourcePower) is type(_PresentDataset):
             return _read_float_array(self._h['sourcePower'])
@@ -2328,7 +2361,8 @@ class MeasurementLists(Group):
 
     @sourcePower.setter
     def sourcePower(self, value):
-        self._sourcePower = np.array(value)
+        if value is not None and any([v is not None for v in value]):
+            self._sourcePower = np.array(value)
         # self._cfg.logger.info('Assignment to %s/sourcePower in %s', self.location, self.filename)
 
     @sourcePower.deleter
@@ -2347,7 +2381,7 @@ class MeasurementLists(Group):
         A 1-D array with length equal to the size of the second dimension of `/nirs(i)/data(j)/dataTimeSeries`. Units are optionally defined in `metaDataTags`.
 
         """
-        if type(self._detectorGain) is type(_AbsentDataset):
+        if self._detectorGain is _AbsentDataset:
             return None
         if type(self._detectorGain) is type(_PresentDataset):
             return _read_float_array(self._h['detectorGain'])
@@ -2357,7 +2391,8 @@ class MeasurementLists(Group):
 
     @detectorGain.setter
     def detectorGain(self, value):
-        self._detectorGain = np.array(value)
+        if value is not None and any([v is not None for v in value]):
+            self._detectorGain = np.array(value)
         # self._cfg.logger.info('Assignment to %s/detectorGain in %s', self.location, self.filename)
 
     @detectorGain.deleter
@@ -2384,7 +2419,7 @@ class MeasurementLists(Group):
                                  self.__class__.__name__ +
                                  ' instance without a filename')
         name = self.location + '/sourceIndex'
-        if type(self._sourceIndex) not in [type(_AbsentDataset), type(None)]:
+        if not self._sourceIndex is _AbsentDataset:
             data = self.sourceIndex  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -2395,7 +2430,7 @@ class MeasurementLists(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/detectorIndex'
-        if type(self._detectorIndex) not in [type(_AbsentDataset), type(None)]:
+        if not self._detectorIndex is _AbsentDataset:
             data = self.detectorIndex  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -2406,9 +2441,7 @@ class MeasurementLists(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/wavelengthIndex'
-        if type(self._wavelengthIndex) not in [
-                type(_AbsentDataset), type(None)
-        ]:
+        if not self._wavelengthIndex is _AbsentDataset:
             data = self.wavelengthIndex  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -2419,9 +2452,7 @@ class MeasurementLists(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/wavelengthActual'
-        if type(self._wavelengthActual) not in [
-                type(_AbsentDataset), type(None)
-        ]:
+        if not self._wavelengthActual is _AbsentDataset:
             data = self.wavelengthActual  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -2432,9 +2463,7 @@ class MeasurementLists(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/wavelengthEmissionActual'
-        if type(self._wavelengthEmissionActual) not in [
-                type(_AbsentDataset), type(None)
-        ]:
+        if not self._wavelengthEmissionActual is _AbsentDataset:
             data = self.wavelengthEmissionActual  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -2445,7 +2474,7 @@ class MeasurementLists(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/dataType'
-        if type(self._dataType) not in [type(_AbsentDataset), type(None)]:
+        if not self._dataType is _AbsentDataset:
             data = self.dataType  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -2456,7 +2485,7 @@ class MeasurementLists(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/dataUnit'
-        if type(self._dataUnit) not in [type(_AbsentDataset), type(None)]:
+        if not self._dataUnit is _AbsentDataset:
             data = self.dataUnit  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -2467,7 +2496,7 @@ class MeasurementLists(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/dataTypeLabel'
-        if type(self._dataTypeLabel) not in [type(_AbsentDataset), type(None)]:
+        if not self._dataTypeLabel is _AbsentDataset:
             data = self.dataTypeLabel  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -2478,7 +2507,7 @@ class MeasurementLists(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/dataTypeIndex'
-        if type(self._dataTypeIndex) not in [type(_AbsentDataset), type(None)]:
+        if not self._dataTypeIndex is _AbsentDataset:
             data = self.dataTypeIndex  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -2489,7 +2518,7 @@ class MeasurementLists(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/sourcePower'
-        if type(self._sourcePower) not in [type(_AbsentDataset), type(None)]:
+        if not self._sourcePower is _AbsentDataset:
             data = self.sourcePower  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -2500,7 +2529,7 @@ class MeasurementLists(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/detectorGain'
-        if type(self._detectorGain) not in [type(_AbsentDataset), type(None)]:
+        if not self._detectorGain is _AbsentDataset:
             data = self.detectorGain  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -2518,7 +2547,7 @@ class MeasurementLists(Group):
                        driver='core',
                        backing_store=False) as tmp:
             name = self.location + '/sourceIndex'
-            if type(self._sourceIndex) in [type(_AbsentDataset), type(None)]:
+            if self._sourceIndex is _AbsentDataset:
                 result._add(name, 'REQUIRED_DATASET_MISSING')
             else:
                 try:
@@ -2532,7 +2561,7 @@ class MeasurementLists(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/detectorIndex'
-            if type(self._detectorIndex) in [type(_AbsentDataset), type(None)]:
+            if self._detectorIndex is _AbsentDataset:
                 result._add(name, 'REQUIRED_DATASET_MISSING')
             else:
                 try:
@@ -2546,9 +2575,7 @@ class MeasurementLists(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/wavelengthIndex'
-            if type(self._wavelengthIndex) in [
-                    type(_AbsentDataset), type(None)
-            ]:
+            if self._wavelengthIndex is _AbsentDataset:
                 result._add(name, 'REQUIRED_DATASET_MISSING')
             else:
                 try:
@@ -2562,9 +2589,7 @@ class MeasurementLists(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/wavelengthActual'
-            if type(self._wavelengthActual) in [
-                    type(_AbsentDataset), type(None)
-            ]:
+            if self._wavelengthActual is _AbsentDataset:
                 result._add(name, 'OPTIONAL_DATASET_MISSING')
             else:
                 try:
@@ -2579,9 +2604,7 @@ class MeasurementLists(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/wavelengthEmissionActual'
-            if type(self._wavelengthEmissionActual) in [
-                    type(_AbsentDataset), type(None)
-            ]:
+            if self._wavelengthEmissionActual is _AbsentDataset:
                 result._add(name, 'OPTIONAL_DATASET_MISSING')
             else:
                 try:
@@ -2598,7 +2621,7 @@ class MeasurementLists(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/dataType'
-            if type(self._dataType) in [type(_AbsentDataset), type(None)]:
+            if self._dataType is _AbsentDataset:
                 result._add(name, 'REQUIRED_DATASET_MISSING')
             else:
                 try:
@@ -2612,7 +2635,7 @@ class MeasurementLists(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/dataUnit'
-            if type(self._dataUnit) in [type(_AbsentDataset), type(None)]:
+            if self._dataUnit is _AbsentDataset:
                 result._add(name, 'OPTIONAL_DATASET_MISSING')
             else:
                 try:
@@ -2627,7 +2650,7 @@ class MeasurementLists(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/dataTypeLabel'
-            if type(self._dataTypeLabel) in [type(_AbsentDataset), type(None)]:
+            if self._dataTypeLabel is _AbsentDataset:
                 result._add(name, 'OPTIONAL_DATASET_MISSING')
             else:
                 try:
@@ -2642,7 +2665,7 @@ class MeasurementLists(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/dataTypeIndex'
-            if type(self._dataTypeIndex) in [type(_AbsentDataset), type(None)]:
+            if self._dataTypeIndex is _AbsentDataset:
                 result._add(name, 'REQUIRED_DATASET_MISSING')
             else:
                 try:
@@ -2656,7 +2679,7 @@ class MeasurementLists(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/sourcePower'
-            if type(self._sourcePower) in [type(_AbsentDataset), type(None)]:
+            if self._sourcePower is _AbsentDataset:
                 result._add(name, 'OPTIONAL_DATASET_MISSING')
             else:
                 try:
@@ -2671,7 +2694,7 @@ class MeasurementLists(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/detectorGain'
-            if type(self._detectorGain) in [type(_AbsentDataset), type(None)]:
+            if self._detectorGain is _AbsentDataset:
                 result._add(name, 'OPTIONAL_DATASET_MISSING')
             else:
                 try:
@@ -2923,7 +2946,7 @@ class Probe(Group):
 
 
         """
-        if type(self._wavelengths) is type(_AbsentDataset):
+        if self._wavelengths is _AbsentDataset:
             return None
         if type(self._wavelengths) is type(_PresentDataset):
             return _read_float_array(self._h['wavelengths'])
@@ -2933,7 +2956,8 @@ class Probe(Group):
 
     @wavelengths.setter
     def wavelengths(self, value):
-        self._wavelengths = np.array(value)
+        if value is not None and any([v is not None for v in value]):
+            self._wavelengths = np.array(value)
         # self._cfg.logger.info('Assignment to %s/wavelengths in %s', self.location, self.filename)
 
     @wavelengths.deleter
@@ -2960,7 +2984,7 @@ class Probe(Group):
 
 
         """
-        if type(self._wavelengthsEmission) is type(_AbsentDataset):
+        if self._wavelengthsEmission is _AbsentDataset:
             return None
         if type(self._wavelengthsEmission) is type(_PresentDataset):
             return _read_float_array(self._h['wavelengthsEmission'])
@@ -2971,7 +2995,8 @@ class Probe(Group):
 
     @wavelengthsEmission.setter
     def wavelengthsEmission(self, value):
-        self._wavelengthsEmission = np.array(value)
+        if value is not None and any([v is not None for v in value]):
+            self._wavelengthsEmission = np.array(value)
         # self._cfg.logger.info('Assignment to %s/wavelengthsEmission in %s', self.location, self.filename)
 
     @wavelengthsEmission.deleter
@@ -2995,7 +3020,7 @@ class Probe(Group):
 
 
         """
-        if type(self._sourcePos2D) is type(_AbsentDataset):
+        if self._sourcePos2D is _AbsentDataset:
             return None
         if type(self._sourcePos2D) is type(_PresentDataset):
             return _read_float_array(self._h['sourcePos2D'])
@@ -3005,7 +3030,8 @@ class Probe(Group):
 
     @sourcePos2D.setter
     def sourcePos2D(self, value):
-        self._sourcePos2D = np.array(value)
+        if value is not None and any([v is not None for v in value]):
+            self._sourcePos2D = np.array(value)
         # self._cfg.logger.info('Assignment to %s/sourcePos2D in %s', self.location, self.filename)
 
     @sourcePos2D.deleter
@@ -3026,7 +3052,7 @@ class Probe(Group):
 
 
         """
-        if type(self._sourcePos3D) is type(_AbsentDataset):
+        if self._sourcePos3D is _AbsentDataset:
             return None
         if type(self._sourcePos3D) is type(_PresentDataset):
             return _read_float_array(self._h['sourcePos3D'])
@@ -3036,7 +3062,8 @@ class Probe(Group):
 
     @sourcePos3D.setter
     def sourcePos3D(self, value):
-        self._sourcePos3D = np.array(value)
+        if value is not None and any([v is not None for v in value]):
+            self._sourcePos3D = np.array(value)
         # self._cfg.logger.info('Assignment to %s/sourcePos3D in %s', self.location, self.filename)
 
     @sourcePos3D.deleter
@@ -3057,7 +3084,7 @@ class Probe(Group):
 
 
         """
-        if type(self._detectorPos2D) is type(_AbsentDataset):
+        if self._detectorPos2D is _AbsentDataset:
             return None
         if type(self._detectorPos2D) is type(_PresentDataset):
             return _read_float_array(self._h['detectorPos2D'])
@@ -3068,7 +3095,8 @@ class Probe(Group):
 
     @detectorPos2D.setter
     def detectorPos2D(self, value):
-        self._detectorPos2D = np.array(value)
+        if value is not None and any([v is not None for v in value]):
+            self._detectorPos2D = np.array(value)
         # self._cfg.logger.info('Assignment to %s/detectorPos2D in %s', self.location, self.filename)
 
     @detectorPos2D.deleter
@@ -3089,7 +3117,7 @@ class Probe(Group):
 
 
         """
-        if type(self._detectorPos3D) is type(_AbsentDataset):
+        if self._detectorPos3D is _AbsentDataset:
             return None
         if type(self._detectorPos3D) is type(_PresentDataset):
             return _read_float_array(self._h['detectorPos3D'])
@@ -3100,7 +3128,8 @@ class Probe(Group):
 
     @detectorPos3D.setter
     def detectorPos3D(self, value):
-        self._detectorPos3D = np.array(value)
+        if value is not None and any([v is not None for v in value]):
+            self._detectorPos3D = np.array(value)
         # self._cfg.logger.info('Assignment to %s/detectorPos3D in %s', self.location, self.filename)
 
     @detectorPos3D.deleter
@@ -3122,7 +3151,7 @@ class Probe(Group):
 
 
         """
-        if type(self._frequencies) is type(_AbsentDataset):
+        if self._frequencies is _AbsentDataset:
             return None
         if type(self._frequencies) is type(_PresentDataset):
             return _read_float_array(self._h['frequencies'])
@@ -3132,7 +3161,8 @@ class Probe(Group):
 
     @frequencies.setter
     def frequencies(self, value):
-        self._frequencies = np.array(value)
+        if value is not None and any([v is not None for v in value]):
+            self._frequencies = np.array(value)
         # self._cfg.logger.info('Assignment to %s/frequencies in %s', self.location, self.filename)
 
     @frequencies.deleter
@@ -3155,7 +3185,7 @@ class Probe(Group):
 
 
         """
-        if type(self._timeDelays) is type(_AbsentDataset):
+        if self._timeDelays is _AbsentDataset:
             return None
         if type(self._timeDelays) is type(_PresentDataset):
             return _read_float_array(self._h['timeDelays'])
@@ -3165,7 +3195,8 @@ class Probe(Group):
 
     @timeDelays.setter
     def timeDelays(self, value):
-        self._timeDelays = np.array(value)
+        if value is not None and any([v is not None for v in value]):
+            self._timeDelays = np.array(value)
         # self._cfg.logger.info('Assignment to %s/timeDelays in %s', self.location, self.filename)
 
     @timeDelays.deleter
@@ -3188,7 +3219,7 @@ class Probe(Group):
 
 
         """
-        if type(self._timeDelayWidths) is type(_AbsentDataset):
+        if self._timeDelayWidths is _AbsentDataset:
             return None
         if type(self._timeDelayWidths) is type(_PresentDataset):
             return _read_float_array(self._h['timeDelayWidths'])
@@ -3199,7 +3230,8 @@ class Probe(Group):
 
     @timeDelayWidths.setter
     def timeDelayWidths(self, value):
-        self._timeDelayWidths = np.array(value)
+        if value is not None and any([v is not None for v in value]):
+            self._timeDelayWidths = np.array(value)
         # self._cfg.logger.info('Assignment to %s/timeDelayWidths in %s', self.location, self.filename)
 
     @timeDelayWidths.deleter
@@ -3227,7 +3259,7 @@ class Probe(Group):
 
 
         """
-        if type(self._momentOrders) is type(_AbsentDataset):
+        if self._momentOrders is _AbsentDataset:
             return None
         if type(self._momentOrders) is type(_PresentDataset):
             return _read_float_array(self._h['momentOrders'])
@@ -3237,7 +3269,8 @@ class Probe(Group):
 
     @momentOrders.setter
     def momentOrders(self, value):
-        self._momentOrders = np.array(value)
+        if value is not None and any([v is not None for v in value]):
+            self._momentOrders = np.array(value)
         # self._cfg.logger.info('Assignment to %s/momentOrders in %s', self.location, self.filename)
 
     @momentOrders.deleter
@@ -3260,7 +3293,7 @@ class Probe(Group):
 
 
         """
-        if type(self._correlationTimeDelays) is type(_AbsentDataset):
+        if self._correlationTimeDelays is _AbsentDataset:
             return None
         if type(self._correlationTimeDelays) is type(_PresentDataset):
             return _read_float_array(self._h['correlationTimeDelays'])
@@ -3271,7 +3304,8 @@ class Probe(Group):
 
     @correlationTimeDelays.setter
     def correlationTimeDelays(self, value):
-        self._correlationTimeDelays = np.array(value)
+        if value is not None and any([v is not None for v in value]):
+            self._correlationTimeDelays = np.array(value)
         # self._cfg.logger.info('Assignment to %s/correlationTimeDelays in %s', self.location, self.filename)
 
     @correlationTimeDelays.deleter
@@ -3294,7 +3328,7 @@ class Probe(Group):
 
 
         """
-        if type(self._correlationTimeDelayWidths) is type(_AbsentDataset):
+        if self._correlationTimeDelayWidths is _AbsentDataset:
             return None
         if type(self._correlationTimeDelayWidths) is type(_PresentDataset):
             return _read_float_array(self._h['correlationTimeDelayWidths'])
@@ -3305,7 +3339,8 @@ class Probe(Group):
 
     @correlationTimeDelayWidths.setter
     def correlationTimeDelayWidths(self, value):
-        self._correlationTimeDelayWidths = np.array(value)
+        if value is not None and any([v is not None for v in value]):
+            self._correlationTimeDelayWidths = np.array(value)
         # self._cfg.logger.info('Assignment to %s/correlationTimeDelayWidths in %s', self.location, self.filename)
 
     @correlationTimeDelayWidths.deleter
@@ -3330,7 +3365,7 @@ class Probe(Group):
 
 
         """
-        if type(self._sourceLabels) is type(_AbsentDataset):
+        if self._sourceLabels is _AbsentDataset:
             return None
         if type(self._sourceLabels) is type(_PresentDataset):
             return _read_string_array(self._h['sourceLabels'])
@@ -3340,7 +3375,8 @@ class Probe(Group):
 
     @sourceLabels.setter
     def sourceLabels(self, value):
-        self._sourceLabels = np.array(value)
+        if value is not None and any([v is not None for v in value]):
+            self._sourceLabels = np.array(value)
         # self._cfg.logger.info('Assignment to %s/sourceLabels in %s', self.location, self.filename)
 
     @sourceLabels.deleter
@@ -3363,7 +3399,7 @@ class Probe(Group):
 
 
         """
-        if type(self._detectorLabels) is type(_AbsentDataset):
+        if self._detectorLabels is _AbsentDataset:
             return None
         if type(self._detectorLabels) is type(_PresentDataset):
             return _read_string_array(self._h['detectorLabels'])
@@ -3374,7 +3410,8 @@ class Probe(Group):
 
     @detectorLabels.setter
     def detectorLabels(self, value):
-        self._detectorLabels = np.array(value)
+        if value is not None and any([v is not None for v in value]):
+            self._detectorLabels = np.array(value)
         # self._cfg.logger.info('Assignment to %s/detectorLabels in %s', self.location, self.filename)
 
     @detectorLabels.deleter
@@ -3400,7 +3437,7 @@ class Probe(Group):
 
 
         """
-        if type(self._landmarkPos2D) is type(_AbsentDataset):
+        if self._landmarkPos2D is _AbsentDataset:
             return None
         if type(self._landmarkPos2D) is type(_PresentDataset):
             return _read_float_array(self._h['landmarkPos2D'])
@@ -3411,7 +3448,8 @@ class Probe(Group):
 
     @landmarkPos2D.setter
     def landmarkPos2D(self, value):
-        self._landmarkPos2D = np.array(value)
+        if value is not None and any([v is not None for v in value]):
+            self._landmarkPos2D = np.array(value)
         # self._cfg.logger.info('Assignment to %s/landmarkPos2D in %s', self.location, self.filename)
 
     @landmarkPos2D.deleter
@@ -3437,7 +3475,7 @@ class Probe(Group):
 
 
         """
-        if type(self._landmarkPos3D) is type(_AbsentDataset):
+        if self._landmarkPos3D is _AbsentDataset:
             return None
         if type(self._landmarkPos3D) is type(_PresentDataset):
             return _read_float_array(self._h['landmarkPos3D'])
@@ -3448,7 +3486,8 @@ class Probe(Group):
 
     @landmarkPos3D.setter
     def landmarkPos3D(self, value):
-        self._landmarkPos3D = np.array(value)
+        if value is not None and any([v is not None for v in value]):
+            self._landmarkPos3D = np.array(value)
         # self._cfg.logger.info('Assignment to %s/landmarkPos3D in %s', self.location, self.filename)
 
     @landmarkPos3D.deleter
@@ -3475,7 +3514,7 @@ class Probe(Group):
 
 
         """
-        if type(self._landmarkLabels) is type(_AbsentDataset):
+        if self._landmarkLabels is _AbsentDataset:
             return None
         if type(self._landmarkLabels) is type(_PresentDataset):
             return _read_string_array(self._h['landmarkLabels'])
@@ -3486,7 +3525,8 @@ class Probe(Group):
 
     @landmarkLabels.setter
     def landmarkLabels(self, value):
-        self._landmarkLabels = np.array(value)
+        if value is not None and any([v is not None for v in value]):
+            self._landmarkLabels = np.array(value)
         # self._cfg.logger.info('Assignment to %s/landmarkLabels in %s', self.location, self.filename)
 
     @landmarkLabels.deleter
@@ -3513,7 +3553,7 @@ class Probe(Group):
 
 
         """
-        if type(self._coordinateSystem) is type(_AbsentDataset):
+        if self._coordinateSystem is _AbsentDataset:
             return None
         if type(self._coordinateSystem) is type(_PresentDataset):
             return _read_string(self._h['coordinateSystem'])
@@ -3547,7 +3587,7 @@ class Probe(Group):
 
 
         """
-        if type(self._coordinateSystemDescription) is type(_AbsentDataset):
+        if self._coordinateSystemDescription is _AbsentDataset:
             return None
         if type(self._coordinateSystemDescription) is type(_PresentDataset):
             return _read_string(self._h['coordinateSystemDescription'])
@@ -3585,7 +3625,7 @@ class Probe(Group):
                                  self.__class__.__name__ +
                                  ' instance without a filename')
         name = self.location + '/wavelengths'
-        if type(self._wavelengths) not in [type(_AbsentDataset), type(None)]:
+        if not self._wavelengths is _AbsentDataset:
             data = self.wavelengths  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -3596,9 +3636,7 @@ class Probe(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/wavelengthsEmission'
-        if type(self._wavelengthsEmission) not in [
-                type(_AbsentDataset), type(None)
-        ]:
+        if not self._wavelengthsEmission is _AbsentDataset:
             data = self.wavelengthsEmission  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -3609,7 +3647,7 @@ class Probe(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/sourcePos2D'
-        if type(self._sourcePos2D) not in [type(_AbsentDataset), type(None)]:
+        if not self._sourcePos2D is _AbsentDataset:
             data = self.sourcePos2D  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -3620,7 +3658,7 @@ class Probe(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/sourcePos3D'
-        if type(self._sourcePos3D) not in [type(_AbsentDataset), type(None)]:
+        if not self._sourcePos3D is _AbsentDataset:
             data = self.sourcePos3D  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -3631,7 +3669,7 @@ class Probe(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/detectorPos2D'
-        if type(self._detectorPos2D) not in [type(_AbsentDataset), type(None)]:
+        if not self._detectorPos2D is _AbsentDataset:
             data = self.detectorPos2D  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -3642,7 +3680,7 @@ class Probe(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/detectorPos3D'
-        if type(self._detectorPos3D) not in [type(_AbsentDataset), type(None)]:
+        if not self._detectorPos3D is _AbsentDataset:
             data = self.detectorPos3D  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -3653,7 +3691,7 @@ class Probe(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/frequencies'
-        if type(self._frequencies) not in [type(_AbsentDataset), type(None)]:
+        if not self._frequencies is _AbsentDataset:
             data = self.frequencies  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -3664,7 +3702,7 @@ class Probe(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/timeDelays'
-        if type(self._timeDelays) not in [type(_AbsentDataset), type(None)]:
+        if not self._timeDelays is _AbsentDataset:
             data = self.timeDelays  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -3675,9 +3713,7 @@ class Probe(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/timeDelayWidths'
-        if type(self._timeDelayWidths) not in [
-                type(_AbsentDataset), type(None)
-        ]:
+        if not self._timeDelayWidths is _AbsentDataset:
             data = self.timeDelayWidths  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -3688,7 +3724,7 @@ class Probe(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/momentOrders'
-        if type(self._momentOrders) not in [type(_AbsentDataset), type(None)]:
+        if not self._momentOrders is _AbsentDataset:
             data = self.momentOrders  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -3699,9 +3735,7 @@ class Probe(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/correlationTimeDelays'
-        if type(self._correlationTimeDelays) not in [
-                type(_AbsentDataset), type(None)
-        ]:
+        if not self._correlationTimeDelays is _AbsentDataset:
             data = self.correlationTimeDelays  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -3712,9 +3746,7 @@ class Probe(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/correlationTimeDelayWidths'
-        if type(self._correlationTimeDelayWidths) not in [
-                type(_AbsentDataset), type(None)
-        ]:
+        if not self._correlationTimeDelayWidths is _AbsentDataset:
             data = self.correlationTimeDelayWidths  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -3725,7 +3757,7 @@ class Probe(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/sourceLabels'
-        if type(self._sourceLabels) not in [type(_AbsentDataset), type(None)]:
+        if not self._sourceLabels is _AbsentDataset:
             data = self.sourceLabels  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -3736,9 +3768,7 @@ class Probe(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/detectorLabels'
-        if type(self._detectorLabels) not in [
-                type(_AbsentDataset), type(None)
-        ]:
+        if not self._detectorLabels is _AbsentDataset:
             data = self.detectorLabels  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -3749,7 +3779,7 @@ class Probe(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/landmarkPos2D'
-        if type(self._landmarkPos2D) not in [type(_AbsentDataset), type(None)]:
+        if not self._landmarkPos2D is _AbsentDataset:
             data = self.landmarkPos2D  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -3760,7 +3790,7 @@ class Probe(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/landmarkPos3D'
-        if type(self._landmarkPos3D) not in [type(_AbsentDataset), type(None)]:
+        if not self._landmarkPos3D is _AbsentDataset:
             data = self.landmarkPos3D  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -3771,9 +3801,7 @@ class Probe(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/landmarkLabels'
-        if type(self._landmarkLabels) not in [
-                type(_AbsentDataset), type(None)
-        ]:
+        if not self._landmarkLabels is _AbsentDataset:
             data = self.landmarkLabels  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -3784,9 +3812,7 @@ class Probe(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/coordinateSystem'
-        if type(self._coordinateSystem) not in [
-                type(_AbsentDataset), type(None)
-        ]:
+        if not self._coordinateSystem is _AbsentDataset:
             data = self.coordinateSystem  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -3797,9 +3823,7 @@ class Probe(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/coordinateSystemDescription'
-        if type(self._coordinateSystemDescription) not in [
-                type(_AbsentDataset), type(None)
-        ]:
+        if not self._coordinateSystemDescription is _AbsentDataset:
             data = self.coordinateSystemDescription  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -3817,7 +3841,7 @@ class Probe(Group):
                        driver='core',
                        backing_store=False) as tmp:
             name = self.location + '/wavelengths'
-            if type(self._wavelengths) in [type(_AbsentDataset), type(None)]:
+            if self._wavelengths is _AbsentDataset:
                 result._add(name, 'REQUIRED_DATASET_MISSING')
             else:
                 try:
@@ -3832,9 +3856,7 @@ class Probe(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/wavelengthsEmission'
-            if type(self._wavelengthsEmission) in [
-                    type(_AbsentDataset), type(None)
-            ]:
+            if self._wavelengthsEmission is _AbsentDataset:
                 result._add(name, 'OPTIONAL_DATASET_MISSING')
             else:
                 try:
@@ -3851,7 +3873,7 @@ class Probe(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/sourcePos2D'
-            if type(self._sourcePos2D) in [type(_AbsentDataset), type(None)]:
+            if self._sourcePos2D is _AbsentDataset:
                 result._add(name, 'REQUIRED_DATASET_MISSING')
             else:
                 try:
@@ -3866,7 +3888,7 @@ class Probe(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/sourcePos3D'
-            if type(self._sourcePos3D) in [type(_AbsentDataset), type(None)]:
+            if self._sourcePos3D is _AbsentDataset:
                 result._add(name, 'REQUIRED_DATASET_MISSING')
             else:
                 try:
@@ -3881,7 +3903,7 @@ class Probe(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/detectorPos2D'
-            if type(self._detectorPos2D) in [type(_AbsentDataset), type(None)]:
+            if self._detectorPos2D is _AbsentDataset:
                 result._add(name, 'REQUIRED_DATASET_MISSING')
             else:
                 try:
@@ -3896,7 +3918,7 @@ class Probe(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/detectorPos3D'
-            if type(self._detectorPos3D) in [type(_AbsentDataset), type(None)]:
+            if self._detectorPos3D is _AbsentDataset:
                 result._add(name, 'REQUIRED_DATASET_MISSING')
             else:
                 try:
@@ -3911,7 +3933,7 @@ class Probe(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/frequencies'
-            if type(self._frequencies) in [type(_AbsentDataset), type(None)]:
+            if self._frequencies is _AbsentDataset:
                 result._add(name, 'OPTIONAL_DATASET_MISSING')
             else:
                 try:
@@ -3926,7 +3948,7 @@ class Probe(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/timeDelays'
-            if type(self._timeDelays) in [type(_AbsentDataset), type(None)]:
+            if self._timeDelays is _AbsentDataset:
                 result._add(name, 'OPTIONAL_DATASET_MISSING')
             else:
                 try:
@@ -3941,9 +3963,7 @@ class Probe(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/timeDelayWidths'
-            if type(self._timeDelayWidths) in [
-                    type(_AbsentDataset), type(None)
-            ]:
+            if self._timeDelayWidths is _AbsentDataset:
                 result._add(name, 'OPTIONAL_DATASET_MISSING')
             else:
                 try:
@@ -3958,7 +3978,7 @@ class Probe(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/momentOrders'
-            if type(self._momentOrders) in [type(_AbsentDataset), type(None)]:
+            if self._momentOrders is _AbsentDataset:
                 result._add(name, 'OPTIONAL_DATASET_MISSING')
             else:
                 try:
@@ -3973,9 +3993,7 @@ class Probe(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/correlationTimeDelays'
-            if type(self._correlationTimeDelays) in [
-                    type(_AbsentDataset), type(None)
-            ]:
+            if self._correlationTimeDelays is _AbsentDataset:
                 result._add(name, 'OPTIONAL_DATASET_MISSING')
             else:
                 try:
@@ -3992,9 +4010,7 @@ class Probe(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/correlationTimeDelayWidths'
-            if type(self._correlationTimeDelayWidths) in [
-                    type(_AbsentDataset), type(None)
-            ]:
+            if self._correlationTimeDelayWidths is _AbsentDataset:
                 result._add(name, 'OPTIONAL_DATASET_MISSING')
             else:
                 try:
@@ -4011,7 +4027,7 @@ class Probe(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/sourceLabels'
-            if type(self._sourceLabels) in [type(_AbsentDataset), type(None)]:
+            if self._sourceLabels is _AbsentDataset:
                 result._add(name, 'OPTIONAL_DATASET_MISSING')
             else:
                 try:
@@ -4026,9 +4042,7 @@ class Probe(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/detectorLabels'
-            if type(self._detectorLabels) in [
-                    type(_AbsentDataset), type(None)
-            ]:
+            if self._detectorLabels is _AbsentDataset:
                 result._add(name, 'OPTIONAL_DATASET_MISSING')
             else:
                 try:
@@ -4043,7 +4057,7 @@ class Probe(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/landmarkPos2D'
-            if type(self._landmarkPos2D) in [type(_AbsentDataset), type(None)]:
+            if self._landmarkPos2D is _AbsentDataset:
                 result._add(name, 'OPTIONAL_DATASET_MISSING')
             else:
                 try:
@@ -4058,7 +4072,7 @@ class Probe(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/landmarkPos3D'
-            if type(self._landmarkPos3D) in [type(_AbsentDataset), type(None)]:
+            if self._landmarkPos3D is _AbsentDataset:
                 result._add(name, 'OPTIONAL_DATASET_MISSING')
             else:
                 try:
@@ -4073,9 +4087,7 @@ class Probe(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/landmarkLabels'
-            if type(self._landmarkLabels) in [
-                    type(_AbsentDataset), type(None)
-            ]:
+            if self._landmarkLabels is _AbsentDataset:
                 result._add(name, 'OPTIONAL_DATASET_MISSING')
             else:
                 try:
@@ -4090,9 +4102,7 @@ class Probe(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/coordinateSystem'
-            if type(self._coordinateSystem) in [
-                    type(_AbsentDataset), type(None)
-            ]:
+            if self._coordinateSystem is _AbsentDataset:
                 result._add(name, 'OPTIONAL_DATASET_MISSING')
             else:
                 try:
@@ -4106,9 +4116,7 @@ class Probe(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/coordinateSystemDescription'
-            if type(self._coordinateSystemDescription) in [
-                    type(_AbsentDataset), type(None)
-            ]:
+            if self._coordinateSystemDescription is _AbsentDataset:
                 result._add(name, 'OPTIONAL_DATASET_MISSING')
             else:
                 try:
@@ -4188,7 +4196,7 @@ class NirsElement(Group):
         The below five metadata records are minimally required in a SNIRF file
 
         """
-        if type(self._metaDataTags) is type(_AbsentGroup):
+        if self._metaDataTags is _AbsentGroup:
             return None
         return self._metaDataTags
 
@@ -4276,7 +4284,7 @@ class NirsElement(Group):
         geometry.  This variable has a number of required fields.
 
         """
-        if type(self._probe) is type(_AbsentGroup):
+        if self._probe is _AbsentGroup:
             return None
         return self._probe
 
@@ -4337,8 +4345,7 @@ class NirsElement(Group):
                 raise ValueError('Cannot save an anonymous ' +
                                  self.__class__.__name__ +
                                  ' instance without a filename')
-        if type(self._metaDataTags) is type(
-                _AbsentGroup) or self._metaDataTags.is_empty():
+        if self._metaDataTags is _AbsentGroup or self._metaDataTags.is_empty():
             if 'metaDataTags' in file:
                 del file['metaDataTags']
                 self._cfg.logger.info('Deleted Group %s/metaDataTags from %s',
@@ -4347,7 +4354,7 @@ class NirsElement(Group):
             self.metaDataTags._save(*args)
         self.data._save(*args)
         self.stim._save(*args)
-        if type(self._probe) is type(_AbsentGroup) or self._probe.is_empty():
+        if self._probe is _AbsentGroup or self._probe.is_empty():
             if 'probe' in file:
                 del file['probe']
                 self._cfg.logger.info('Deleted Group %s/probe from %s',
@@ -4364,10 +4371,9 @@ class NirsElement(Group):
                        backing_store=False) as tmp:
             name = self.location + '/metaDataTags'
             # If Group is not present in file and empty in the wrapper, it is missing
-            if type(self._metaDataTags) in [
-                    type(_AbsentGroup), type(None)
-            ] or ('metaDataTags' not in self._h
-                  and self._metaDataTags.is_empty()):
+            if self._metaDataTags is _AbsentGroup or (
+                    'metaDataTags' not in self._h
+                    and self._metaDataTags.is_empty()):
                 result._add(name, 'REQUIRED_GROUP_MISSING')
             else:
                 self._metaDataTags._validate(result)
@@ -4383,9 +4389,8 @@ class NirsElement(Group):
                 self.stim._validate(result)
             name = self.location + '/probe'
             # If Group is not present in file and empty in the wrapper, it is missing
-            if type(self._probe) in [
-                    type(_AbsentGroup), type(None)
-            ] or ('probe' not in self._h and self._probe.is_empty()):
+            if self._probe is _AbsentGroup or ('probe' not in self._h
+                                               and self._probe.is_empty()):
                 result._add(name, 'REQUIRED_GROUP_MISSING')
             else:
                 self._probe._validate(result)
@@ -4502,7 +4507,7 @@ class DataElement(Group):
 
 
         """
-        if type(self._dataTimeSeries) is type(_AbsentDataset):
+        if self._dataTimeSeries is _AbsentDataset:
             return None
         if type(self._dataTimeSeries) is type(_PresentDataset):
             return _read_float_array(self._h['dataTimeSeries'])
@@ -4513,7 +4518,8 @@ class DataElement(Group):
 
     @dataTimeSeries.setter
     def dataTimeSeries(self, value):
-        self._dataTimeSeries = np.array(value)
+        if value is not None and any([v is not None for v in value]):
+            self._dataTimeSeries = np.array(value)
         # self._cfg.logger.info('Assignment to %s/dataTimeSeries in %s', self.location, self.filename)
 
     @dataTimeSeries.deleter
@@ -4537,7 +4543,7 @@ class DataElement(Group):
 
 
         """
-        if type(self._dataOffset) is type(_AbsentDataset):
+        if self._dataOffset is _AbsentDataset:
             return None
         if type(self._dataOffset) is type(_PresentDataset):
             return _read_float_array(self._h['dataOffset'])
@@ -4547,7 +4553,8 @@ class DataElement(Group):
 
     @dataOffset.setter
     def dataOffset(self, value):
-        self._dataOffset = np.array(value)
+        if value is not None and any([v is not None for v in value]):
+            self._dataOffset = np.array(value)
         # self._cfg.logger.info('Assignment to %s/dataOffset in %s', self.location, self.filename)
 
     @dataOffset.deleter
@@ -4580,7 +4587,7 @@ class DataElement(Group):
         Chunked data is allowed to support real-time streaming of data in this array.
 
         """
-        if type(self._time) is type(_AbsentDataset):
+        if self._time is _AbsentDataset:
             return None
         if type(self._time) is type(_PresentDataset):
             return _read_float_array(self._h['time'])
@@ -4590,7 +4597,8 @@ class DataElement(Group):
 
     @time.setter
     def time(self, value):
-        self._time = np.array(value)
+        if value is not None and any([v is not None for v in value]):
+            self._time = np.array(value)
         # self._cfg.logger.info('Assignment to %s/time in %s', self.location, self.filename)
 
     @time.deleter
@@ -4647,7 +4655,7 @@ class DataElement(Group):
         The arrays of `measurementLists` are:
 
         """
-        if type(self._measurementLists) is type(_AbsentGroup):
+        if self._measurementLists is _AbsentGroup:
             return None
         return self._measurementLists
 
@@ -4686,9 +4694,7 @@ class DataElement(Group):
                                  self.__class__.__name__ +
                                  ' instance without a filename')
         name = self.location + '/dataTimeSeries'
-        if type(self._dataTimeSeries) not in [
-                type(_AbsentDataset), type(None)
-        ]:
+        if not self._dataTimeSeries is _AbsentDataset:
             data = self.dataTimeSeries  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -4699,7 +4705,7 @@ class DataElement(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/dataOffset'
-        if type(self._dataOffset) not in [type(_AbsentDataset), type(None)]:
+        if not self._dataOffset is _AbsentDataset:
             data = self.dataOffset  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -4710,7 +4716,7 @@ class DataElement(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/time'
-        if type(self._time) not in [type(_AbsentDataset), type(None)]:
+        if not self._time is _AbsentDataset:
             data = self.time  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -4721,8 +4727,8 @@ class DataElement(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         self.measurementList._save(*args)
-        if type(self._measurementLists) is type(
-                _AbsentGroup) or self._measurementLists.is_empty():
+        if self._measurementLists is _AbsentGroup or self._measurementLists.is_empty(
+        ):
             if 'measurementLists' in file:
                 del file['measurementLists']
                 self._cfg.logger.info(
@@ -4738,9 +4744,7 @@ class DataElement(Group):
                        driver='core',
                        backing_store=False) as tmp:
             name = self.location + '/dataTimeSeries'
-            if type(self._dataTimeSeries) in [
-                    type(_AbsentDataset), type(None)
-            ]:
+            if self._dataTimeSeries is _AbsentDataset:
                 result._add(name, 'REQUIRED_DATASET_MISSING')
             else:
                 try:
@@ -4755,7 +4759,7 @@ class DataElement(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/dataOffset'
-            if type(self._dataOffset) in [type(_AbsentDataset), type(None)]:
+            if self._dataOffset is _AbsentDataset:
                 result._add(name, 'OPTIONAL_DATASET_MISSING')
             else:
                 try:
@@ -4770,7 +4774,7 @@ class DataElement(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/time'
-            if type(self._time) in [type(_AbsentDataset), type(None)]:
+            if self._time is _AbsentDataset:
                 result._add(name, 'REQUIRED_DATASET_MISSING')
             else:
                 try:
@@ -4791,10 +4795,9 @@ class DataElement(Group):
                 self.measurementList._validate(result)
             name = self.location + '/measurementLists'
             # If Group is not present in file and empty in the wrapper, it is missing
-            if type(self._measurementLists) in [
-                    type(_AbsentGroup), type(None)
-            ] or ('measurementLists' not in self._h
-                  and self._measurementLists.is_empty()):
+            if self._measurementLists is _AbsentGroup or (
+                    'measurementLists' not in self._h
+                    and self._measurementLists.is_empty()):
                 result._add(name, 'REQUIRED_GROUP_MISSING')
             else:
                 self._measurementLists._validate(result)
@@ -4953,7 +4956,7 @@ class MeasurementListElement(Group):
         Index of the source.
          
         """
-        if type(self._sourceIndex) is type(_AbsentDataset):
+        if self._sourceIndex is _AbsentDataset:
             return None
         if type(self._sourceIndex) is type(_PresentDataset):
             return _read_int(self._h['sourceIndex'])
@@ -4982,7 +4985,7 @@ class MeasurementListElement(Group):
         Index of the detector.
 
         """
-        if type(self._detectorIndex) is type(_AbsentDataset):
+        if self._detectorIndex is _AbsentDataset:
             return None
         if type(self._detectorIndex) is type(_PresentDataset):
             return _read_int(self._h['detectorIndex'])
@@ -5012,7 +5015,7 @@ class MeasurementListElement(Group):
         Index of the "nominal" wavelength (in `probe.wavelengths`).
 
         """
-        if type(self._wavelengthIndex) is type(_AbsentDataset):
+        if self._wavelengthIndex is _AbsentDataset:
             return None
         if type(self._wavelengthIndex) is type(_PresentDataset):
             return _read_int(self._h['wavelengthIndex'])
@@ -5042,7 +5045,7 @@ class MeasurementListElement(Group):
         Actual (measured) wavelength in nm, if available, for the source in a given channel.
 
         """
-        if type(self._wavelengthActual) is type(_AbsentDataset):
+        if self._wavelengthActual is _AbsentDataset:
             return None
         if type(self._wavelengthActual) is type(_PresentDataset):
             return _read_float(self._h['wavelengthActual'])
@@ -5072,7 +5075,7 @@ class MeasurementListElement(Group):
         Actual (measured) emission wavelength in nm, if available, for the source in a given channel.
          
         """
-        if type(self._wavelengthEmissionActual) is type(_AbsentDataset):
+        if self._wavelengthEmissionActual is _AbsentDataset:
             return None
         if type(self._wavelengthEmissionActual) is type(_PresentDataset):
             return _read_float(self._h['wavelengthEmissionActual'])
@@ -5102,7 +5105,7 @@ class MeasurementListElement(Group):
         Data-type identifier. See Appendix for list possible values.
 
         """
-        if type(self._dataType) is type(_AbsentDataset):
+        if self._dataType is _AbsentDataset:
             return None
         if type(self._dataType) is type(_PresentDataset):
             return _read_int(self._h['dataType'])
@@ -5131,7 +5134,7 @@ class MeasurementListElement(Group):
         International System of Units (SI units) identifier for the given channel. Encoding should follow the [CMIXF-12 standard](https://people.csail.mit.edu/jaffer/MIXF/CMIXF-12), avoiding special unicode symbols like U+03BC (m) or U+00B5 (u) and using '/' rather than 'per' for units such as `V/us`. The recommended export format is in unscaled units such as V, s, Mole.
 
         """
-        if type(self._dataUnit) is type(_AbsentDataset):
+        if self._dataUnit is _AbsentDataset:
             return None
         if type(self._dataUnit) is type(_PresentDataset):
             return _read_string(self._h['dataUnit'])
@@ -5161,7 +5164,7 @@ class MeasurementListElement(Group):
         for list of possible values.
 
         """
-        if type(self._dataTypeLabel) is type(_AbsentDataset):
+        if self._dataTypeLabel is _AbsentDataset:
             return None
         if type(self._dataTypeLabel) is type(_PresentDataset):
             return _read_string(self._h['dataTypeLabel'])
@@ -5191,7 +5194,7 @@ class MeasurementListElement(Group):
         Data-type specific parameter index. The data type index specifies additional data type specific parameters that are further elaborated by other fields in the probe structure, as detailed below. Note that where multiple parameters are required, the same index must be used into each (examples include data types such as Time Domain and Diffuse Correlation Spectroscopy). One use of this parameter is as a stimulus condition index when `measurementList(k).dataType = 99999` (i.e, `processed` and `measurementList(k).dataTypeLabel = 'HRF ...'` .
 
         """
-        if type(self._dataTypeIndex) is type(_AbsentDataset):
+        if self._dataTypeIndex is _AbsentDataset:
             return None
         if type(self._dataTypeIndex) is type(_PresentDataset):
             return _read_int(self._h['dataTypeIndex'])
@@ -5221,7 +5224,7 @@ class MeasurementListElement(Group):
         The units are not defined, unless the user takes the option of using a `metaDataTag` as described below.
 
         """
-        if type(self._sourcePower) is type(_AbsentDataset):
+        if self._sourcePower is _AbsentDataset:
             return None
         if type(self._sourcePower) is type(_PresentDataset):
             return _read_float(self._h['sourcePower'])
@@ -5283,7 +5286,7 @@ class MeasurementListElement(Group):
         label for sources and detectors.
 
         """
-        if type(self._detectorGain) is type(_AbsentDataset):
+        if self._detectorGain is _AbsentDataset:
             return None
         if type(self._detectorGain) is type(_PresentDataset):
             return _read_float(self._h['detectorGain'])
@@ -5320,7 +5323,7 @@ class MeasurementListElement(Group):
                                  self.__class__.__name__ +
                                  ' instance without a filename')
         name = self.location + '/sourceIndex'
-        if type(self._sourceIndex) not in [type(_AbsentDataset), type(None)]:
+        if not self._sourceIndex is _AbsentDataset:
             data = self.sourceIndex  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -5331,7 +5334,7 @@ class MeasurementListElement(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/detectorIndex'
-        if type(self._detectorIndex) not in [type(_AbsentDataset), type(None)]:
+        if not self._detectorIndex is _AbsentDataset:
             data = self.detectorIndex  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -5342,9 +5345,7 @@ class MeasurementListElement(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/wavelengthIndex'
-        if type(self._wavelengthIndex) not in [
-                type(_AbsentDataset), type(None)
-        ]:
+        if not self._wavelengthIndex is _AbsentDataset:
             data = self.wavelengthIndex  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -5355,9 +5356,7 @@ class MeasurementListElement(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/wavelengthActual'
-        if type(self._wavelengthActual) not in [
-                type(_AbsentDataset), type(None)
-        ]:
+        if not self._wavelengthActual is _AbsentDataset:
             data = self.wavelengthActual  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -5368,9 +5367,7 @@ class MeasurementListElement(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/wavelengthEmissionActual'
-        if type(self._wavelengthEmissionActual) not in [
-                type(_AbsentDataset), type(None)
-        ]:
+        if not self._wavelengthEmissionActual is _AbsentDataset:
             data = self.wavelengthEmissionActual  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -5381,7 +5378,7 @@ class MeasurementListElement(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/dataType'
-        if type(self._dataType) not in [type(_AbsentDataset), type(None)]:
+        if not self._dataType is _AbsentDataset:
             data = self.dataType  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -5392,7 +5389,7 @@ class MeasurementListElement(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/dataUnit'
-        if type(self._dataUnit) not in [type(_AbsentDataset), type(None)]:
+        if not self._dataUnit is _AbsentDataset:
             data = self.dataUnit  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -5403,7 +5400,7 @@ class MeasurementListElement(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/dataTypeLabel'
-        if type(self._dataTypeLabel) not in [type(_AbsentDataset), type(None)]:
+        if not self._dataTypeLabel is _AbsentDataset:
             data = self.dataTypeLabel  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -5414,7 +5411,7 @@ class MeasurementListElement(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/dataTypeIndex'
-        if type(self._dataTypeIndex) not in [type(_AbsentDataset), type(None)]:
+        if not self._dataTypeIndex is _AbsentDataset:
             data = self.dataTypeIndex  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -5425,7 +5422,7 @@ class MeasurementListElement(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/sourcePower'
-        if type(self._sourcePower) not in [type(_AbsentDataset), type(None)]:
+        if not self._sourcePower is _AbsentDataset:
             data = self.sourcePower  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -5436,7 +5433,7 @@ class MeasurementListElement(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/detectorGain'
-        if type(self._detectorGain) not in [type(_AbsentDataset), type(None)]:
+        if not self._detectorGain is _AbsentDataset:
             data = self.detectorGain  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -5454,7 +5451,7 @@ class MeasurementListElement(Group):
                        driver='core',
                        backing_store=False) as tmp:
             name = self.location + '/sourceIndex'
-            if type(self._sourceIndex) in [type(_AbsentDataset), type(None)]:
+            if self._sourceIndex is _AbsentDataset:
                 result._add(name, 'REQUIRED_DATASET_MISSING')
             else:
                 try:
@@ -5474,7 +5471,7 @@ class MeasurementListElement(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/detectorIndex'
-            if type(self._detectorIndex) in [type(_AbsentDataset), type(None)]:
+            if self._detectorIndex is _AbsentDataset:
                 result._add(name, 'REQUIRED_DATASET_MISSING')
             else:
                 try:
@@ -5494,9 +5491,7 @@ class MeasurementListElement(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/wavelengthIndex'
-            if type(self._wavelengthIndex) in [
-                    type(_AbsentDataset), type(None)
-            ]:
+            if self._wavelengthIndex is _AbsentDataset:
                 result._add(name, 'REQUIRED_DATASET_MISSING')
             else:
                 try:
@@ -5516,9 +5511,7 @@ class MeasurementListElement(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/wavelengthActual'
-            if type(self._wavelengthActual) in [
-                    type(_AbsentDataset), type(None)
-            ]:
+            if self._wavelengthActual is _AbsentDataset:
                 result._add(name, 'OPTIONAL_DATASET_MISSING')
             else:
                 try:
@@ -5532,9 +5525,7 @@ class MeasurementListElement(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/wavelengthEmissionActual'
-            if type(self._wavelengthEmissionActual) in [
-                    type(_AbsentDataset), type(None)
-            ]:
+            if self._wavelengthEmissionActual is _AbsentDataset:
                 result._add(name, 'OPTIONAL_DATASET_MISSING')
             else:
                 try:
@@ -5550,7 +5541,7 @@ class MeasurementListElement(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/dataType'
-            if type(self._dataType) in [type(_AbsentDataset), type(None)]:
+            if self._dataType is _AbsentDataset:
                 result._add(name, 'REQUIRED_DATASET_MISSING')
             else:
                 try:
@@ -5564,7 +5555,7 @@ class MeasurementListElement(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/dataUnit'
-            if type(self._dataUnit) in [type(_AbsentDataset), type(None)]:
+            if self._dataUnit is _AbsentDataset:
                 result._add(name, 'OPTIONAL_DATASET_MISSING')
             else:
                 try:
@@ -5578,7 +5569,7 @@ class MeasurementListElement(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/dataTypeLabel'
-            if type(self._dataTypeLabel) in [type(_AbsentDataset), type(None)]:
+            if self._dataTypeLabel is _AbsentDataset:
                 result._add(name, 'OPTIONAL_DATASET_MISSING')
             else:
                 try:
@@ -5592,7 +5583,7 @@ class MeasurementListElement(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/dataTypeIndex'
-            if type(self._dataTypeIndex) in [type(_AbsentDataset), type(None)]:
+            if self._dataTypeIndex is _AbsentDataset:
                 result._add(name, 'REQUIRED_DATASET_MISSING')
             else:
                 try:
@@ -5612,7 +5603,7 @@ class MeasurementListElement(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/sourcePower'
-            if type(self._sourcePower) in [type(_AbsentDataset), type(None)]:
+            if self._sourcePower is _AbsentDataset:
                 result._add(name, 'OPTIONAL_DATASET_MISSING')
             else:
                 try:
@@ -5626,7 +5617,7 @@ class MeasurementListElement(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/detectorGain'
-            if type(self._detectorGain) in [type(_AbsentDataset), type(None)]:
+            if self._detectorGain is _AbsentDataset:
                 result._add(name, 'OPTIONAL_DATASET_MISSING')
             else:
                 try:
@@ -5724,7 +5715,7 @@ class StimElement(Group):
 
 
         """
-        if type(self._name) is type(_AbsentDataset):
+        if self._name is _AbsentDataset:
             return None
         if type(self._name) is type(_PresentDataset):
             return _read_string(self._h['name'])
@@ -5765,7 +5756,7 @@ class StimElement(Group):
         used to annotate the meanings of each data column. 
 
         """
-        if type(self._data) is type(_AbsentDataset):
+        if self._data is _AbsentDataset:
             return None
         if type(self._data) is type(_PresentDataset):
             return _read_float_array(self._h['data'])
@@ -5775,7 +5766,8 @@ class StimElement(Group):
 
     @data.setter
     def data(self, value):
-        self._data = np.array(value)
+        if value is not None and any([v is not None for v in value]):
+            self._data = np.array(value)
         # self._cfg.logger.info('Assignment to %s/data in %s', self.location, self.filename)
 
     @data.deleter
@@ -5797,7 +5789,7 @@ class StimElement(Group):
         of `/nirs(i)/stim(j)/data`, including the first 3 required columns.
 
         """
-        if type(self._dataLabels) is type(_AbsentDataset):
+        if self._dataLabels is _AbsentDataset:
             return None
         if type(self._dataLabels) is type(_PresentDataset):
             return _read_string_array(self._h['dataLabels'])
@@ -5807,7 +5799,8 @@ class StimElement(Group):
 
     @dataLabels.setter
     def dataLabels(self, value):
-        self._dataLabels = np.array(value)
+        if value is not None and any([v is not None for v in value]):
+            self._dataLabels = np.array(value)
         # self._cfg.logger.info('Assignment to %s/dataLabels in %s', self.location, self.filename)
 
     @dataLabels.deleter
@@ -5834,7 +5827,7 @@ class StimElement(Group):
                                  self.__class__.__name__ +
                                  ' instance without a filename')
         name = self.location + '/name'
-        if type(self._name) not in [type(_AbsentDataset), type(None)]:
+        if not self._name is _AbsentDataset:
             data = self.name  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -5845,7 +5838,7 @@ class StimElement(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/data'
-        if type(self._data) not in [type(_AbsentDataset), type(None)]:
+        if not self._data is _AbsentDataset:
             data = self.data  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -5856,7 +5849,7 @@ class StimElement(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/dataLabels'
-        if type(self._dataLabels) not in [type(_AbsentDataset), type(None)]:
+        if not self._dataLabels is _AbsentDataset:
             data = self.dataLabels  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -5874,7 +5867,7 @@ class StimElement(Group):
                        driver='core',
                        backing_store=False) as tmp:
             name = self.location + '/name'
-            if type(self._name) in [type(_AbsentDataset), type(None)]:
+            if self._name is _AbsentDataset:
                 result._add(name, 'OPTIONAL_DATASET_MISSING')
             else:
                 try:
@@ -5888,7 +5881,7 @@ class StimElement(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/data'
-            if type(self._data) in [type(_AbsentDataset), type(None)]:
+            if self._data is _AbsentDataset:
                 result._add(name, 'OPTIONAL_DATASET_MISSING')
             else:
                 try:
@@ -5903,7 +5896,7 @@ class StimElement(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/dataLabels'
-            if type(self._dataLabels) in [type(_AbsentDataset), type(None)]:
+            if self._dataLabels is _AbsentDataset:
                 result._add(name, 'OPTIONAL_DATASET_MISSING')
             else:
                 try:
@@ -6013,7 +6006,7 @@ class AuxElement(Group):
         This is string describing the j<sup>th</sup> auxiliary data timecourse. While auxiliary data can be given any title, standard names for commonly used auxiliary channels (i.e. accelerometer data) are specified in the appendix.
 
         """
-        if type(self._name) is type(_AbsentDataset):
+        if self._name is _AbsentDataset:
             return None
         if type(self._name) is type(_PresentDataset):
             return _read_string(self._h['name'])
@@ -6043,7 +6036,7 @@ class AuxElement(Group):
         time points> x <number of channels>`. If multiple channels of related data are generated by a system, they may be encoded in the multiple columns of the time series (i.e. complex numbers). For example, a system containing more than one accelerometer may output this data as a set of `ACCEL_X`/`ACCEL_Y`/`ACCEL_Z` auxiliary time series, where each has the dimension of `<number of time points> x <number of accelerometers>`. Note that it is NOT recommended to encode the various accelerometer dimensions as multiple channels of the same `aux` Group: instead follow the `"ACCEL_X"`, `"ACCEL_Y"`, `"ACCEL_Z"` naming conventions described in the appendix. Chunked data is allowed to support real-time data streaming.
 
         """
-        if type(self._dataTimeSeries) is type(_AbsentDataset):
+        if self._dataTimeSeries is _AbsentDataset:
             return None
         if type(self._dataTimeSeries) is type(_PresentDataset):
             return _read_float_array(self._h['dataTimeSeries'])
@@ -6054,7 +6047,8 @@ class AuxElement(Group):
 
     @dataTimeSeries.setter
     def dataTimeSeries(self, value):
-        self._dataTimeSeries = np.array(value)
+        if value is not None and any([v is not None for v in value]):
+            self._dataTimeSeries = np.array(value)
         # self._cfg.logger.info('Assignment to %s/dataTimeSeries in %s', self.location, self.filename)
 
     @dataTimeSeries.deleter
@@ -6073,7 +6067,7 @@ class AuxElement(Group):
         International System of Units (SI units) identifier for the given channel. Encoding should follow the [CMIXF-12 standard](https://people.csail.mit.edu/jaffer/MIXF/CMIXF-12), avoiding special unicode symbols like U+03BC (m) or U+00B5 (u) and using '/' rather than 'per' for units such as `V/us`. The recommended export format is in unscaled units such as V, s, Mole.
 
         """
-        if type(self._dataUnit) is type(_AbsentDataset):
+        if self._dataUnit is _AbsentDataset:
             return None
         if type(self._dataUnit) is type(_PresentDataset):
             return _read_string(self._h['dataUnit'])
@@ -6109,7 +6103,7 @@ class AuxElement(Group):
         Chunked data is allowed to support real-time data streaming
 
         """
-        if type(self._time) is type(_AbsentDataset):
+        if self._time is _AbsentDataset:
             return None
         if type(self._time) is type(_PresentDataset):
             return _read_float_array(self._h['time'])
@@ -6119,7 +6113,8 @@ class AuxElement(Group):
 
     @time.setter
     def time(self, value):
-        self._time = np.array(value)
+        if value is not None and any([v is not None for v in value]):
+            self._time = np.array(value)
         # self._cfg.logger.info('Assignment to %s/time in %s', self.location, self.filename)
 
     @time.deleter
@@ -6141,7 +6136,7 @@ class AuxElement(Group):
 
 
         """
-        if type(self._timeOffset) is type(_AbsentDataset):
+        if self._timeOffset is _AbsentDataset:
             return None
         if type(self._timeOffset) is type(_PresentDataset):
             return _read_float_array(self._h['timeOffset'])
@@ -6151,7 +6146,8 @@ class AuxElement(Group):
 
     @timeOffset.setter
     def timeOffset(self, value):
-        self._timeOffset = np.array(value)
+        if value is not None and any([v is not None for v in value]):
+            self._timeOffset = np.array(value)
         # self._cfg.logger.info('Assignment to %s/timeOffset in %s', self.location, self.filename)
 
     @timeOffset.deleter
@@ -6178,7 +6174,7 @@ class AuxElement(Group):
                                  self.__class__.__name__ +
                                  ' instance without a filename')
         name = self.location + '/name'
-        if type(self._name) not in [type(_AbsentDataset), type(None)]:
+        if not self._name is _AbsentDataset:
             data = self.name  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -6189,9 +6185,7 @@ class AuxElement(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/dataTimeSeries'
-        if type(self._dataTimeSeries) not in [
-                type(_AbsentDataset), type(None)
-        ]:
+        if not self._dataTimeSeries is _AbsentDataset:
             data = self.dataTimeSeries  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -6202,7 +6196,7 @@ class AuxElement(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/dataUnit'
-        if type(self._dataUnit) not in [type(_AbsentDataset), type(None)]:
+        if not self._dataUnit is _AbsentDataset:
             data = self.dataUnit  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -6213,7 +6207,7 @@ class AuxElement(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/time'
-        if type(self._time) not in [type(_AbsentDataset), type(None)]:
+        if not self._time is _AbsentDataset:
             data = self.time  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -6224,7 +6218,7 @@ class AuxElement(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/timeOffset'
-        if type(self._timeOffset) not in [type(_AbsentDataset), type(None)]:
+        if not self._timeOffset is _AbsentDataset:
             data = self.timeOffset  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -6242,7 +6236,7 @@ class AuxElement(Group):
                        driver='core',
                        backing_store=False) as tmp:
             name = self.location + '/name'
-            if type(self._name) in [type(_AbsentDataset), type(None)]:
+            if self._name is _AbsentDataset:
                 result._add(name, 'OPTIONAL_DATASET_MISSING')
             else:
                 try:
@@ -6256,9 +6250,7 @@ class AuxElement(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/dataTimeSeries'
-            if type(self._dataTimeSeries) in [
-                    type(_AbsentDataset), type(None)
-            ]:
+            if self._dataTimeSeries is _AbsentDataset:
                 result._add(name, 'OPTIONAL_DATASET_MISSING')
             else:
                 try:
@@ -6273,7 +6265,7 @@ class AuxElement(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/dataUnit'
-            if type(self._dataUnit) in [type(_AbsentDataset), type(None)]:
+            if self._dataUnit is _AbsentDataset:
                 result._add(name, 'OPTIONAL_DATASET_MISSING')
             else:
                 try:
@@ -6287,7 +6279,7 @@ class AuxElement(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/time'
-            if type(self._time) in [type(_AbsentDataset), type(None)]:
+            if self._time is _AbsentDataset:
                 result._add(name, 'OPTIONAL_DATASET_MISSING')
             else:
                 try:
@@ -6302,7 +6294,7 @@ class AuxElement(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/timeOffset'
-            if type(self._timeOffset) in [type(_AbsentDataset), type(None)]:
+            if self._timeOffset is _AbsentDataset:
                 result._add(name, 'OPTIONAL_DATASET_MISSING')
             else:
                 try:
@@ -6449,7 +6441,7 @@ class Snirf(Group):
         describes format version "1.0"
          
         """
-        if type(self._formatVersion) is type(_AbsentDataset):
+        if self._formatVersion is _AbsentDataset:
             return None
         if type(self._formatVersion) is type(_PresentDataset):
             return _read_string(self._h['formatVersion'])
@@ -6519,7 +6511,7 @@ class Snirf(Group):
                                  self.__class__.__name__ +
                                  ' instance without a filename')
         name = self.location + '/formatVersion'
-        if type(self._formatVersion) not in [type(_AbsentDataset), type(None)]:
+        if not self._formatVersion is _AbsentDataset:
             data = self.formatVersion  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -6538,7 +6530,7 @@ class Snirf(Group):
                        driver='core',
                        backing_store=False) as tmp:
             name = self.location + '/formatVersion'
-            if type(self._formatVersion) in [type(_AbsentDataset), type(None)]:
+            if self._formatVersion is _AbsentDataset:
                 result._add(name, 'REQUIRED_DATASET_MISSING')
             else:
                 try:
@@ -6677,7 +6669,7 @@ class DataElement(DataElement):
                 vals = [
                     getattr(ml, dataset_name) for ml in self.measurementList
                 ]
-                if any(val is not None for val in vals):
+                if all(val is not None for val in vals):
                     setattr(self.measurementLists, dataset_name, vals)
 
     def _validate(self, result: ValidationResult):
