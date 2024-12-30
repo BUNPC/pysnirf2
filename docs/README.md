@@ -16,7 +16,7 @@
 - [`pysnirf2.IndexedGroup`](./pysnirf2.md#class-indexedgroup)
 - [`pysnirf2.MeasurementList`](./pysnirf2.md#class-measurementlist): Interface for indexed group `MeasurementList`.
 - [`pysnirf2.MeasurementListElement`](./pysnirf2.md#class-measurementlistelement): Wrapper for an element of indexed group `MeasurementList`.
-- [`pysnirf2.MeasurementLists`](./pysnirf2.md#class-measurementlists): Wrapper for Group of type `measurementLists`.
+- [`pysnirf2.MeasurementLists`](./pysnirf2.md#class-measurementlists)
 - [`pysnirf2.MetaDataTags`](./pysnirf2.md#class-metadatatags)
 - [`pysnirf2.Nirs`](./pysnirf2.md#class-nirs): Interface for indexed group `Nirs`.
 - [`pysnirf2.NirsElement`](./pysnirf2.md#class-nirselement): Wrapper for an element of indexed group `Nirs`.

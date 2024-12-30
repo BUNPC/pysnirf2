@@ -24,7 +24,7 @@ Maintained by the Boston University Neurophotonics Center
 
 ---
 
-<a href="../snirf/pysnirf2.py#L6909"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../snirf/pysnirf2.py#L6958"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `loadSnirf`
 
@@ -63,7 +63,7 @@ Returns a `Snirf` object loaded from path if a SNIRF file exists there. Takes th
 
 ---
 
-<a href="../snirf/pysnirf2.py#L6940"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../snirf/pysnirf2.py#L6989"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `saveSnirf`
 
@@ -83,7 +83,7 @@ Saves a SNIRF file to disk.
 
 ---
 
-<a href="../snirf/pysnirf2.py#L6954"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../snirf/pysnirf2.py#L7003"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `validateSnirf`
 
@@ -732,13 +732,9 @@ Group level save to a SNIRF file on disk.
 <a href="../snirf/pysnirf2.py#L1921"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `MeasurementLists`
-Wrapper for Group of type `measurementLists`. 
 
-The group for measurement list variables which map the data array onto the probe geometry (sources and detectors), data type, and wavelength. This group's datasets are arrays with size `<number of channels>`, with each position describing the corresponding column in the data matrix. (i.e. the values at `measurementLists/sourceIndex(3)` and `measurementLists/detectorIndex(3)` correspond to `dataTimeSeries(:,3)`). 
 
-This group is required only if the indexed-group format `/nirs(i)/data(j)/measurementList(k)` is not used to encode the measurement list. `measurementLists` is an alternative that may offer better performance for larger probes. 
 
-The arrays of `measurementLists` are: 
 
 <a href="../snirf/pysnirf2.py#L1932"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
@@ -1625,6 +1621,22 @@ If the Group has no member Groups or Datasets.
 **Returns:**
  
  - <b>`bool`</b>:  True if empty, False if not 
+
+---
+
+<a href="../snirf/pysnirf2.py#L6666"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+
+### <kbd>method</kbd> `measurementList_to_measurementLists`
+
+```python
+measurementList_to_measurementLists()
+```
+
+Converts `measurementList` to a `measurementLists` structure if it is present. 
+
+This method will create a new `measurementLists` Group structure and populate it with the contents of the `measurementList` indexed Group. 
+
+The `measurementList` indexedGroup is not be removed. 
 
 ---
 
@@ -2772,7 +2784,7 @@ This group stores one set of NIRS data.  This can be extended by adding the coun
 
 ---
 
-<a href="../snirf/pysnirf2.py#L6837"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../snirf/pysnirf2.py#L6867"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `close`
 
@@ -2788,7 +2800,7 @@ After closing, the underlying SNIRF file cannot be accessed from this interface 
 
 ---
 
-<a href="../snirf/pysnirf2.py#L6804"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../snirf/pysnirf2.py#L6825"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `copy`
 
@@ -2820,7 +2832,21 @@ If the Group has no member Groups or Datasets.
 
 ---
 
-<a href="../snirf/pysnirf2.py#L6769"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../snirf/pysnirf2.py#L6849"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+
+### <kbd>method</kbd> `measurementList_to_measurementLists`
+
+```python
+measurementList_to_measurementLists()
+```
+
+Convert the `measurementList` field of all `Data` elements to `measurementLists`. 
+
+Does not delete the measurementList Dataset. 
+
+---
+
+<a href="../snirf/pysnirf2.py#L6790"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `save`
 
@@ -2850,7 +2876,7 @@ Save a SNIRF file to disk.
 
 ---
 
-<a href="../snirf/pysnirf2.py#L6815"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../snirf/pysnirf2.py#L6836"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `validate`
 
