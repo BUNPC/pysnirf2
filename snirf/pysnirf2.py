@@ -503,13 +503,13 @@ _CODES = {
      ),
     'INVALID_SOURCE_INDEX':
     (11, 3,
-     'measurementList/sourceIndex exceeds length of probe/sourceLabels'),
+     'measurementList(s)/sourceIndex exceeds length of probe/sourceLabels or the first axis of source position data'),
     'INVALID_DETECTOR_INDEX':
     (12, 3,
-     'measurementList/detectorIndex exceeds length of probe/detectorLabels'),
+     'measurementList(s)/detectorIndex exceeds length of probe/detectorLabels or the first axis of source position data'),
     'INVALID_WAVELENGTH_INDEX':
     (13, 3,
-     'measurementList/waveLengthIndex exceeds length of probe/wavelengths'),
+     'measurementList(s)/waveLengthIndex exceeds length of probe/wavelengths'),
     'NEGATIVE_INDEX': (14, 3, 'An index is negative'),
     # Warnings (Severity 2)
     'INDEX_OF_ZERO': (15, 2, 'An index of zero is usually undefined'),
@@ -6663,6 +6663,19 @@ class Aux(Aux):
 
 class DataElement(DataElement):
 
+    def measurementList_to_measurementLists(self):
+        """Converts `measurementList` to a `measurementLists` structure if it is present.
+
+        This method will create a new `measurementLists` Group structure and populate it with the contents of the `measurementList` indexed Group.
+
+        The `measurementList` indexedGroup is not be removed.
+        """
+        if len(self.measurementList) > 0:
+            for dataset_name in self.measurementList[0]._snirf_names:
+                vals = [getattr(ml, dataset_name) for ml in self.measurementList]
+                if any(val is not None for val in vals):
+                    setattr(self.measurementLists, dataset_name, vals)
+
     def _validate(self, result: ValidationResult):
 
         # Override measurementList/measurementLists validation, only one is required
@@ -6763,6 +6776,14 @@ class Probe(Probe):
         super()._validate(result)
 
 
+class MeasurementLists(MeasurementLists):
+
+    def _validate(self, result):
+        
+
+        return super()._validate(result)
+
+
 class Snirf(Snirf):
 
     # overload
@@ -6825,6 +6846,15 @@ class Snirf(Snirf):
         self._validate(result)
         return result
 
+    def measurementList_to_measurementLists(self):
+        """Convert the `measurementList` field of all `Data` elements to `measurementLists`.
+
+        Does not delete the measurementList Dataset.
+        """
+        for nirs in self.nirs:
+            for data in nirs.data:
+                data.measurementList_to_measurementLists()
+
     # overload
     @property
     def filename(self):
@@ -6869,38 +6899,57 @@ class Snirf(Snirf):
             return None
 
     def _validate(self, result: ValidationResult):
-        super()._validate(result)
 
         # TODO INVALID_FILENAME, INVALID_FILE detection
 
+        # Compare measurement list to probe
         for nirs in self.nirs:
             if type(nirs.probe) not in [type(None), type(_AbsentGroup)]:
+                lenSourceLabels = None
+                lenDetectorLabels = None
+                lenWavelengths = None
+                lenSources = None
+                lenDetectors = None
                 if nirs.probe.sourceLabels is not None:
                     lenSourceLabels = nirs.probe.sourceLabels.size
-                else:
-                    lenSourceLabels = 0
                 if nirs.probe.detectorLabels is not None:
                     lenDetectorLabels = nirs.probe.detectorLabels.size
-                else:
-                    lenDetectorLabels = 0
                 if nirs.probe.wavelengths is not None:
                     lenWavelengths = nirs.probe.wavelengths.size
-                else:
-                    lenWavelengths = 0
+                if nirs.probe.sourcePos2D is not None:
+                    lenSources = nirs.probe.sourcePos2D.shape[0]
+                elif nirs.probe.sourcePos3D is not None:
+                    lenSources = nirs.probe.sourcePos3D.shape[0]
+                if nirs.probe.detectorPos2D is not None:
+                    lenDetectors = nirs.probe.detectorPos2D.shape[0]
+                elif nirs.probe.detectorPos3D is not None:
+                    lenDetectors = nirs.probe.detectorPos3D.shape[0]
                 for data in nirs.data:
+                    if lenSourceLabels is not None and max(data.measurementLists.sourceIndex) > lenSourceLabels:
+                        result._add(data.measurementLists.location + '/sourceIndex', 'INVALID_SOURCE_INDEX')
+                    if lenSources is not None and max(data.measurementLists.sourceIndex) > lenSources:
+                        result._add(data.measurementLists.location + '/sourceIndex', 'INVALID_SOURCE_INDEX')
+                    if lenDetectorLabels is not None and max(data.measurementLists.detectorIndex) > lenDetectorLabels :
+                        result._add(data.measurementLists.location + '/detectorIndex', 'INVALID_DETECTOR_INDEX')
+                    if lenDetectors is not None and max(data.measurementLists.detectorIndex) > lenDetectors:
+                        result._add(data.measurementLists.location + '/detectorIndex', 'INVALID_DETECTOR_INDEX')
+                    if lenWavelengths is not None and max(data.measurementLists.wavelengthIndex) > lenWavelengths:  # No wavelengths should raise a missing issue
+                        result._add(data.measurementLists.location + '/wavelengthIndex', 'INVALID_WAVELENGTH_INDEX')
                     for ml in data.measurementList:
-                        if ml.sourceIndex is not None:
+                        if ml.sourceIndex is not None and lenSourceLabels is not None:
                             if ml.sourceIndex > lenSourceLabels:
                                 result._add(ml.location + '/sourceIndex',
                                             'INVALID_SOURCE_INDEX')
-                        if ml.detectorIndex is not None:
+                        if ml.detectorIndex is not None and lenDetectorLabels is not None:
                             if ml.detectorIndex > lenDetectorLabels:
                                 result._add(ml.location + '/detectorIndex',
                                             'INVALID_DETECTOR_INDEX')
-                        if ml.wavelengthIndex is not None:
+                        if ml.wavelengthIndex is not None and lenWavelengths is not None:
                             if ml.wavelengthIndex > lenWavelengths:
                                 result._add(ml.location + '/wavelengthIndex',
                                             'INVALID_WAVELENGTH_INDEX')
+                                
+        super()._validate(result)
 
 
 # -- Interface functions ----------------------------------------------------
