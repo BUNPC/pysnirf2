@@ -117,6 +117,8 @@
             self._{{ CHILD.name }} = _recursive_hdf5_copy(self._{{ CHILD.name }}, value)
         else:
             raise ValueError("Only a Group of type {{ sentencecase(CHILD.name) }} can be assigned to {{ CHILD.name }}.")
+        {% elif TYPES.ARRAY_1D in CHILD.type or TYPES.ARRAY_2D in CHILD.type %}
+        self._{{ CHILD.name }} = np.array(value)
         {% else %}
         self._{{ CHILD.name }} = value
         {% endif %}
