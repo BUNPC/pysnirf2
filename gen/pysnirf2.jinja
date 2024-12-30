@@ -222,7 +222,7 @@
 {% macro gen_validator(NODE) %}
     def _validate(self, result: ValidationResult):
         # Validate unwritten datasets after writing them to this tempfile
-        with h5py.File(TemporaryFile(), 'w') as tmp:
+        with h5py.File(str(uuid.uuid4()), 'w', driver='core', backing_store=False) as tmp:
         {% for CHILD in NODE.children %}
             name = self.location + '/{{ CHILD.name }}'
         {% if TYPES.INDEXED_GROUP in CHILD.type %}
@@ -379,6 +379,7 @@ class Snirf(Group):
         self._cfg = SnirfConfig()
         self._cfg.dynamic_loading = dynamic_loading
         self._cfg.fmode = ''
+        self._f = None  # handle for filelikes and temporary files
         if len(args) > 0:
             path = args[0]
             if enable_logging:
@@ -416,7 +417,8 @@ class Snirf(Group):
                 self._cfg.logger.info('Loading from filelike object')
                 if self._cfg.fmode == '':
                     self._cfg.fmode = 'r'
-                self._h = h5py.File(path, 'r')
+                self._f = args[0]
+                self._h = h5py.File(self._f, 'r', backing_store=False)
             else:
                 raise TypeError(str(path) + ' is not a valid filename')
         else:
@@ -427,7 +429,7 @@ class Snirf(Group):
             else:
                 self._cfg.logger = _create_logger('', None)  # Do not log to file
             self._cfg.fmode = 'w'
-            self._h = h5py.File(TemporaryFile(), 'w')
+            self._h = h5py.File(str(uuid.uuid4()), 'w', driver='core', backing_store=False)
     {{ declare_members(ROOT) | indent }}
     {{ init_members(ROOT) | indent }}
 {{ gen_properties(ROOT) }}
