@@ -6985,11 +6985,11 @@ class Snirf(Snirf):
                             result._add(
                                 data.measurementLists.location +
                                 '/sourceIndex', 'INVALID_SOURCE_INDEX')
-                        if lenDetectorLabels is not None and data.measurementLists.detectorIndex is not None and not np.all([0 < x <= lenDetectorLabels for x in data.measurementLists.detectorIndex])
+                        if lenDetectorLabels is not None and data.measurementLists.detectorIndex is not None and not np.all([0 < x <= lenDetectorLabels for x in data.measurementLists.detectorIndex]):
                             result._add(
                                 data.measurementLists.location +
                                 '/detectorIndex', 'INVALID_DETECTOR_INDEX')
-                        if lenDetectors is not None and data.measurementLists.detectorIndex is not None and not np.all([0 < x <= lenDetectors for x in data.measurementLists.detectorIndex])
+                        if lenDetectors is not None and data.measurementLists.detectorIndex is not None and not np.all([0 < x <= lenDetectors for x in data.measurementLists.detectorIndex]):
                             result._add(
                                 data.measurementLists.location +
                                 '/detectorIndex', 'INVALID_DETECTOR_INDEX')
