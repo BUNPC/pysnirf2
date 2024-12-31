@@ -6811,12 +6811,13 @@ class DataElement(DataElement):
                             self.location + '/measurementLists/dataType',
                             'UNRECOGNIZED_DATA_TYPE')
                     elif value == 99999:
-                        for label in self.measurementLists.dataTypeLabel:
-                            if label not in _RECOGNIZED_DATA_TYPE_LABELS:
-                                result._add(
-                                    self.location +
-                                    '/measurementLists/dataTypeLabel',
-                                    'UNRECOGNIZED_DATA_TYPE_LABEL')
+                        if self.measurementLists.dataTypeLabel is not None:
+                            for label in self.measurementLists.dataTypeLabel:
+                                if label not in _RECOGNIZED_DATA_TYPE_LABELS:
+                                    result._add(
+                                        self.location +
+                                        '/measurementLists/dataTypeLabel',
+                                        'UNRECOGNIZED_DATA_TYPE_LABEL')
         for ml in self.measurementList:
             if ml.dataType is not None and ml.dataType not in _RECOGNIZED_DATA_TYPES:
                 result._add(ml.location + '/dataType',

@@ -169,7 +169,13 @@ class PySnirf2_Test(unittest.TestCase):
                         if VERBOSE:
                             s.validate().display(severity=3)
                         self.assertTrue('UNRECOGNIZED_DATA_TYPE_LABEL' in [err.name for err in s.validate().errors], msg='Failed to raise dataTypeLabel error')        
-
+                        s.measurementList_to_measurementLists()
+                        if VERBOSE:
+                            s.validate().display(severity=3)
+                        self.assertTrue('UNRECOGNIZED_DATA_TYPE_LABEL' in [err.name for err in s.validate().errors], msg='Failed to raise dataTypeLabel error after converting to measurementLists')
+                        s.nirs[0].data[0].measurementLists.dataType[-1] = -100
+                        self.assertTrue('UNRECOGNIZED_DATA_TYPE' in [err.name for err in s.validate().errors], msg='Failed to raise dataType error after converting to measurementLists')
+        
     def test_validate_measurementList_dimensions(self):
         """
         Test validation that measurementList dimensions are consistent with dataTimeSeries
