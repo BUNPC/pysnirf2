@@ -76,11 +76,11 @@
     {% if TYPES.INDEXED_GROUP in CHILD.type %}
         return self._{{ CHILD.name }}
     {% elif TYPES.GROUP in CHILD.type %}
-        if type(self._{{ CHILD.name }}) is type(_AbsentGroup):
+        if self._{{ CHILD.name }} is _AbsentGroup:
             return None
         return self._{{ CHILD.name }}
     {% else %}
-        if type(self._{{ CHILD.name }}) is type(_AbsentDataset):
+        if self._{{ CHILD.name }} is _AbsentDataset:
             return None
         if type(self._{{ CHILD.name }}) is type(_PresentDataset):
         {% if (TYPES.ARRAY_1D in CHILD.type) or (TYPES.ARRAY_2D in CHILD.type) %}
@@ -117,6 +117,9 @@
             self._{{ CHILD.name }} = _recursive_hdf5_copy(self._{{ CHILD.name }}, value)
         else:
             raise ValueError("Only a Group of type {{ sentencecase(CHILD.name) }} can be assigned to {{ CHILD.name }}.")
+        {% elif TYPES.ARRAY_1D in CHILD.type or TYPES.ARRAY_2D in CHILD.type %}
+        if value is not None and any([v is not None for v in value]):
+            self._{{ CHILD.name }} = np.array(value)
         {% else %}
         self._{{ CHILD.name }} = value
         {% endif %}
@@ -152,18 +155,18 @@
             else:
                 raise ValueError('Cannot save an anonymous ' + self.__class__.__name__ + ' instance without a filename')
 {% for CHILD in NODE.children %}
+        name = self.location + '/{{ CHILD.name }}'
     {% if TYPES.INDEXED_GROUP in CHILD.type %}
         self.{{ CHILD.name }}._save(*args)
     {% elif TYPES.GROUP in CHILD.type %}
-        if type(self._{{ CHILD.name }}) is type(_AbsentGroup) or self._{{ CHILD.name }}.is_empty():
-            if '{{ CHILD.name }}' in file:
-                del file['{{ CHILD.name }}']
+        if self._{{ CHILD.name }} is _AbsentGroup or self._{{ CHILD.name }}.is_empty():
+            if name in file:
+                del file[name]
                 self._cfg.logger.info('Deleted Group %s/{{ CHILD.name }} from %s', self.location, file)
         else:
             self.{{ CHILD.name }}._save(*args)
     {% else %}
-        name = self.location + '/{{ CHILD.name }}'
-        if type(self._{{ CHILD.name }}) not in [type(_AbsentDataset), type(None)]:
+        if not self._{{ CHILD.name }} is _AbsentDataset:
             data = self.{{ CHILD.name }}  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -222,7 +225,7 @@
 {% macro gen_validator(NODE) %}
     def _validate(self, result: ValidationResult):
         # Validate unwritten datasets after writing them to this tempfile
-        with h5py.File(TemporaryFile(), 'w') as tmp:
+        with h5py.File(str(uuid.uuid4()), 'w', driver='core', backing_store=False) as tmp:
         {% for CHILD in NODE.children %}
             name = self.location + '/{{ CHILD.name }}'
         {% if TYPES.INDEXED_GROUP in CHILD.type %}
@@ -237,7 +240,7 @@
                 self.{{ CHILD.name }}._validate(result)
         {% elif TYPES.GROUP in CHILD.type %}
             # If Group is not present in file and empty in the wrapper, it is missing
-            if type(self._{{ CHILD.name }}) in [type(_AbsentGroup), type(None)] or ('{{ CHILD.name }}' not in self._h and self._{{ CHILD.name }}.is_empty()):
+            if self._{{ CHILD.name }} is _AbsentGroup or ('{{ CHILD.name }}' not in self._h and self._{{ CHILD.name }}.is_empty()):
             {% if TYPES.REQUIRED in CHILD.type %}
                 result._add(name, 'REQUIRED_GROUP_MISSING')
             {% else %}
@@ -246,7 +249,7 @@
             else:
                 self._{{ CHILD.name }}._validate(result)
         {% else %}
-            if type(self._{{ CHILD.name }}) in [type(_AbsentDataset), type(None)]:
+            if self._{{ CHILD.name }} is _AbsentDataset:
             {% if TYPES.REQUIRED in CHILD.type %}
                 result._add(name, 'REQUIRED_DATASET_MISSING')
             {% else %}
@@ -379,6 +382,7 @@ class Snirf(Group):
         self._cfg = SnirfConfig()
         self._cfg.dynamic_loading = dynamic_loading
         self._cfg.fmode = ''
+        self._f = None  # handle for filelikes and temporary files
         if len(args) > 0:
             path = args[0]
             if enable_logging:
@@ -416,7 +420,8 @@ class Snirf(Group):
                 self._cfg.logger.info('Loading from filelike object')
                 if self._cfg.fmode == '':
                     self._cfg.fmode = 'r'
-                self._h = h5py.File(path, 'r')
+                self._f = args[0]
+                self._h = h5py.File(self._f, 'r', backing_store=False)
             else:
                 raise TypeError(str(path) + ' is not a valid filename')
         else:
@@ -427,7 +432,7 @@ class Snirf(Group):
             else:
                 self._cfg.logger = _create_logger('', None)  # Do not log to file
             self._cfg.fmode = 'w'
-            self._h = h5py.File(TemporaryFile(), 'w')
+            self._h = h5py.File(str(uuid.uuid4()), 'w', driver='core', backing_store=False)
     {{ declare_members(ROOT) | indent }}
     {{ init_members(ROOT) | indent }}
 {{ gen_properties(ROOT) }}
@@ -435,5 +440,11 @@ class Snirf(Group):
 {{ gen_validator(ROOT) }}
 
 _RECOGNIZED_COORDINATE_SYSTEM_NAMES = [{% for NAME in BIDS_COORDINATE_SYSTEM_NAMES %}'{{ NAME }}', {% endfor -%}]
+
+_RECOGNIZED_AUX_NAMES = [{% for NAME in AUX_NAMES %}'{{ NAME }}', {% endfor -%}]
+
+_RECOGNIZED_DATA_TYPES = [{% for VALUE in DATA_TYPES %}{{ VALUE }}, {% endfor -%}]
+
+_RECOGNIZED_DATA_TYPE_LABELS = [{% for NAME in DATA_TYPE_LABELS %}'{{ NAME }}', {% endfor -%}]
 
 {{ FOOTER }}

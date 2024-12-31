@@ -75,10 +75,10 @@ setup(
     long_description=long_description,
     long_description_content_type='text/markdown',
     author_email='sstucker@bu.edu',
-    python_requires='>=3.6.0',
+    python_requires='>=3.9.0',
     install_requires=[
         'h5py>=3.1.0',
-        'numpy',
+        'numpy>2.0.0',
         'setuptools',
         'pip',
         'termcolor',

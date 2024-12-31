@@ -1,5 +1,5 @@
 h5py
-numpy
+numpy>=2.0.0
 setuptools
 pip
 termcolor

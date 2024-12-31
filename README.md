@@ -22,7 +22,7 @@ Developed and maintained by the [Boston University Neurophotonics Center](https:
 ## Installation
 `pip install snirf`
 
-pysnirf2 requires Python > 3.6.
+pysnirf2 requires Python > 3.9.
 
 # Features
 

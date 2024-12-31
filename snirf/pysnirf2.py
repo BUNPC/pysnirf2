@@ -24,7 +24,7 @@ import sys
 import numpy as np
 from warnings import warn
 from collections.abc import MutableSequence
-from tempfile import TemporaryFile
+import uuid
 import logging
 from typing import Tuple
 import time
@@ -43,7 +43,7 @@ if sys.version_info[0] < 3:
 
 
 class SnirfFormatError(Warning):
-    """Raised when SNIRF-specific error prevents file from loading properly."""
+    """Raised when SNIRF-specific error prevents file from loading or saving properly."""
     pass
 
 
@@ -154,16 +154,23 @@ def _get_padded_shape(name: str, data: np.ndarray,
     """Utility function which pads data shape to ndim."""
     if desired_ndim is None:
         return data.shape
+    if data.ndim == desired_ndim:
+        return np.shape(data)
     elif desired_ndim > data.ndim:
         return np.concatenate(
             [data.shape,
              np.ones(int(desired_ndim) - int(data.ndim))])
-    elif data.ndim == desired_ndim:
-        return np.shape(data)
-    else:
-        raise ValueError(
-            "Could not create dataset {}: ndim={} is incompatible with data which has shape {}."
-            .format(name, desired_ndim, data.shape))
+    elif desired_ndim < data.ndim:
+        flattened = [x for x in data.shape if x > 1]
+        if len(flattened) == desired_ndim:
+            warn(
+                "Dataset '{}' must have ndim {} but had erroneous shape {}. Singular dimensions were removed."
+                .format(name, desired_ndim, data.shape))
+            return flattened
+        else:
+            raise SnirfFormatError(
+                "Cannot coerce Dataset '{}' with shape {} to the required {} dimension(s)"
+                .format(name, data.shape, desired_ndim))
 
 
 def _create_dataset(file: h5py.File, name: str, data):
@@ -185,6 +192,8 @@ def _create_dataset(file: h5py.File, name: str, data):
     Raises:
         TypeError: The data could not be mapped to a SNIRF compliant h5py format.
     """
+    if data is None:  # Don't create dataset from None
+        return
     data = np.array(data)  # Cast to numpy type to identify
     if data.size > 1:
         dtype = data[0].dtype
@@ -220,6 +229,8 @@ def _create_dataset_string(file: h5py.File, name: str, data: str):
     Returns:
         An h5py.Dataset instance created
     """
+    if data is None:
+        return None
     return file.create_dataset(name, dtype=_varlen_str_type, data=str(data))
 
 
@@ -234,6 +245,8 @@ def _create_dataset_int(file: h5py.File, name: str, data: int):
     Returns:
         An h5py.Dataset instance created
     """
+    if data is None:
+        return None
     return file.create_dataset(name, dtype=_DTYPE_INT32, data=int(data))
 
 
@@ -248,6 +261,8 @@ def _create_dataset_float(file: h5py.File, name: str, data: float):
     Returns:
         An h5py.Dataset instance created
     """
+    if data is None:
+        return None
     return file.create_dataset(name, dtype=_DTYPE_FLOAT64, data=float(data))
 
 
@@ -265,7 +280,11 @@ def _create_dataset_string_array(file: h5py.File,
     Returns:
         An h5py.Dataset instance created
     """
-    array = np.array(data).astype('O')
+    try:
+        array = np.array(data).astype('O')
+    except TypeError as e:
+        warn('Could not cast {} array to numpy "O": {}'.format(name, e))
+        return
     shape = _get_padded_shape(name, array, ndim)
     return file.create_dataset(name, dtype=_varlen_str_type, data=array)
 
@@ -284,7 +303,11 @@ def _create_dataset_int_array(file: h5py.File,
     Returns:
         An h5py.Dataset instance created
     """
-    array = np.array(data).astype(int)
+    try:
+        array = np.array(data).astype(int)
+    except TypeError as e:
+        warn('Could not cast {} array to int: {}'.format(name, e))
+        return
     shape = _get_padded_shape(name, array, ndim)
     return file.create_dataset(name, dtype=_DTYPE_INT32, data=array)
 
@@ -303,7 +326,11 @@ def _create_dataset_float_array(file: h5py.File,
     Returns:
         An h5py.Dataset instance created
     """
-    array = np.array(data).astype(float)
+    try:
+        array = np.array(data).astype(float)
+    except TypeError as e:
+        warn('Could not cast {} array to float: {}'.format(name, e))
+        return
     shape = _get_padded_shape(name, array, ndim)
     return file.create_dataset(name,
                                dtype=_DTYPE_FLOAT64,
@@ -486,63 +513,69 @@ _CODES = {
     (8, 3,
      'The number of measurementList elements does not match the second dimension of dataTimeSeries'
      ),
-    'INVALID_TIME':
+    'INVALID_MEASUREMENTLISTS':
     (9, 3,
+     'The length of at least one measurementLists element does not match the second dimension of dataTimeSeries'
+     ),
+    'INVALID_TIME':
+    (10, 3,
      'The length of the data/time vector does not match the first dimension of data/dataTimeSeries'
      ),
     'INVALID_STIM_DATALABELS':
-    (10, 3,
+    (11, 3,
      'The length of stim/dataLabels exceeds the second dimension of stim/data'
      ),
     'INVALID_SOURCE_INDEX':
-    (11, 3,
-     'measurementList/sourceIndex exceeds length of probe/sourceLabels'),
-    'INVALID_DETECTOR_INDEX':
     (12, 3,
-     'measurementList/detectorIndex exceeds length of probe/detectorLabels'),
-    'INVALID_WAVELENGTH_INDEX':
+     'measurementList(s)/sourceIndex exceeds length of probe/sourceLabels or the first axis of source position data'
+     ),
+    'INVALID_DETECTOR_INDEX':
     (13, 3,
-     'measurementList/waveLengthIndex exceeds length of probe/wavelengths'),
-    'NEGATIVE_INDEX': (14, 3, 'An index is negative'),
+     'measurementList(s)/detectorIndex exceeds length of probe/detectorLabels or the first axis of source position data'
+     ),
+    'INVALID_WAVELENGTH_INDEX':
+    (14, 3,
+     'measurementList(s)/waveLengthIndex exceeds length of probe/wavelengths'),
+    'NEGATIVE_INDEX': (15, 3, 'An index is negative'),
     # Warnings (Severity 2)
-    'INDEX_OF_ZERO': (15, 2, 'An index of zero is usually undefined'),
-    'UNRECOGNIZED_GROUP': (16, 2,
+    'INDEX_OF_ZERO': (16, 2, 'An index of zero is usually undefined'),
+    'UNRECOGNIZED_GROUP': (17, 2,
                            'An unspecified Group is a part of the file'),
     'UNRECOGNIZED_DATASET':
-    (17, 2,
-     'An unspecified Dataset is a part of the file in an unexpected place'),
-    'UNRECOGNIZED_DATATYPELABEL':
     (18, 2,
-     'measurementList/dataTypeLabel is not one of the recognized values listed in the Appendix'
+     'An unspecified Dataset is a part of the file in an unexpected place'),
+    'UNRECOGNIZED_DATA_TYPE_LABEL':
+    (19, 3,
+     'measurementList(s)/dataTypeLabel is not one of the recognized values listed in the Appendix'
      ),
-    'UNRECOGNIZED_DATATYPE':
-    (19, 2,
-     'measurementList/dataType is not one of the recognized values listed in the Appendix'
+    'UNRECOGNIZED_DATA_TYPE':
+    (20, 3,
+     'measurementList(s)/dataType is not one of the recognized values listed in the Appendix'
      ),
     'INT_64':
-    (25, 2,
+    (21, 2,
      'The SNIRF specification limits users to the use of 32 bit native integer types'
      ),
     'UNRECOGNIZED_COORDINATE_SYSTEM':
-    (26, 2,
+    (22, 2,
      'The identifying string of the coordinate system was not recognized.'),
     'NO_COORDINATE_SYSTEM_DESCRIPTION':
-    (27, 2,
+    (23, 2,
      "The coordinate system was unrecognized or 'Other' but lacks a probe/coordinateSystemDescription"
      ),
     'FIXED_LENGTH_STRING':
-    (20, 2,
+    (24, 2,
      'The use of fixed-length strings is discouraged and may be banned by a future spec version. Rewrite this file with pysnirf2 to use variable length strings'
      ),
     # Info (Severity 1)
-    'OPTIONAL_GROUP_MISSING': (21, 1,
+    'OPTIONAL_GROUP_MISSING': (25, 1,
                                'Missing an optional Group in this location'),
-    'OPTIONAL_DATASET_MISSING': (22, 1,
+    'OPTIONAL_DATASET_MISSING': (26, 1,
                                  'Missing optional Dataset in this location'),
     'OPTIONAL_INDEXED_GROUP_EMPTY':
-    (23, 1, 'The optional indexed group has no elements'),
+    (27, 1, 'The optional indexed group has no elements'),
     # OK (Severity 0)
-    'OK': (24, 0, 'No issues detected'),
+    'OK': (28, 0, 'No issues detected'),
 }
 
 
@@ -560,6 +593,7 @@ class ValidationIssue:
             3 `FATAL`, The file is invalid.
         message: A string containing a more verbose description of the issue
     """
+
     def __init__(self, name: str, location: str):
         self.location = location  # A location in the Snirf file matching an HDF5 name
         self.name = name  # The name of the issue, a key in _CODES above
@@ -596,9 +630,10 @@ class ValidationResult:
 
     ```
     <ValidationResult> = <Snirf instance>.validate()
-     <ValidationResult> = validateSnirf(<path>)
+    <ValidationResult> = validateSnirf(<path>)
     ```
     """
+
     def __init__(self):
         """`ValidationResult` should only be created by a `Snirf` instance's `validate` method."""
         self._issues = []
@@ -679,7 +714,7 @@ class ValidationResult:
             longest_code = max([len(code) for code in self.codes])
         except ValueError:
             print('Empty ValidationResult: nothing to display')
-        s = object.__repr__(self) + '\n'
+        s = repr(self) + '\n'
         printed = [0, 0, 0, 0]
         for issue in self._issues:
             sev = issue.severity
@@ -737,6 +772,8 @@ def _validate_string(dataset: h5py.Dataset) -> str:
     Returns:
         An issue code describing the validity of the dataset based on its format and shape
     """
+    if dataset is None:
+        return 'REQUIRED_DATASET_MISSING'
     if type(dataset) is not h5py.Dataset:
         raise TypeError("'dataset' must be type h5py.Dataset")
     if dataset.size > 1 or dataset.ndim > 0:
@@ -758,6 +795,8 @@ def _validate_int(dataset: h5py.Dataset) -> str:
     Returns:
         An issue code describing the validity of the dataset based on its format and shape
     """
+    if dataset is None:
+        return 'REQUIRED_DATASET_MISSING'
     if type(dataset) is not h5py.Dataset:
         raise TypeError("'dataset' must be type h5py.Dataset")
     if dataset.size > 1 or dataset.ndim > 0:
@@ -783,6 +822,8 @@ def _validate_float(dataset: h5py.Dataset) -> str:
     Returns:
         An issue code describing the validity of the dataset based on its format and shape
     """
+    if dataset is None:
+        return 'REQUIRED_DATASET_MISSING'
     if type(dataset) is not h5py.Dataset:
         raise TypeError("'dataset' must be type h5py.Dataset")
     if dataset.size > 1 or dataset.ndim > 0:
@@ -802,6 +843,8 @@ def _validate_string_array(dataset: h5py.Dataset, ndims=[1]) -> str:
     Returns:
         An issue code describing the validity of the dataset based on its format and shape
     """
+    if dataset is None:
+        return 'REQUIRED_DATASET_MISSING'
     if type(dataset) is not h5py.Dataset:
         raise TypeError("'dataset' must be type h5py.Dataset")
     if dataset.ndim not in ndims:
@@ -823,6 +866,8 @@ def _validate_int_array(dataset: h5py.Dataset, ndims=[1]) -> str:
     Returns:
         An issue code describing the validity of the dataset based on its format and shape
     """
+    if dataset is None:
+        return 'REQUIRED_DATASET_MISSING'
     if type(dataset) is not h5py.Dataset:
         raise TypeError("'dataset' must be type h5py.Dataset")
     if dataset.ndim not in ndims:
@@ -844,6 +889,8 @@ def _validate_float_array(dataset: h5py.Dataset, ndims=[1]) -> str:
     Returns:
         An issue code describing the validity of the dataset based on its format and shape
     """
+    if dataset is None:
+        return 'REQUIRED_DATASET_MISSING'
     if type(dataset) is not h5py.Dataset:
         raise TypeError("'dataset' must be type h5py.Dataset")
     if dataset.ndim != ndims[0]:
@@ -864,6 +911,7 @@ class SnirfConfig:
         logger (logging.Logger): The logger that the Snirf instance writes to
         dynamic_loading (bool): If True, data is loaded from the HDF5 file only on access via property
     """
+
     def __init__(self):
         self.logger: logging.Logger = _logger  # The logger that the interface will write to
         self.dynamic_loading: bool = False  # If False, data is loaded in the constructor, if True, data is loaded on access
@@ -892,6 +940,7 @@ _PresentDataset = _PresentDatasetType()
 
 
 class Group(ABC):
+
     def __init__(self, varg, cfg: SnirfConfig):
         """Wrapper for an HDF5 Group element defined by SNIRF.
 
@@ -985,10 +1034,7 @@ class Group(ABC):
 
     @property
     def location(self):
-        """The HDF5 relative location indentifier.
-
-        None if not associataed with a Group on disk.
-        """
+        """The HDF5 relative location indentifier."""
         if self._h != {}:
             return self._h.name
         else:
@@ -1331,9 +1377,12 @@ class IndexedGroup(MutableSequence, ABC):
         for key in h:
             numsplit = key.split(self._name)
             if len(numsplit) > 1 and len(numsplit[1]) > 0:
-                if len(numsplit[1]) == len(str(int(numsplit[1]))):
-                    unordered.append(key)
-                    indices.append(int(numsplit[1]))
+                try:
+                    index = int(numsplit[1])
+                except ValueError:  # if name is not really an indexed group member (e.g. `measurementLists`)
+                    continue
+                unordered.append(key)
+                indices.append(index)
             elif key.endswith(
                     self._name):  # Case of single Group with no index
                 unordered.append(key)
@@ -1395,8 +1444,8 @@ def _recursive_hdf5_copy(g_dst: Group, g_src: Group):
 # ================================================================================
 # <<< BEGIN TEMPLATE INSERT >>>
 
-# generated by sstucker on 2023-09-18
-# version v1.1 SNIRF specification parsed from https://raw.githubusercontent.com/fNIRS/snirf/v1.1/snirf_specification.md
+# generated by sstucker on 2024-12-31
+# version 1.2-development SNIRF specification parsed from https://raw.githubusercontent.com/sstucker/snirf/refs/heads/master/snirf_specification.md
 
 
 class MetaDataTags(Group):
@@ -1411,6 +1460,7 @@ class MetaDataTags(Group):
     The below five metadata records are minimally required in a SNIRF file
 
     """
+
     def __init__(self, var, cfg: SnirfConfig):
         super().__init__(var, cfg)
         self._SubjectID = _AbsentDataset  # "s"*
@@ -1494,7 +1544,7 @@ class MetaDataTags(Group):
         This record stores the string-valued ID of the study subject or experiment.
 
         """
-        if type(self._SubjectID) is type(_AbsentDataset):
+        if self._SubjectID is _AbsentDataset:
             return None
         if type(self._SubjectID) is type(_PresentDataset):
             return _read_string(self._h['SubjectID'])
@@ -1527,7 +1577,7 @@ class MetaDataTags(Group):
         - `DD` is the 2-digit date (padding zero if a single digit)
 
         """
-        if type(self._MeasurementDate) is type(_AbsentDataset):
+        if self._MeasurementDate is _AbsentDataset:
             return None
         if type(self._MeasurementDate) is type(_PresentDataset):
             return _read_string(self._h['MeasurementDate'])
@@ -1563,7 +1613,7 @@ class MetaDataTags(Group):
         - `TZD` is the time zone designator (`Z` or `+hh:mm` or `-hh:mm`)
 
         """
-        if type(self._MeasurementTime) is type(_AbsentDataset):
+        if self._MeasurementTime is _AbsentDataset:
             return None
         if type(self._MeasurementTime) is type(_PresentDataset):
             return _read_string(self._h['MeasurementTime'])
@@ -1595,7 +1645,7 @@ class MetaDataTags(Group):
         "um" is the same as "mm", i.e. micrometer.
 
         """
-        if type(self._LengthUnit) is type(_AbsentDataset):
+        if self._LengthUnit is _AbsentDataset:
             return None
         if type(self._LengthUnit) is type(_PresentDataset):
             return _read_string(self._h['LengthUnit'])
@@ -1626,7 +1676,7 @@ class MetaDataTags(Group):
         is the same as "ms", i.e. microsecond.
 
         """
-        if type(self._TimeUnit) is type(_AbsentDataset):
+        if self._TimeUnit is _AbsentDataset:
             return None
         if type(self._TimeUnit) is type(_PresentDataset):
             return _read_string(self._h['TimeUnit'])
@@ -1692,7 +1742,7 @@ class MetaDataTags(Group):
         time in seconds since 1970-01-01T00:00:00Z (UTC) minus the leap seconds.
 
         """
-        if type(self._FrequencyUnit) is type(_AbsentDataset):
+        if self._FrequencyUnit is _AbsentDataset:
             return None
         if type(self._FrequencyUnit) is type(_PresentDataset):
             return _read_string(self._h['FrequencyUnit'])
@@ -1730,7 +1780,7 @@ class MetaDataTags(Group):
                                  self.__class__.__name__ +
                                  ' instance without a filename')
         name = self.location + '/SubjectID'
-        if type(self._SubjectID) not in [type(_AbsentDataset), type(None)]:
+        if not self._SubjectID is _AbsentDataset:
             data = self.SubjectID  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -1741,9 +1791,7 @@ class MetaDataTags(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/MeasurementDate'
-        if type(self._MeasurementDate) not in [
-                type(_AbsentDataset), type(None)
-        ]:
+        if not self._MeasurementDate is _AbsentDataset:
             data = self.MeasurementDate  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -1754,9 +1802,7 @@ class MetaDataTags(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/MeasurementTime'
-        if type(self._MeasurementTime) not in [
-                type(_AbsentDataset), type(None)
-        ]:
+        if not self._MeasurementTime is _AbsentDataset:
             data = self.MeasurementTime  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -1767,7 +1813,7 @@ class MetaDataTags(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/LengthUnit'
-        if type(self._LengthUnit) not in [type(_AbsentDataset), type(None)]:
+        if not self._LengthUnit is _AbsentDataset:
             data = self.LengthUnit  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -1778,7 +1824,7 @@ class MetaDataTags(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/TimeUnit'
-        if type(self._TimeUnit) not in [type(_AbsentDataset), type(None)]:
+        if not self._TimeUnit is _AbsentDataset:
             data = self.TimeUnit  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -1789,7 +1835,7 @@ class MetaDataTags(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/FrequencyUnit'
-        if type(self._FrequencyUnit) not in [type(_AbsentDataset), type(None)]:
+        if not self._FrequencyUnit is _AbsentDataset:
             data = self.FrequencyUnit  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -1812,9 +1858,12 @@ class MetaDataTags(Group):
 
     def _validate(self, result: ValidationResult):
         # Validate unwritten datasets after writing them to this tempfile
-        with h5py.File(TemporaryFile(), 'w') as tmp:
+        with h5py.File(str(uuid.uuid4()),
+                       'w',
+                       driver='core',
+                       backing_store=False) as tmp:
             name = self.location + '/SubjectID'
-            if type(self._SubjectID) in [type(_AbsentDataset), type(None)]:
+            if self._SubjectID is _AbsentDataset:
                 result._add(name, 'REQUIRED_DATASET_MISSING')
             else:
                 try:
@@ -1828,9 +1877,7 @@ class MetaDataTags(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/MeasurementDate'
-            if type(self._MeasurementDate) in [
-                    type(_AbsentDataset), type(None)
-            ]:
+            if self._MeasurementDate is _AbsentDataset:
                 result._add(name, 'REQUIRED_DATASET_MISSING')
             else:
                 try:
@@ -1844,9 +1891,7 @@ class MetaDataTags(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/MeasurementTime'
-            if type(self._MeasurementTime) in [
-                    type(_AbsentDataset), type(None)
-            ]:
+            if self._MeasurementTime is _AbsentDataset:
                 result._add(name, 'REQUIRED_DATASET_MISSING')
             else:
                 try:
@@ -1860,7 +1905,7 @@ class MetaDataTags(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/LengthUnit'
-            if type(self._LengthUnit) in [type(_AbsentDataset), type(None)]:
+            if self._LengthUnit is _AbsentDataset:
                 result._add(name, 'REQUIRED_DATASET_MISSING')
             else:
                 try:
@@ -1874,7 +1919,7 @@ class MetaDataTags(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/TimeUnit'
-            if type(self._TimeUnit) in [type(_AbsentDataset), type(None)]:
+            if self._TimeUnit is _AbsentDataset:
                 result._add(name, 'REQUIRED_DATASET_MISSING')
             else:
                 try:
@@ -1888,7 +1933,7 @@ class MetaDataTags(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/FrequencyUnit'
-            if type(self._FrequencyUnit) in [type(_AbsentDataset), type(None)]:
+            if self._FrequencyUnit is _AbsentDataset:
                 result._add(name, 'REQUIRED_DATASET_MISSING')
             else:
                 try:
@@ -1903,6 +1948,781 @@ class MetaDataTags(Group):
                     result._add(name, 'INVALID_DATASET_TYPE')
 
 
+class MeasurementLists(Group):
+    """Wrapper for Group of type `measurementLists`.
+
+    The group for measurement list variables which map the data array onto the probe geometry (sources and detectors), data type, and wavelength. This group's datasets are arrays with size `<number of channels>`, with each position describing the corresponding column in the data matrix. (i.e. the values at `measurementLists/sourceIndex(3)` and `measurementLists/detectorIndex(3)` correspond to `dataTimeSeries(:,3)`).
+
+    This group is required only if the indexed-group format `/nirs(i)/data(j)/measurementList(k)` is not used to encode the measurement list. `measurementLists` is an alternative that may offer better performance for larger probes.
+
+    The arrays of `measurementLists` are:
+
+    """
+
+    def __init__(self, var, cfg: SnirfConfig):
+        super().__init__(var, cfg)
+        self._sourceIndex = _AbsentDataset  # [<i>,...]*
+        self._detectorIndex = _AbsentDataset  # [<i>,...]*
+        self._wavelengthIndex = _AbsentDataset  # [<i>,...]*
+        self._wavelengthActual = _AbsentDataset  # [<f>,...]
+        self._wavelengthEmissionActual = _AbsentDataset  # [<f>,...]
+        self._dataType = _AbsentDataset  # [<i>,...]*
+        self._dataUnit = _AbsentDataset  # ["s",...]
+        self._dataTypeLabel = _AbsentDataset  # ["s",...]
+        self._dataTypeIndex = _AbsentDataset  # [<i>,...]*
+        self._sourcePower = _AbsentDataset  # [<f>,...]
+        self._detectorGain = _AbsentDataset  # [<f>,...]
+        self._snirf_names = [
+            'sourceIndex',
+            'detectorIndex',
+            'wavelengthIndex',
+            'wavelengthActual',
+            'wavelengthEmissionActual',
+            'dataType',
+            'dataUnit',
+            'dataTypeLabel',
+            'dataTypeIndex',
+            'sourcePower',
+            'detectorGain',
+        ]
+
+        self._indexed_groups = []
+        if 'sourceIndex' in self._h:
+            if not self._cfg.dynamic_loading:
+                self._sourceIndex = _read_int_array(self._h['sourceIndex'])
+            else:  # if the dataset is found on disk but dynamic_loading=True
+                self._sourceIndex = _PresentDataset
+        else:  # if the dataset is not found on disk
+            self._sourceIndex = _AbsentDataset
+        if 'detectorIndex' in self._h:
+            if not self._cfg.dynamic_loading:
+                self._detectorIndex = _read_int_array(self._h['detectorIndex'])
+            else:  # if the dataset is found on disk but dynamic_loading=True
+                self._detectorIndex = _PresentDataset
+        else:  # if the dataset is not found on disk
+            self._detectorIndex = _AbsentDataset
+        if 'wavelengthIndex' in self._h:
+            if not self._cfg.dynamic_loading:
+                self._wavelengthIndex = _read_int_array(
+                    self._h['wavelengthIndex'])
+            else:  # if the dataset is found on disk but dynamic_loading=True
+                self._wavelengthIndex = _PresentDataset
+        else:  # if the dataset is not found on disk
+            self._wavelengthIndex = _AbsentDataset
+        if 'wavelengthActual' in self._h:
+            if not self._cfg.dynamic_loading:
+                self._wavelengthActual = _read_float_array(
+                    self._h['wavelengthActual'])
+            else:  # if the dataset is found on disk but dynamic_loading=True
+                self._wavelengthActual = _PresentDataset
+        else:  # if the dataset is not found on disk
+            self._wavelengthActual = _AbsentDataset
+        if 'wavelengthEmissionActual' in self._h:
+            if not self._cfg.dynamic_loading:
+                self._wavelengthEmissionActual = _read_float_array(
+                    self._h['wavelengthEmissionActual'])
+            else:  # if the dataset is found on disk but dynamic_loading=True
+                self._wavelengthEmissionActual = _PresentDataset
+        else:  # if the dataset is not found on disk
+            self._wavelengthEmissionActual = _AbsentDataset
+        if 'dataType' in self._h:
+            if not self._cfg.dynamic_loading:
+                self._dataType = _read_int_array(self._h['dataType'])
+            else:  # if the dataset is found on disk but dynamic_loading=True
+                self._dataType = _PresentDataset
+        else:  # if the dataset is not found on disk
+            self._dataType = _AbsentDataset
+        if 'dataUnit' in self._h:
+            if not self._cfg.dynamic_loading:
+                self._dataUnit = _read_string_array(self._h['dataUnit'])
+            else:  # if the dataset is found on disk but dynamic_loading=True
+                self._dataUnit = _PresentDataset
+        else:  # if the dataset is not found on disk
+            self._dataUnit = _AbsentDataset
+        if 'dataTypeLabel' in self._h:
+            if not self._cfg.dynamic_loading:
+                self._dataTypeLabel = _read_string_array(
+                    self._h['dataTypeLabel'])
+            else:  # if the dataset is found on disk but dynamic_loading=True
+                self._dataTypeLabel = _PresentDataset
+        else:  # if the dataset is not found on disk
+            self._dataTypeLabel = _AbsentDataset
+        if 'dataTypeIndex' in self._h:
+            if not self._cfg.dynamic_loading:
+                self._dataTypeIndex = _read_int_array(self._h['dataTypeIndex'])
+            else:  # if the dataset is found on disk but dynamic_loading=True
+                self._dataTypeIndex = _PresentDataset
+        else:  # if the dataset is not found on disk
+            self._dataTypeIndex = _AbsentDataset
+        if 'sourcePower' in self._h:
+            if not self._cfg.dynamic_loading:
+                self._sourcePower = _read_float_array(self._h['sourcePower'])
+            else:  # if the dataset is found on disk but dynamic_loading=True
+                self._sourcePower = _PresentDataset
+        else:  # if the dataset is not found on disk
+            self._sourcePower = _AbsentDataset
+        if 'detectorGain' in self._h:
+            if not self._cfg.dynamic_loading:
+                self._detectorGain = _read_float_array(self._h['detectorGain'])
+            else:  # if the dataset is found on disk but dynamic_loading=True
+                self._detectorGain = _PresentDataset
+        else:  # if the dataset is not found on disk
+            self._detectorGain = _AbsentDataset
+
+    @property
+    def sourceIndex(self):
+        """SNIRF field `sourceIndex`.
+
+        If dynamic_loading=True, the data is loaded from the SNIRF file only
+        when accessed through the getter
+
+        Source indices for each channel. A 1-D array with length equal to the size of the second dimension of `/nirs(i)/data(j)/dataTimeSeries`.
+         
+        """
+        if self._sourceIndex is _AbsentDataset:
+            return None
+        if type(self._sourceIndex) is type(_PresentDataset):
+            return _read_int_array(self._h['sourceIndex'])
+            self._cfg.logger.info('Dynamically loaded %s/sourceIndex from %s',
+                                  self.location, self.filename)
+        return self._sourceIndex
+
+    @sourceIndex.setter
+    def sourceIndex(self, value):
+        if value is not None and any([v is not None for v in value]):
+            self._sourceIndex = np.array(value)
+        # self._cfg.logger.info('Assignment to %s/sourceIndex in %s', self.location, self.filename)
+
+    @sourceIndex.deleter
+    def sourceIndex(self):
+        self._sourceIndex = _AbsentDataset
+        self._cfg.logger.info('Deleted %s/sourceIndex from %s', self.location,
+                              self.filename)
+
+    @property
+    def detectorIndex(self):
+        """SNIRF field `detectorIndex`.
+
+        If dynamic_loading=True, the data is loaded from the SNIRF file only
+        when accessed through the getter
+
+        Detector indices for each channel. A 1-D array with length equal to the size of the second dimension of `/nirs(i)/data(j)/dataTimeSeries`.
+
+        """
+        if self._detectorIndex is _AbsentDataset:
+            return None
+        if type(self._detectorIndex) is type(_PresentDataset):
+            return _read_int_array(self._h['detectorIndex'])
+            self._cfg.logger.info(
+                'Dynamically loaded %s/detectorIndex from %s', self.location,
+                self.filename)
+        return self._detectorIndex
+
+    @detectorIndex.setter
+    def detectorIndex(self, value):
+        if value is not None and any([v is not None for v in value]):
+            self._detectorIndex = np.array(value)
+        # self._cfg.logger.info('Assignment to %s/detectorIndex in %s', self.location, self.filename)
+
+    @detectorIndex.deleter
+    def detectorIndex(self):
+        self._detectorIndex = _AbsentDataset
+        self._cfg.logger.info('Deleted %s/detectorIndex from %s',
+                              self.location, self.filename)
+
+    @property
+    def wavelengthIndex(self):
+        """SNIRF field `wavelengthIndex`.
+
+        If dynamic_loading=True, the data is loaded from the SNIRF file only
+        when accessed through the getter
+
+        Index of the "nominal" wavelength (in `probe.wavelengths`) for each channel. A 1-D array with length equal to the size of the second dimension of `/nirs(i)/data(j)/dataTimeSeries`.
+
+        """
+        if self._wavelengthIndex is _AbsentDataset:
+            return None
+        if type(self._wavelengthIndex) is type(_PresentDataset):
+            return _read_int_array(self._h['wavelengthIndex'])
+            self._cfg.logger.info(
+                'Dynamically loaded %s/wavelengthIndex from %s', self.location,
+                self.filename)
+        return self._wavelengthIndex
+
+    @wavelengthIndex.setter
+    def wavelengthIndex(self, value):
+        if value is not None and any([v is not None for v in value]):
+            self._wavelengthIndex = np.array(value)
+        # self._cfg.logger.info('Assignment to %s/wavelengthIndex in %s', self.location, self.filename)
+
+    @wavelengthIndex.deleter
+    def wavelengthIndex(self):
+        self._wavelengthIndex = _AbsentDataset
+        self._cfg.logger.info('Deleted %s/wavelengthIndex from %s',
+                              self.location, self.filename)
+
+    @property
+    def wavelengthActual(self):
+        """SNIRF field `wavelengthActual`.
+
+        If dynamic_loading=True, the data is loaded from the SNIRF file only
+        when accessed through the getter
+
+        Actual (measured) wavelength in nm, if available, for the source in each channel. A 1-D array with length equal to the size of the second dimension of `/nirs(i)/data(j)/dataTimeSeries`.
+
+        """
+        if self._wavelengthActual is _AbsentDataset:
+            return None
+        if type(self._wavelengthActual) is type(_PresentDataset):
+            return _read_float_array(self._h['wavelengthActual'])
+            self._cfg.logger.info(
+                'Dynamically loaded %s/wavelengthActual from %s',
+                self.location, self.filename)
+        return self._wavelengthActual
+
+    @wavelengthActual.setter
+    def wavelengthActual(self, value):
+        if value is not None and any([v is not None for v in value]):
+            self._wavelengthActual = np.array(value)
+        # self._cfg.logger.info('Assignment to %s/wavelengthActual in %s', self.location, self.filename)
+
+    @wavelengthActual.deleter
+    def wavelengthActual(self):
+        self._wavelengthActual = _AbsentDataset
+        self._cfg.logger.info('Deleted %s/wavelengthActual from %s',
+                              self.location, self.filename)
+
+    @property
+    def wavelengthEmissionActual(self):
+        """SNIRF field `wavelengthEmissionActual`.
+
+        If dynamic_loading=True, the data is loaded from the SNIRF file only
+        when accessed through the getter
+
+        Actual (measured) emission wavelength in nm, if available, for the source in each channel. A 1-D array with length equal to the size of the second dimension of `/nirs(i)/data(j)/dataTimeSeries`.
+         
+        """
+        if self._wavelengthEmissionActual is _AbsentDataset:
+            return None
+        if type(self._wavelengthEmissionActual) is type(_PresentDataset):
+            return _read_float_array(self._h['wavelengthEmissionActual'])
+            self._cfg.logger.info(
+                'Dynamically loaded %s/wavelengthEmissionActual from %s',
+                self.location, self.filename)
+        return self._wavelengthEmissionActual
+
+    @wavelengthEmissionActual.setter
+    def wavelengthEmissionActual(self, value):
+        if value is not None and any([v is not None for v in value]):
+            self._wavelengthEmissionActual = np.array(value)
+        # self._cfg.logger.info('Assignment to %s/wavelengthEmissionActual in %s', self.location, self.filename)
+
+    @wavelengthEmissionActual.deleter
+    def wavelengthEmissionActual(self):
+        self._wavelengthEmissionActual = _AbsentDataset
+        self._cfg.logger.info('Deleted %s/wavelengthEmissionActual from %s',
+                              self.location, self.filename)
+
+    @property
+    def dataType(self):
+        """SNIRF field `dataType`.
+
+        If dynamic_loading=True, the data is loaded from the SNIRF file only
+        when accessed through the getter
+
+        A 1-D array with length equal to the size of the second dimension of `/nirs(i)/data(j)/dataTimeSeries`. See Appendix for list of possible values.
+
+        """
+        if self._dataType is _AbsentDataset:
+            return None
+        if type(self._dataType) is type(_PresentDataset):
+            return _read_int_array(self._h['dataType'])
+            self._cfg.logger.info('Dynamically loaded %s/dataType from %s',
+                                  self.location, self.filename)
+        return self._dataType
+
+    @dataType.setter
+    def dataType(self, value):
+        if value is not None and any([v is not None for v in value]):
+            self._dataType = np.array(value)
+        # self._cfg.logger.info('Assignment to %s/dataType in %s', self.location, self.filename)
+
+    @dataType.deleter
+    def dataType(self):
+        self._dataType = _AbsentDataset
+        self._cfg.logger.info('Deleted %s/dataType from %s', self.location,
+                              self.filename)
+
+    @property
+    def dataUnit(self):
+        """SNIRF field `dataUnit`.
+
+        If dynamic_loading=True, the data is loaded from the SNIRF file only
+        when accessed through the getter
+
+        International System of Units (SI units) identifier for each channel. A 1-D array with length equal to the size of the second dimension of `/nirs(i)/data(j)/dataTimeSeries`.
+
+        """
+        if self._dataUnit is _AbsentDataset:
+            return None
+        if type(self._dataUnit) is type(_PresentDataset):
+            return _read_string_array(self._h['dataUnit'])
+            self._cfg.logger.info('Dynamically loaded %s/dataUnit from %s',
+                                  self.location, self.filename)
+        return self._dataUnit
+
+    @dataUnit.setter
+    def dataUnit(self, value):
+        if value is not None and any([v is not None for v in value]):
+            self._dataUnit = np.array(value)
+        # self._cfg.logger.info('Assignment to %s/dataUnit in %s', self.location, self.filename)
+
+    @dataUnit.deleter
+    def dataUnit(self):
+        self._dataUnit = _AbsentDataset
+        self._cfg.logger.info('Deleted %s/dataUnit from %s', self.location,
+                              self.filename)
+
+    @property
+    def dataTypeLabel(self):
+        """SNIRF field `dataTypeLabel`.
+
+        If dynamic_loading=True, the data is loaded from the SNIRF file only
+        when accessed through the getter
+
+        Data-type label. A 1-D array with length equal to the size of the second dimension of `/nirs(i)/data(j)/dataTimeSeries`.
+
+        """
+        if self._dataTypeLabel is _AbsentDataset:
+            return None
+        if type(self._dataTypeLabel) is type(_PresentDataset):
+            return _read_string_array(self._h['dataTypeLabel'])
+            self._cfg.logger.info(
+                'Dynamically loaded %s/dataTypeLabel from %s', self.location,
+                self.filename)
+        return self._dataTypeLabel
+
+    @dataTypeLabel.setter
+    def dataTypeLabel(self, value):
+        if value is not None and any([v is not None for v in value]):
+            self._dataTypeLabel = np.array(value)
+        # self._cfg.logger.info('Assignment to %s/dataTypeLabel in %s', self.location, self.filename)
+
+    @dataTypeLabel.deleter
+    def dataTypeLabel(self):
+        self._dataTypeLabel = _AbsentDataset
+        self._cfg.logger.info('Deleted %s/dataTypeLabel from %s',
+                              self.location, self.filename)
+
+    @property
+    def dataTypeIndex(self):
+        """SNIRF field `dataTypeIndex`.
+
+        If dynamic_loading=True, the data is loaded from the SNIRF file only
+        when accessed through the getter
+
+        Data-type specific parameter indices. A 1-D array with length equal to the size of the second dimension of `/nirs(i)/data(j)/dataTimeSeries`. Note that the Time Domain and Diffuse Correlation Spectroscopy data types have two additional parameters and so `dataTimeIndex` must be a 2-D array with 2 columns that index the additional parameters.
+
+        """
+        if self._dataTypeIndex is _AbsentDataset:
+            return None
+        if type(self._dataTypeIndex) is type(_PresentDataset):
+            return _read_int_array(self._h['dataTypeIndex'])
+            self._cfg.logger.info(
+                'Dynamically loaded %s/dataTypeIndex from %s', self.location,
+                self.filename)
+        return self._dataTypeIndex
+
+    @dataTypeIndex.setter
+    def dataTypeIndex(self, value):
+        if value is not None and any([v is not None for v in value]):
+            self._dataTypeIndex = np.array(value)
+        # self._cfg.logger.info('Assignment to %s/dataTypeIndex in %s', self.location, self.filename)
+
+    @dataTypeIndex.deleter
+    def dataTypeIndex(self):
+        self._dataTypeIndex = _AbsentDataset
+        self._cfg.logger.info('Deleted %s/dataTypeIndex from %s',
+                              self.location, self.filename)
+
+    @property
+    def sourcePower(self):
+        """SNIRF field `sourcePower`.
+
+        If dynamic_loading=True, the data is loaded from the SNIRF file only
+        when accessed through the getter
+
+        A 1-D array with length equal to the size of the second dimension of `/nirs(i)/data(j)/dataTimeSeries`. Units are optionally defined in `metaDataTags`.
+
+        """
+        if self._sourcePower is _AbsentDataset:
+            return None
+        if type(self._sourcePower) is type(_PresentDataset):
+            return _read_float_array(self._h['sourcePower'])
+            self._cfg.logger.info('Dynamically loaded %s/sourcePower from %s',
+                                  self.location, self.filename)
+        return self._sourcePower
+
+    @sourcePower.setter
+    def sourcePower(self, value):
+        if value is not None and any([v is not None for v in value]):
+            self._sourcePower = np.array(value)
+        # self._cfg.logger.info('Assignment to %s/sourcePower in %s', self.location, self.filename)
+
+    @sourcePower.deleter
+    def sourcePower(self):
+        self._sourcePower = _AbsentDataset
+        self._cfg.logger.info('Deleted %s/sourcePower from %s', self.location,
+                              self.filename)
+
+    @property
+    def detectorGain(self):
+        """SNIRF field `detectorGain`.
+
+        If dynamic_loading=True, the data is loaded from the SNIRF file only
+        when accessed through the getter
+
+        A 1-D array with length equal to the size of the second dimension of `/nirs(i)/data(j)/dataTimeSeries`. Units are optionally defined in `metaDataTags`.
+
+        """
+        if self._detectorGain is _AbsentDataset:
+            return None
+        if type(self._detectorGain) is type(_PresentDataset):
+            return _read_float_array(self._h['detectorGain'])
+            self._cfg.logger.info('Dynamically loaded %s/detectorGain from %s',
+                                  self.location, self.filename)
+        return self._detectorGain
+
+    @detectorGain.setter
+    def detectorGain(self, value):
+        if value is not None and any([v is not None for v in value]):
+            self._detectorGain = np.array(value)
+        # self._cfg.logger.info('Assignment to %s/detectorGain in %s', self.location, self.filename)
+
+    @detectorGain.deleter
+    def detectorGain(self):
+        self._detectorGain = _AbsentDataset
+        self._cfg.logger.info('Deleted %s/detectorGain from %s', self.location,
+                              self.filename)
+
+    def _save(self, *args):
+        if len(args) > 0 and type(args[0]) is h5py.File:
+            file = args[0]
+            if self.location not in file:
+                file.create_group(self.location)
+                # self._cfg.logger.info('Created Group at %s in %s', self.location, file)
+        else:
+            if self.location not in file:
+                # Assign the wrapper to the new HDF5 Group on disk
+                self._h = file.create_group(self.location)
+                # self._cfg.logger.info('Created Group at %s in %s', self.location, file)
+            if self._h != {}:
+                file = self._h.file
+            else:
+                raise ValueError('Cannot save an anonymous ' +
+                                 self.__class__.__name__ +
+                                 ' instance without a filename')
+        name = self.location + '/sourceIndex'
+        if not self._sourceIndex is _AbsentDataset:
+            data = self.sourceIndex  # Use loader function via getter
+            if name in file:
+                del file[name]
+            _create_dataset_int_array(file, name, data, ndim=1)
+            # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
+        else:
+            if name in file:
+                del file[name]
+                self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
+        name = self.location + '/detectorIndex'
+        if not self._detectorIndex is _AbsentDataset:
+            data = self.detectorIndex  # Use loader function via getter
+            if name in file:
+                del file[name]
+            _create_dataset_int_array(file, name, data, ndim=1)
+            # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
+        else:
+            if name in file:
+                del file[name]
+                self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
+        name = self.location + '/wavelengthIndex'
+        if not self._wavelengthIndex is _AbsentDataset:
+            data = self.wavelengthIndex  # Use loader function via getter
+            if name in file:
+                del file[name]
+            _create_dataset_int_array(file, name, data, ndim=1)
+            # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
+        else:
+            if name in file:
+                del file[name]
+                self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
+        name = self.location + '/wavelengthActual'
+        if not self._wavelengthActual is _AbsentDataset:
+            data = self.wavelengthActual  # Use loader function via getter
+            if name in file:
+                del file[name]
+            _create_dataset_float_array(file, name, data, ndim=1)
+            # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
+        else:
+            if name in file:
+                del file[name]
+                self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
+        name = self.location + '/wavelengthEmissionActual'
+        if not self._wavelengthEmissionActual is _AbsentDataset:
+            data = self.wavelengthEmissionActual  # Use loader function via getter
+            if name in file:
+                del file[name]
+            _create_dataset_float_array(file, name, data, ndim=1)
+            # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
+        else:
+            if name in file:
+                del file[name]
+                self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
+        name = self.location + '/dataType'
+        if not self._dataType is _AbsentDataset:
+            data = self.dataType  # Use loader function via getter
+            if name in file:
+                del file[name]
+            _create_dataset_int_array(file, name, data, ndim=1)
+            # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
+        else:
+            if name in file:
+                del file[name]
+                self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
+        name = self.location + '/dataUnit'
+        if not self._dataUnit is _AbsentDataset:
+            data = self.dataUnit  # Use loader function via getter
+            if name in file:
+                del file[name]
+            _create_dataset_string_array(file, name, data, ndim=1)
+            # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
+        else:
+            if name in file:
+                del file[name]
+                self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
+        name = self.location + '/dataTypeLabel'
+        if not self._dataTypeLabel is _AbsentDataset:
+            data = self.dataTypeLabel  # Use loader function via getter
+            if name in file:
+                del file[name]
+            _create_dataset_string_array(file, name, data, ndim=1)
+            # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
+        else:
+            if name in file:
+                del file[name]
+                self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
+        name = self.location + '/dataTypeIndex'
+        if not self._dataTypeIndex is _AbsentDataset:
+            data = self.dataTypeIndex  # Use loader function via getter
+            if name in file:
+                del file[name]
+            _create_dataset_int_array(file, name, data, ndim=1)
+            # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
+        else:
+            if name in file:
+                del file[name]
+                self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
+        name = self.location + '/sourcePower'
+        if not self._sourcePower is _AbsentDataset:
+            data = self.sourcePower  # Use loader function via getter
+            if name in file:
+                del file[name]
+            _create_dataset_float_array(file, name, data, ndim=1)
+            # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
+        else:
+            if name in file:
+                del file[name]
+                self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
+        name = self.location + '/detectorGain'
+        if not self._detectorGain is _AbsentDataset:
+            data = self.detectorGain  # Use loader function via getter
+            if name in file:
+                del file[name]
+            _create_dataset_float_array(file, name, data, ndim=1)
+            # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
+        else:
+            if name in file:
+                del file[name]
+                self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
+
+    def _validate(self, result: ValidationResult):
+        # Validate unwritten datasets after writing them to this tempfile
+        with h5py.File(str(uuid.uuid4()),
+                       'w',
+                       driver='core',
+                       backing_store=False) as tmp:
+            name = self.location + '/sourceIndex'
+            if self._sourceIndex is _AbsentDataset:
+                result._add(name, 'REQUIRED_DATASET_MISSING')
+            else:
+                try:
+                    if type(self._sourceIndex) is type(
+                            _PresentDataset) or 'sourceIndex' in self._h:
+                        dataset = self._h['sourceIndex']
+                    else:
+                        dataset = _create_dataset_int_array(
+                            tmp, 'sourceIndex', self._sourceIndex)
+                    result._add(name, _validate_int_array(dataset, ndims=[1]))
+                except ValueError:  # If the _create_dataset function can't convert the data
+                    result._add(name, 'INVALID_DATASET_TYPE')
+            name = self.location + '/detectorIndex'
+            if self._detectorIndex is _AbsentDataset:
+                result._add(name, 'REQUIRED_DATASET_MISSING')
+            else:
+                try:
+                    if type(self._detectorIndex) is type(
+                            _PresentDataset) or 'detectorIndex' in self._h:
+                        dataset = self._h['detectorIndex']
+                    else:
+                        dataset = _create_dataset_int_array(
+                            tmp, 'detectorIndex', self._detectorIndex)
+                    result._add(name, _validate_int_array(dataset, ndims=[1]))
+                except ValueError:  # If the _create_dataset function can't convert the data
+                    result._add(name, 'INVALID_DATASET_TYPE')
+            name = self.location + '/wavelengthIndex'
+            if self._wavelengthIndex is _AbsentDataset:
+                result._add(name, 'REQUIRED_DATASET_MISSING')
+            else:
+                try:
+                    if type(self._wavelengthIndex) is type(
+                            _PresentDataset) or 'wavelengthIndex' in self._h:
+                        dataset = self._h['wavelengthIndex']
+                    else:
+                        dataset = _create_dataset_int_array(
+                            tmp, 'wavelengthIndex', self._wavelengthIndex)
+                    result._add(name, _validate_int_array(dataset, ndims=[1]))
+                except ValueError:  # If the _create_dataset function can't convert the data
+                    result._add(name, 'INVALID_DATASET_TYPE')
+            name = self.location + '/wavelengthActual'
+            if self._wavelengthActual is _AbsentDataset:
+                result._add(name, 'OPTIONAL_DATASET_MISSING')
+            else:
+                try:
+                    if type(self._wavelengthActual) is type(
+                            _PresentDataset) or 'wavelengthActual' in self._h:
+                        dataset = self._h['wavelengthActual']
+                    else:
+                        dataset = _create_dataset_float_array(
+                            tmp, 'wavelengthActual', self._wavelengthActual)
+                    result._add(name, _validate_float_array(dataset,
+                                                            ndims=[1]))
+                except ValueError:  # If the _create_dataset function can't convert the data
+                    result._add(name, 'INVALID_DATASET_TYPE')
+            name = self.location + '/wavelengthEmissionActual'
+            if self._wavelengthEmissionActual is _AbsentDataset:
+                result._add(name, 'OPTIONAL_DATASET_MISSING')
+            else:
+                try:
+                    if type(self._wavelengthEmissionActual) is type(
+                            _PresentDataset
+                    ) or 'wavelengthEmissionActual' in self._h:
+                        dataset = self._h['wavelengthEmissionActual']
+                    else:
+                        dataset = _create_dataset_float_array(
+                            tmp, 'wavelengthEmissionActual',
+                            self._wavelengthEmissionActual)
+                    result._add(name, _validate_float_array(dataset,
+                                                            ndims=[1]))
+                except ValueError:  # If the _create_dataset function can't convert the data
+                    result._add(name, 'INVALID_DATASET_TYPE')
+            name = self.location + '/dataType'
+            if self._dataType is _AbsentDataset:
+                result._add(name, 'REQUIRED_DATASET_MISSING')
+            else:
+                try:
+                    if type(self._dataType) is type(
+                            _PresentDataset) or 'dataType' in self._h:
+                        dataset = self._h['dataType']
+                    else:
+                        dataset = _create_dataset_int_array(
+                            tmp, 'dataType', self._dataType)
+                    result._add(name, _validate_int_array(dataset, ndims=[1]))
+                except ValueError:  # If the _create_dataset function can't convert the data
+                    result._add(name, 'INVALID_DATASET_TYPE')
+            name = self.location + '/dataUnit'
+            if self._dataUnit is _AbsentDataset:
+                result._add(name, 'OPTIONAL_DATASET_MISSING')
+            else:
+                try:
+                    if type(self._dataUnit) is type(
+                            _PresentDataset) or 'dataUnit' in self._h:
+                        dataset = self._h['dataUnit']
+                    else:
+                        dataset = _create_dataset_string_array(
+                            tmp, 'dataUnit', self._dataUnit)
+                    result._add(name, _validate_string_array(dataset,
+                                                             ndims=[1]))
+                except ValueError:  # If the _create_dataset function can't convert the data
+                    result._add(name, 'INVALID_DATASET_TYPE')
+            name = self.location + '/dataTypeLabel'
+            if self._dataTypeLabel is _AbsentDataset:
+                result._add(name, 'OPTIONAL_DATASET_MISSING')
+            else:
+                try:
+                    if type(self._dataTypeLabel) is type(
+                            _PresentDataset) or 'dataTypeLabel' in self._h:
+                        dataset = self._h['dataTypeLabel']
+                    else:
+                        dataset = _create_dataset_string_array(
+                            tmp, 'dataTypeLabel', self._dataTypeLabel)
+                    result._add(name, _validate_string_array(dataset,
+                                                             ndims=[1]))
+                except ValueError:  # If the _create_dataset function can't convert the data
+                    result._add(name, 'INVALID_DATASET_TYPE')
+            name = self.location + '/dataTypeIndex'
+            if self._dataTypeIndex is _AbsentDataset:
+                result._add(name, 'REQUIRED_DATASET_MISSING')
+            else:
+                try:
+                    if type(self._dataTypeIndex) is type(
+                            _PresentDataset) or 'dataTypeIndex' in self._h:
+                        dataset = self._h['dataTypeIndex']
+                    else:
+                        dataset = _create_dataset_int_array(
+                            tmp, 'dataTypeIndex', self._dataTypeIndex)
+                    result._add(name, _validate_int_array(dataset, ndims=[1]))
+                except ValueError:  # If the _create_dataset function can't convert the data
+                    result._add(name, 'INVALID_DATASET_TYPE')
+            name = self.location + '/sourcePower'
+            if self._sourcePower is _AbsentDataset:
+                result._add(name, 'OPTIONAL_DATASET_MISSING')
+            else:
+                try:
+                    if type(self._sourcePower) is type(
+                            _PresentDataset) or 'sourcePower' in self._h:
+                        dataset = self._h['sourcePower']
+                    else:
+                        dataset = _create_dataset_float_array(
+                            tmp, 'sourcePower', self._sourcePower)
+                    result._add(name, _validate_float_array(dataset,
+                                                            ndims=[1]))
+                except ValueError:  # If the _create_dataset function can't convert the data
+                    result._add(name, 'INVALID_DATASET_TYPE')
+            name = self.location + '/detectorGain'
+            if self._detectorGain is _AbsentDataset:
+                result._add(name, 'OPTIONAL_DATASET_MISSING')
+            else:
+                try:
+                    if type(self._detectorGain) is type(
+                            _PresentDataset) or 'detectorGain' in self._h:
+                        dataset = self._h['detectorGain']
+                    else:
+                        dataset = _create_dataset_float_array(
+                            tmp, 'detectorGain', self._detectorGain)
+                    result._add(name, _validate_float_array(dataset,
+                                                            ndims=[1]))
+                except ValueError:  # If the _create_dataset function can't convert the data
+                    result._add(name, 'INVALID_DATASET_TYPE')
+            for key in self._h.keys():
+                if not any(
+                    [key.startswith(name) for name in self._snirf_names]):
+                    if type(self._h[key]) is h5py.Group:
+                        result._add(self.location + '/' + key,
+                                    'UNRECOGNIZED_GROUP')
+                    elif type(self._h[key]) is h5py.Dataset:
+                        result._add(self.location + '/' + key,
+                                    'UNRECOGNIZED_DATASET')
+
+
 class Probe(Group):
     """Wrapper for Group of type `probe`.
 
@@ -1910,14 +2730,15 @@ class Probe(Group):
     geometry.  This variable has a number of required fields.
 
     """
+
     def __init__(self, var, cfg: SnirfConfig):
         super().__init__(var, cfg)
         self._wavelengths = _AbsentDataset  # [<f>,...]*
         self._wavelengthsEmission = _AbsentDataset  # [<f>,...]
-        self._sourcePos2D = _AbsentDataset  # [[<f>,...]]*1
-        self._sourcePos3D = _AbsentDataset  # [[<f>,...]]*1
-        self._detectorPos2D = _AbsentDataset  # [[<f>,...]]*2
-        self._detectorPos3D = _AbsentDataset  # [[<f>,...]]*2
+        self._sourcePos2D = _AbsentDataset  # [[<f>,...]]*2
+        self._sourcePos3D = _AbsentDataset  # [[<f>,...]]*2
+        self._detectorPos2D = _AbsentDataset  # [[<f>,...]]*3
+        self._detectorPos3D = _AbsentDataset  # [[<f>,...]]*3
         self._frequencies = _AbsentDataset  # [<f>,...]
         self._timeDelays = _AbsentDataset  # [<f>,...]
         self._timeDelayWidths = _AbsentDataset  # [<f>,...]
@@ -1931,7 +2752,6 @@ class Probe(Group):
         self._landmarkLabels = _AbsentDataset  # ["s",...]
         self._coordinateSystem = _AbsentDataset  # "s"
         self._coordinateSystemDescription = _AbsentDataset  # "s"
-        self._useLocalIndex = _AbsentDataset  # <i>
         self._snirf_names = [
             'wavelengths',
             'wavelengthsEmission',
@@ -1952,7 +2772,6 @@ class Probe(Group):
             'landmarkLabels',
             'coordinateSystem',
             'coordinateSystemDescription',
-            'useLocalIndex',
         ]
 
         self._indexed_groups = []
@@ -2102,13 +2921,6 @@ class Probe(Group):
                 self._coordinateSystemDescription = _PresentDataset
         else:  # if the dataset is not found on disk
             self._coordinateSystemDescription = _AbsentDataset
-        if 'useLocalIndex' in self._h:
-            if not self._cfg.dynamic_loading:
-                self._useLocalIndex = _read_int(self._h['useLocalIndex'])
-            else:  # if the dataset is found on disk but dynamic_loading=True
-                self._useLocalIndex = _PresentDataset
-        else:  # if the dataset is not found on disk
-            self._useLocalIndex = _AbsentDataset
 
     @property
     def wavelengths(self):
@@ -2138,7 +2950,7 @@ class Probe(Group):
 
 
         """
-        if type(self._wavelengths) is type(_AbsentDataset):
+        if self._wavelengths is _AbsentDataset:
             return None
         if type(self._wavelengths) is type(_PresentDataset):
             return _read_float_array(self._h['wavelengths'])
@@ -2148,7 +2960,8 @@ class Probe(Group):
 
     @wavelengths.setter
     def wavelengths(self, value):
-        self._wavelengths = value
+        if value is not None and any([v is not None for v in value]):
+            self._wavelengths = np.array(value)
         # self._cfg.logger.info('Assignment to %s/wavelengths in %s', self.location, self.filename)
 
     @wavelengths.deleter
@@ -2175,7 +2988,7 @@ class Probe(Group):
 
 
         """
-        if type(self._wavelengthsEmission) is type(_AbsentDataset):
+        if self._wavelengthsEmission is _AbsentDataset:
             return None
         if type(self._wavelengthsEmission) is type(_PresentDataset):
             return _read_float_array(self._h['wavelengthsEmission'])
@@ -2186,7 +2999,8 @@ class Probe(Group):
 
     @wavelengthsEmission.setter
     def wavelengthsEmission(self, value):
-        self._wavelengthsEmission = value
+        if value is not None and any([v is not None for v in value]):
+            self._wavelengthsEmission = np.array(value)
         # self._cfg.logger.info('Assignment to %s/wavelengthsEmission in %s', self.location, self.filename)
 
     @wavelengthsEmission.deleter
@@ -2210,7 +3024,7 @@ class Probe(Group):
 
 
         """
-        if type(self._sourcePos2D) is type(_AbsentDataset):
+        if self._sourcePos2D is _AbsentDataset:
             return None
         if type(self._sourcePos2D) is type(_PresentDataset):
             return _read_float_array(self._h['sourcePos2D'])
@@ -2220,7 +3034,8 @@ class Probe(Group):
 
     @sourcePos2D.setter
     def sourcePos2D(self, value):
-        self._sourcePos2D = value
+        if value is not None and any([v is not None for v in value]):
+            self._sourcePos2D = np.array(value)
         # self._cfg.logger.info('Assignment to %s/sourcePos2D in %s', self.location, self.filename)
 
     @sourcePos2D.deleter
@@ -2241,7 +3056,7 @@ class Probe(Group):
 
 
         """
-        if type(self._sourcePos3D) is type(_AbsentDataset):
+        if self._sourcePos3D is _AbsentDataset:
             return None
         if type(self._sourcePos3D) is type(_PresentDataset):
             return _read_float_array(self._h['sourcePos3D'])
@@ -2251,7 +3066,8 @@ class Probe(Group):
 
     @sourcePos3D.setter
     def sourcePos3D(self, value):
-        self._sourcePos3D = value
+        if value is not None and any([v is not None for v in value]):
+            self._sourcePos3D = np.array(value)
         # self._cfg.logger.info('Assignment to %s/sourcePos3D in %s', self.location, self.filename)
 
     @sourcePos3D.deleter
@@ -2272,7 +3088,7 @@ class Probe(Group):
 
 
         """
-        if type(self._detectorPos2D) is type(_AbsentDataset):
+        if self._detectorPos2D is _AbsentDataset:
             return None
         if type(self._detectorPos2D) is type(_PresentDataset):
             return _read_float_array(self._h['detectorPos2D'])
@@ -2283,7 +3099,8 @@ class Probe(Group):
 
     @detectorPos2D.setter
     def detectorPos2D(self, value):
-        self._detectorPos2D = value
+        if value is not None and any([v is not None for v in value]):
+            self._detectorPos2D = np.array(value)
         # self._cfg.logger.info('Assignment to %s/detectorPos2D in %s', self.location, self.filename)
 
     @detectorPos2D.deleter
@@ -2304,7 +3121,7 @@ class Probe(Group):
 
 
         """
-        if type(self._detectorPos3D) is type(_AbsentDataset):
+        if self._detectorPos3D is _AbsentDataset:
             return None
         if type(self._detectorPos3D) is type(_PresentDataset):
             return _read_float_array(self._h['detectorPos3D'])
@@ -2315,7 +3132,8 @@ class Probe(Group):
 
     @detectorPos3D.setter
     def detectorPos3D(self, value):
-        self._detectorPos3D = value
+        if value is not None and any([v is not None for v in value]):
+            self._detectorPos3D = np.array(value)
         # self._cfg.logger.info('Assignment to %s/detectorPos3D in %s', self.location, self.filename)
 
     @detectorPos3D.deleter
@@ -2337,7 +3155,7 @@ class Probe(Group):
 
 
         """
-        if type(self._frequencies) is type(_AbsentDataset):
+        if self._frequencies is _AbsentDataset:
             return None
         if type(self._frequencies) is type(_PresentDataset):
             return _read_float_array(self._h['frequencies'])
@@ -2347,7 +3165,8 @@ class Probe(Group):
 
     @frequencies.setter
     def frequencies(self, value):
-        self._frequencies = value
+        if value is not None and any([v is not None for v in value]):
+            self._frequencies = np.array(value)
         # self._cfg.logger.info('Assignment to %s/frequencies in %s', self.location, self.filename)
 
     @frequencies.deleter
@@ -2370,7 +3189,7 @@ class Probe(Group):
 
 
         """
-        if type(self._timeDelays) is type(_AbsentDataset):
+        if self._timeDelays is _AbsentDataset:
             return None
         if type(self._timeDelays) is type(_PresentDataset):
             return _read_float_array(self._h['timeDelays'])
@@ -2380,7 +3199,8 @@ class Probe(Group):
 
     @timeDelays.setter
     def timeDelays(self, value):
-        self._timeDelays = value
+        if value is not None and any([v is not None for v in value]):
+            self._timeDelays = np.array(value)
         # self._cfg.logger.info('Assignment to %s/timeDelays in %s', self.location, self.filename)
 
     @timeDelays.deleter
@@ -2403,7 +3223,7 @@ class Probe(Group):
 
 
         """
-        if type(self._timeDelayWidths) is type(_AbsentDataset):
+        if self._timeDelayWidths is _AbsentDataset:
             return None
         if type(self._timeDelayWidths) is type(_PresentDataset):
             return _read_float_array(self._h['timeDelayWidths'])
@@ -2414,7 +3234,8 @@ class Probe(Group):
 
     @timeDelayWidths.setter
     def timeDelayWidths(self, value):
-        self._timeDelayWidths = value
+        if value is not None and any([v is not None for v in value]):
+            self._timeDelayWidths = np.array(value)
         # self._cfg.logger.info('Assignment to %s/timeDelayWidths in %s', self.location, self.filename)
 
     @timeDelayWidths.deleter
@@ -2442,7 +3263,7 @@ class Probe(Group):
 
 
         """
-        if type(self._momentOrders) is type(_AbsentDataset):
+        if self._momentOrders is _AbsentDataset:
             return None
         if type(self._momentOrders) is type(_PresentDataset):
             return _read_float_array(self._h['momentOrders'])
@@ -2452,7 +3273,8 @@ class Probe(Group):
 
     @momentOrders.setter
     def momentOrders(self, value):
-        self._momentOrders = value
+        if value is not None and any([v is not None for v in value]):
+            self._momentOrders = np.array(value)
         # self._cfg.logger.info('Assignment to %s/momentOrders in %s', self.location, self.filename)
 
     @momentOrders.deleter
@@ -2475,7 +3297,7 @@ class Probe(Group):
 
 
         """
-        if type(self._correlationTimeDelays) is type(_AbsentDataset):
+        if self._correlationTimeDelays is _AbsentDataset:
             return None
         if type(self._correlationTimeDelays) is type(_PresentDataset):
             return _read_float_array(self._h['correlationTimeDelays'])
@@ -2486,7 +3308,8 @@ class Probe(Group):
 
     @correlationTimeDelays.setter
     def correlationTimeDelays(self, value):
-        self._correlationTimeDelays = value
+        if value is not None and any([v is not None for v in value]):
+            self._correlationTimeDelays = np.array(value)
         # self._cfg.logger.info('Assignment to %s/correlationTimeDelays in %s', self.location, self.filename)
 
     @correlationTimeDelays.deleter
@@ -2509,7 +3332,7 @@ class Probe(Group):
 
 
         """
-        if type(self._correlationTimeDelayWidths) is type(_AbsentDataset):
+        if self._correlationTimeDelayWidths is _AbsentDataset:
             return None
         if type(self._correlationTimeDelayWidths) is type(_PresentDataset):
             return _read_float_array(self._h['correlationTimeDelayWidths'])
@@ -2520,7 +3343,8 @@ class Probe(Group):
 
     @correlationTimeDelayWidths.setter
     def correlationTimeDelayWidths(self, value):
-        self._correlationTimeDelayWidths = value
+        if value is not None and any([v is not None for v in value]):
+            self._correlationTimeDelayWidths = np.array(value)
         # self._cfg.logger.info('Assignment to %s/correlationTimeDelayWidths in %s', self.location, self.filename)
 
     @correlationTimeDelayWidths.deleter
@@ -2545,7 +3369,7 @@ class Probe(Group):
 
 
         """
-        if type(self._sourceLabels) is type(_AbsentDataset):
+        if self._sourceLabels is _AbsentDataset:
             return None
         if type(self._sourceLabels) is type(_PresentDataset):
             return _read_string_array(self._h['sourceLabels'])
@@ -2555,7 +3379,8 @@ class Probe(Group):
 
     @sourceLabels.setter
     def sourceLabels(self, value):
-        self._sourceLabels = value
+        if value is not None and any([v is not None for v in value]):
+            self._sourceLabels = np.array(value)
         # self._cfg.logger.info('Assignment to %s/sourceLabels in %s', self.location, self.filename)
 
     @sourceLabels.deleter
@@ -2578,7 +3403,7 @@ class Probe(Group):
 
 
         """
-        if type(self._detectorLabels) is type(_AbsentDataset):
+        if self._detectorLabels is _AbsentDataset:
             return None
         if type(self._detectorLabels) is type(_PresentDataset):
             return _read_string_array(self._h['detectorLabels'])
@@ -2589,7 +3414,8 @@ class Probe(Group):
 
     @detectorLabels.setter
     def detectorLabels(self, value):
-        self._detectorLabels = value
+        if value is not None and any([v is not None for v in value]):
+            self._detectorLabels = np.array(value)
         # self._cfg.logger.info('Assignment to %s/detectorLabels in %s', self.location, self.filename)
 
     @detectorLabels.deleter
@@ -2615,7 +3441,7 @@ class Probe(Group):
 
 
         """
-        if type(self._landmarkPos2D) is type(_AbsentDataset):
+        if self._landmarkPos2D is _AbsentDataset:
             return None
         if type(self._landmarkPos2D) is type(_PresentDataset):
             return _read_float_array(self._h['landmarkPos2D'])
@@ -2626,7 +3452,8 @@ class Probe(Group):
 
     @landmarkPos2D.setter
     def landmarkPos2D(self, value):
-        self._landmarkPos2D = value
+        if value is not None and any([v is not None for v in value]):
+            self._landmarkPos2D = np.array(value)
         # self._cfg.logger.info('Assignment to %s/landmarkPos2D in %s', self.location, self.filename)
 
     @landmarkPos2D.deleter
@@ -2652,7 +3479,7 @@ class Probe(Group):
 
 
         """
-        if type(self._landmarkPos3D) is type(_AbsentDataset):
+        if self._landmarkPos3D is _AbsentDataset:
             return None
         if type(self._landmarkPos3D) is type(_PresentDataset):
             return _read_float_array(self._h['landmarkPos3D'])
@@ -2663,7 +3490,8 @@ class Probe(Group):
 
     @landmarkPos3D.setter
     def landmarkPos3D(self, value):
-        self._landmarkPos3D = value
+        if value is not None and any([v is not None for v in value]):
+            self._landmarkPos3D = np.array(value)
         # self._cfg.logger.info('Assignment to %s/landmarkPos3D in %s', self.location, self.filename)
 
     @landmarkPos3D.deleter
@@ -2690,7 +3518,7 @@ class Probe(Group):
 
 
         """
-        if type(self._landmarkLabels) is type(_AbsentDataset):
+        if self._landmarkLabels is _AbsentDataset:
             return None
         if type(self._landmarkLabels) is type(_PresentDataset):
             return _read_string_array(self._h['landmarkLabels'])
@@ -2701,7 +3529,8 @@ class Probe(Group):
 
     @landmarkLabels.setter
     def landmarkLabels(self, value):
-        self._landmarkLabels = value
+        if value is not None and any([v is not None for v in value]):
+            self._landmarkLabels = np.array(value)
         # self._cfg.logger.info('Assignment to %s/landmarkLabels in %s', self.location, self.filename)
 
     @landmarkLabels.deleter
@@ -2728,7 +3557,7 @@ class Probe(Group):
 
 
         """
-        if type(self._coordinateSystem) is type(_AbsentDataset):
+        if self._coordinateSystem is _AbsentDataset:
             return None
         if type(self._coordinateSystem) is type(_PresentDataset):
             return _read_string(self._h['coordinateSystem'])
@@ -2762,7 +3591,7 @@ class Probe(Group):
 
 
         """
-        if type(self._coordinateSystemDescription) is type(_AbsentDataset):
+        if self._coordinateSystemDescription is _AbsentDataset:
             return None
         if type(self._coordinateSystemDescription) is type(_PresentDataset):
             return _read_string(self._h['coordinateSystemDescription'])
@@ -2780,43 +3609,6 @@ class Probe(Group):
     def coordinateSystemDescription(self):
         self._coordinateSystemDescription = _AbsentDataset
         self._cfg.logger.info('Deleted %s/coordinateSystemDescription from %s',
-                              self.location, self.filename)
-
-    @property
-    def useLocalIndex(self):
-        """SNIRF field `useLocalIndex`.
-
-        If dynamic_loading=True, the data is loaded from the SNIRF file only
-        when accessed through the getter
-
-        For modular NIRS systems, setting this flag to a non-zero integer indicates 
-        that `measurementList(k).sourceIndex` and `measurementList(k).detectorIndex` 
-        are module-specific local-indices. One must also include 
-        `measurementList(k).moduleIndex`, or when cross-module channels present, both 
-        `measurementList(k).sourceModuleIndex` and `measurementList(k).detectorModuleIndex` 
-        in the `measurementList` structure in order to restore the global indices 
-        of the sources/detectors.
-
-
-        """
-        if type(self._useLocalIndex) is type(_AbsentDataset):
-            return None
-        if type(self._useLocalIndex) is type(_PresentDataset):
-            return _read_int(self._h['useLocalIndex'])
-            self._cfg.logger.info(
-                'Dynamically loaded %s/useLocalIndex from %s', self.location,
-                self.filename)
-        return self._useLocalIndex
-
-    @useLocalIndex.setter
-    def useLocalIndex(self, value):
-        self._useLocalIndex = value
-        # self._cfg.logger.info('Assignment to %s/useLocalIndex in %s', self.location, self.filename)
-
-    @useLocalIndex.deleter
-    def useLocalIndex(self):
-        self._useLocalIndex = _AbsentDataset
-        self._cfg.logger.info('Deleted %s/useLocalIndex from %s',
                               self.location, self.filename)
 
     def _save(self, *args):
@@ -2837,7 +3629,7 @@ class Probe(Group):
                                  self.__class__.__name__ +
                                  ' instance without a filename')
         name = self.location + '/wavelengths'
-        if type(self._wavelengths) not in [type(_AbsentDataset), type(None)]:
+        if not self._wavelengths is _AbsentDataset:
             data = self.wavelengths  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -2848,9 +3640,7 @@ class Probe(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/wavelengthsEmission'
-        if type(self._wavelengthsEmission) not in [
-                type(_AbsentDataset), type(None)
-        ]:
+        if not self._wavelengthsEmission is _AbsentDataset:
             data = self.wavelengthsEmission  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -2861,7 +3651,7 @@ class Probe(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/sourcePos2D'
-        if type(self._sourcePos2D) not in [type(_AbsentDataset), type(None)]:
+        if not self._sourcePos2D is _AbsentDataset:
             data = self.sourcePos2D  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -2872,7 +3662,7 @@ class Probe(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/sourcePos3D'
-        if type(self._sourcePos3D) not in [type(_AbsentDataset), type(None)]:
+        if not self._sourcePos3D is _AbsentDataset:
             data = self.sourcePos3D  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -2883,7 +3673,7 @@ class Probe(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/detectorPos2D'
-        if type(self._detectorPos2D) not in [type(_AbsentDataset), type(None)]:
+        if not self._detectorPos2D is _AbsentDataset:
             data = self.detectorPos2D  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -2894,7 +3684,7 @@ class Probe(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/detectorPos3D'
-        if type(self._detectorPos3D) not in [type(_AbsentDataset), type(None)]:
+        if not self._detectorPos3D is _AbsentDataset:
             data = self.detectorPos3D  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -2905,7 +3695,7 @@ class Probe(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/frequencies'
-        if type(self._frequencies) not in [type(_AbsentDataset), type(None)]:
+        if not self._frequencies is _AbsentDataset:
             data = self.frequencies  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -2916,7 +3706,7 @@ class Probe(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/timeDelays'
-        if type(self._timeDelays) not in [type(_AbsentDataset), type(None)]:
+        if not self._timeDelays is _AbsentDataset:
             data = self.timeDelays  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -2927,9 +3717,7 @@ class Probe(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/timeDelayWidths'
-        if type(self._timeDelayWidths) not in [
-                type(_AbsentDataset), type(None)
-        ]:
+        if not self._timeDelayWidths is _AbsentDataset:
             data = self.timeDelayWidths  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -2940,7 +3728,7 @@ class Probe(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/momentOrders'
-        if type(self._momentOrders) not in [type(_AbsentDataset), type(None)]:
+        if not self._momentOrders is _AbsentDataset:
             data = self.momentOrders  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -2951,9 +3739,7 @@ class Probe(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/correlationTimeDelays'
-        if type(self._correlationTimeDelays) not in [
-                type(_AbsentDataset), type(None)
-        ]:
+        if not self._correlationTimeDelays is _AbsentDataset:
             data = self.correlationTimeDelays  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -2964,9 +3750,7 @@ class Probe(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/correlationTimeDelayWidths'
-        if type(self._correlationTimeDelayWidths) not in [
-                type(_AbsentDataset), type(None)
-        ]:
+        if not self._correlationTimeDelayWidths is _AbsentDataset:
             data = self.correlationTimeDelayWidths  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -2977,7 +3761,7 @@ class Probe(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/sourceLabels'
-        if type(self._sourceLabels) not in [type(_AbsentDataset), type(None)]:
+        if not self._sourceLabels is _AbsentDataset:
             data = self.sourceLabels  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -2988,9 +3772,7 @@ class Probe(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/detectorLabels'
-        if type(self._detectorLabels) not in [
-                type(_AbsentDataset), type(None)
-        ]:
+        if not self._detectorLabels is _AbsentDataset:
             data = self.detectorLabels  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -3001,7 +3783,7 @@ class Probe(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/landmarkPos2D'
-        if type(self._landmarkPos2D) not in [type(_AbsentDataset), type(None)]:
+        if not self._landmarkPos2D is _AbsentDataset:
             data = self.landmarkPos2D  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -3012,7 +3794,7 @@ class Probe(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/landmarkPos3D'
-        if type(self._landmarkPos3D) not in [type(_AbsentDataset), type(None)]:
+        if not self._landmarkPos3D is _AbsentDataset:
             data = self.landmarkPos3D  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -3023,9 +3805,7 @@ class Probe(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/landmarkLabels'
-        if type(self._landmarkLabels) not in [
-                type(_AbsentDataset), type(None)
-        ]:
+        if not self._landmarkLabels is _AbsentDataset:
             data = self.landmarkLabels  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -3036,9 +3816,7 @@ class Probe(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/coordinateSystem'
-        if type(self._coordinateSystem) not in [
-                type(_AbsentDataset), type(None)
-        ]:
+        if not self._coordinateSystem is _AbsentDataset:
             data = self.coordinateSystem  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -3049,9 +3827,7 @@ class Probe(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/coordinateSystemDescription'
-        if type(self._coordinateSystemDescription) not in [
-                type(_AbsentDataset), type(None)
-        ]:
+        if not self._coordinateSystemDescription is _AbsentDataset:
             data = self.coordinateSystemDescription  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -3061,23 +3837,15 @@ class Probe(Group):
             if name in file:
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
-        name = self.location + '/useLocalIndex'
-        if type(self._useLocalIndex) not in [type(_AbsentDataset), type(None)]:
-            data = self.useLocalIndex  # Use loader function via getter
-            if name in file:
-                del file[name]
-            _create_dataset_int(file, name, data)
-            # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
-        else:
-            if name in file:
-                del file[name]
-                self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
 
     def _validate(self, result: ValidationResult):
         # Validate unwritten datasets after writing them to this tempfile
-        with h5py.File(TemporaryFile(), 'w') as tmp:
+        with h5py.File(str(uuid.uuid4()),
+                       'w',
+                       driver='core',
+                       backing_store=False) as tmp:
             name = self.location + '/wavelengths'
-            if type(self._wavelengths) in [type(_AbsentDataset), type(None)]:
+            if self._wavelengths is _AbsentDataset:
                 result._add(name, 'REQUIRED_DATASET_MISSING')
             else:
                 try:
@@ -3092,9 +3860,7 @@ class Probe(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/wavelengthsEmission'
-            if type(self._wavelengthsEmission) in [
-                    type(_AbsentDataset), type(None)
-            ]:
+            if self._wavelengthsEmission is _AbsentDataset:
                 result._add(name, 'OPTIONAL_DATASET_MISSING')
             else:
                 try:
@@ -3111,7 +3877,7 @@ class Probe(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/sourcePos2D'
-            if type(self._sourcePos2D) in [type(_AbsentDataset), type(None)]:
+            if self._sourcePos2D is _AbsentDataset:
                 result._add(name, 'REQUIRED_DATASET_MISSING')
             else:
                 try:
@@ -3126,7 +3892,7 @@ class Probe(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/sourcePos3D'
-            if type(self._sourcePos3D) in [type(_AbsentDataset), type(None)]:
+            if self._sourcePos3D is _AbsentDataset:
                 result._add(name, 'REQUIRED_DATASET_MISSING')
             else:
                 try:
@@ -3141,7 +3907,7 @@ class Probe(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/detectorPos2D'
-            if type(self._detectorPos2D) in [type(_AbsentDataset), type(None)]:
+            if self._detectorPos2D is _AbsentDataset:
                 result._add(name, 'REQUIRED_DATASET_MISSING')
             else:
                 try:
@@ -3156,7 +3922,7 @@ class Probe(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/detectorPos3D'
-            if type(self._detectorPos3D) in [type(_AbsentDataset), type(None)]:
+            if self._detectorPos3D is _AbsentDataset:
                 result._add(name, 'REQUIRED_DATASET_MISSING')
             else:
                 try:
@@ -3171,7 +3937,7 @@ class Probe(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/frequencies'
-            if type(self._frequencies) in [type(_AbsentDataset), type(None)]:
+            if self._frequencies is _AbsentDataset:
                 result._add(name, 'OPTIONAL_DATASET_MISSING')
             else:
                 try:
@@ -3186,7 +3952,7 @@ class Probe(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/timeDelays'
-            if type(self._timeDelays) in [type(_AbsentDataset), type(None)]:
+            if self._timeDelays is _AbsentDataset:
                 result._add(name, 'OPTIONAL_DATASET_MISSING')
             else:
                 try:
@@ -3201,9 +3967,7 @@ class Probe(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/timeDelayWidths'
-            if type(self._timeDelayWidths) in [
-                    type(_AbsentDataset), type(None)
-            ]:
+            if self._timeDelayWidths is _AbsentDataset:
                 result._add(name, 'OPTIONAL_DATASET_MISSING')
             else:
                 try:
@@ -3218,7 +3982,7 @@ class Probe(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/momentOrders'
-            if type(self._momentOrders) in [type(_AbsentDataset), type(None)]:
+            if self._momentOrders is _AbsentDataset:
                 result._add(name, 'OPTIONAL_DATASET_MISSING')
             else:
                 try:
@@ -3233,9 +3997,7 @@ class Probe(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/correlationTimeDelays'
-            if type(self._correlationTimeDelays) in [
-                    type(_AbsentDataset), type(None)
-            ]:
+            if self._correlationTimeDelays is _AbsentDataset:
                 result._add(name, 'OPTIONAL_DATASET_MISSING')
             else:
                 try:
@@ -3252,9 +4014,7 @@ class Probe(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/correlationTimeDelayWidths'
-            if type(self._correlationTimeDelayWidths) in [
-                    type(_AbsentDataset), type(None)
-            ]:
+            if self._correlationTimeDelayWidths is _AbsentDataset:
                 result._add(name, 'OPTIONAL_DATASET_MISSING')
             else:
                 try:
@@ -3271,7 +4031,7 @@ class Probe(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/sourceLabels'
-            if type(self._sourceLabels) in [type(_AbsentDataset), type(None)]:
+            if self._sourceLabels is _AbsentDataset:
                 result._add(name, 'OPTIONAL_DATASET_MISSING')
             else:
                 try:
@@ -3286,9 +4046,7 @@ class Probe(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/detectorLabels'
-            if type(self._detectorLabels) in [
-                    type(_AbsentDataset), type(None)
-            ]:
+            if self._detectorLabels is _AbsentDataset:
                 result._add(name, 'OPTIONAL_DATASET_MISSING')
             else:
                 try:
@@ -3303,7 +4061,7 @@ class Probe(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/landmarkPos2D'
-            if type(self._landmarkPos2D) in [type(_AbsentDataset), type(None)]:
+            if self._landmarkPos2D is _AbsentDataset:
                 result._add(name, 'OPTIONAL_DATASET_MISSING')
             else:
                 try:
@@ -3318,7 +4076,7 @@ class Probe(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/landmarkPos3D'
-            if type(self._landmarkPos3D) in [type(_AbsentDataset), type(None)]:
+            if self._landmarkPos3D is _AbsentDataset:
                 result._add(name, 'OPTIONAL_DATASET_MISSING')
             else:
                 try:
@@ -3333,9 +4091,7 @@ class Probe(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/landmarkLabels'
-            if type(self._landmarkLabels) in [
-                    type(_AbsentDataset), type(None)
-            ]:
+            if self._landmarkLabels is _AbsentDataset:
                 result._add(name, 'OPTIONAL_DATASET_MISSING')
             else:
                 try:
@@ -3350,9 +4106,7 @@ class Probe(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/coordinateSystem'
-            if type(self._coordinateSystem) in [
-                    type(_AbsentDataset), type(None)
-            ]:
+            if self._coordinateSystem is _AbsentDataset:
                 result._add(name, 'OPTIONAL_DATASET_MISSING')
             else:
                 try:
@@ -3366,9 +4120,7 @@ class Probe(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/coordinateSystemDescription'
-            if type(self._coordinateSystemDescription) in [
-                    type(_AbsentDataset), type(None)
-            ]:
+            if self._coordinateSystemDescription is _AbsentDataset:
                 result._add(name, 'OPTIONAL_DATASET_MISSING')
             else:
                 try:
@@ -3381,26 +4133,6 @@ class Probe(Group):
                             tmp, 'coordinateSystemDescription',
                             self._coordinateSystemDescription)
                     result._add(name, _validate_string(dataset))
-                except ValueError:  # If the _create_dataset function can't convert the data
-                    result._add(name, 'INVALID_DATASET_TYPE')
-            name = self.location + '/useLocalIndex'
-            if type(self._useLocalIndex) in [type(_AbsentDataset), type(None)]:
-                result._add(name, 'OPTIONAL_DATASET_MISSING')
-            else:
-                try:
-                    if type(self._useLocalIndex) is type(
-                            _PresentDataset) or 'useLocalIndex' in self._h:
-                        dataset = self._h['useLocalIndex']
-                    else:
-                        dataset = _create_dataset_int(tmp, 'useLocalIndex',
-                                                      self._useLocalIndex)
-                    err_code = _validate_int(dataset)
-                    if _read_int(dataset) < 0 and err_code == 'OK':
-                        result._add(name, 'NEGATIVE_INDEX')
-                    elif _read_int(dataset) == 0 and err_code == 'OK':
-                        result._add(name, 'INDEX_OF_ZERO')
-                    else:
-                        result._add(name, err_code)
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             for key in self._h.keys():
@@ -3416,6 +4148,7 @@ class Probe(Group):
 
 class NirsElement(Group):
     """Wrapper for an element of indexed group `Nirs`."""
+
     def __init__(self, gid: h5py.h5g.GroupID, cfg: SnirfConfig):
         super().__init__(gid, cfg)
         self._metaDataTags = _AbsentGroup  # {.}*
@@ -3467,7 +4200,7 @@ class NirsElement(Group):
         The below five metadata records are minimally required in a SNIRF file
 
         """
-        if type(self._metaDataTags) is type(_AbsentGroup):
+        if self._metaDataTags is _AbsentGroup:
             return None
         return self._metaDataTags
 
@@ -3555,7 +4288,7 @@ class NirsElement(Group):
         geometry.  This variable has a number of required fields.
 
         """
-        if type(self._probe) is type(_AbsentGroup):
+        if self._probe is _AbsentGroup:
             return None
         return self._probe
 
@@ -3616,34 +4349,40 @@ class NirsElement(Group):
                 raise ValueError('Cannot save an anonymous ' +
                                  self.__class__.__name__ +
                                  ' instance without a filename')
-        if type(self._metaDataTags) is type(
-                _AbsentGroup) or self._metaDataTags.is_empty():
-            if 'metaDataTags' in file:
-                del file['metaDataTags']
+        name = self.location + '/metaDataTags'
+        if self._metaDataTags is _AbsentGroup or self._metaDataTags.is_empty():
+            if name in file:
+                del file[name]
                 self._cfg.logger.info('Deleted Group %s/metaDataTags from %s',
                                       self.location, file)
         else:
             self.metaDataTags._save(*args)
+        name = self.location + '/data'
         self.data._save(*args)
+        name = self.location + '/stim'
         self.stim._save(*args)
-        if type(self._probe) is type(_AbsentGroup) or self._probe.is_empty():
-            if 'probe' in file:
-                del file['probe']
+        name = self.location + '/probe'
+        if self._probe is _AbsentGroup or self._probe.is_empty():
+            if name in file:
+                del file[name]
                 self._cfg.logger.info('Deleted Group %s/probe from %s',
                                       self.location, file)
         else:
             self.probe._save(*args)
+        name = self.location + '/aux'
         self.aux._save(*args)
 
     def _validate(self, result: ValidationResult):
         # Validate unwritten datasets after writing them to this tempfile
-        with h5py.File(TemporaryFile(), 'w') as tmp:
+        with h5py.File(str(uuid.uuid4()),
+                       'w',
+                       driver='core',
+                       backing_store=False) as tmp:
             name = self.location + '/metaDataTags'
             # If Group is not present in file and empty in the wrapper, it is missing
-            if type(self._metaDataTags) in [
-                    type(_AbsentGroup), type(None)
-            ] or ('metaDataTags' not in self._h
-                  and self._metaDataTags.is_empty()):
+            if self._metaDataTags is _AbsentGroup or (
+                    'metaDataTags' not in self._h
+                    and self._metaDataTags.is_empty()):
                 result._add(name, 'REQUIRED_GROUP_MISSING')
             else:
                 self._metaDataTags._validate(result)
@@ -3659,9 +4398,8 @@ class NirsElement(Group):
                 self.stim._validate(result)
             name = self.location + '/probe'
             # If Group is not present in file and empty in the wrapper, it is missing
-            if type(self._probe) in [
-                    type(_AbsentGroup), type(None)
-            ] or ('probe' not in self._h and self._probe.is_empty()):
+            if self._probe is _AbsentGroup or ('probe' not in self._h
+                                               and self._probe.is_empty()):
                 result._add(name, 'REQUIRED_GROUP_MISSING')
             else:
                 self._probe._validate(result)
@@ -3708,15 +4446,20 @@ class Nirs(IndexedGroup):
 
 class DataElement(Group):
     """Wrapper for an element of indexed group `Data`."""
+
     def __init__(self, gid: h5py.h5g.GroupID, cfg: SnirfConfig):
         super().__init__(gid, cfg)
         self._dataTimeSeries = _AbsentDataset  # [[<f>,...]]*
+        self._dataOffset = _AbsentDataset  # [<f>,...]
         self._time = _AbsentDataset  # [<f>,...]*
-        self._measurementList = _AbsentDataset  # {i}*
+        self._measurementList = _AbsentDataset  # {i}*1
+        self._measurementLists = _AbsentGroup  # {.}*1
         self._snirf_names = [
             'dataTimeSeries',
+            'dataOffset',
             'time',
             'measurementList',
+            'measurementLists',
         ]
 
         self._indexed_groups = []
@@ -3728,6 +4471,13 @@ class DataElement(Group):
                 self._dataTimeSeries = _PresentDataset
         else:  # if the dataset is not found on disk
             self._dataTimeSeries = _AbsentDataset
+        if 'dataOffset' in self._h:
+            if not self._cfg.dynamic_loading:
+                self._dataOffset = _read_float_array(self._h['dataOffset'])
+            else:  # if the dataset is found on disk but dynamic_loading=True
+                self._dataOffset = _PresentDataset
+        else:  # if the dataset is not found on disk
+            self._dataOffset = _AbsentDataset
         if 'time' in self._h:
             if not self._cfg.dynamic_loading:
                 self._time = _read_float_array(self._h['time'])
@@ -3738,6 +4488,13 @@ class DataElement(Group):
         self.measurementList = MeasurementList(self,
                                                self._cfg)  # Indexed group
         self._indexed_groups.append(self.measurementList)
+        if 'measurementLists' in self._h:
+            self._measurementLists = MeasurementLists(
+                self._h['measurementLists'].id, self._cfg)  # Group
+        else:
+            self._measurementLists = MeasurementLists(
+                self.location + '/' + 'measurementLists',
+                self._cfg)  # Anonymous group (wrapper only)
 
     @property
     def dataTimeSeries(self):
@@ -3757,8 +4514,9 @@ class DataElement(Group):
 
         Chunked data is allowed to support real-time streaming of data in this array. 
 
+
         """
-        if type(self._dataTimeSeries) is type(_AbsentDataset):
+        if self._dataTimeSeries is _AbsentDataset:
             return None
         if type(self._dataTimeSeries) is type(_PresentDataset):
             return _read_float_array(self._h['dataTimeSeries'])
@@ -3769,7 +4527,8 @@ class DataElement(Group):
 
     @dataTimeSeries.setter
     def dataTimeSeries(self, value):
-        self._dataTimeSeries = value
+        if value is not None and any([v is not None for v in value]):
+            self._dataTimeSeries = np.array(value)
         # self._cfg.logger.info('Assignment to %s/dataTimeSeries in %s', self.location, self.filename)
 
     @dataTimeSeries.deleter
@@ -3777,6 +4536,41 @@ class DataElement(Group):
         self._dataTimeSeries = _AbsentDataset
         self._cfg.logger.info('Deleted %s/dataTimeSeries from %s',
                               self.location, self.filename)
+
+    @property
+    def dataOffset(self):
+        """SNIRF field `dataOffset`.
+
+        If dynamic_loading=True, the data is loaded from the SNIRF file only
+        when accessed through the getter
+
+        This stores an optional offset value per channel, which, when added to
+        `/nirs(i)/data(j)/dataTimeSeries`, results in absolute data values.
+
+        The length of this array is equal to the <number of channels> as represented
+        by the second dimension in the `dataTimeSeries`.
+
+
+        """
+        if self._dataOffset is _AbsentDataset:
+            return None
+        if type(self._dataOffset) is type(_PresentDataset):
+            return _read_float_array(self._h['dataOffset'])
+            self._cfg.logger.info('Dynamically loaded %s/dataOffset from %s',
+                                  self.location, self.filename)
+        return self._dataOffset
+
+    @dataOffset.setter
+    def dataOffset(self, value):
+        if value is not None and any([v is not None for v in value]):
+            self._dataOffset = np.array(value)
+        # self._cfg.logger.info('Assignment to %s/dataOffset in %s', self.location, self.filename)
+
+    @dataOffset.deleter
+    def dataOffset(self):
+        self._dataOffset = _AbsentDataset
+        self._cfg.logger.info('Deleted %s/dataOffset from %s', self.location,
+                              self.filename)
 
     @property
     def time(self):
@@ -3802,7 +4596,7 @@ class DataElement(Group):
         Chunked data is allowed to support real-time streaming of data in this array.
 
         """
-        if type(self._time) is type(_AbsentDataset):
+        if self._time is _AbsentDataset:
             return None
         if type(self._time) is type(_PresentDataset):
             return _read_float_array(self._h['time'])
@@ -3812,7 +4606,8 @@ class DataElement(Group):
 
     @time.setter
     def time(self, value):
-        self._time = value
+        if value is not None and any([v is not None for v in value]):
+            self._time = np.array(value)
         # self._cfg.logger.info('Assignment to %s/time in %s', self.location, self.filename)
 
     @time.deleter
@@ -3855,6 +4650,41 @@ class DataElement(Group):
         self._cfg.logger.info('Deleted %s/measurementList from %s',
                               self.location, self.filename)
 
+    @property
+    def measurementLists(self):
+        """SNIRF field `measurementLists`.
+
+        If dynamic_loading=True, the data is loaded from the SNIRF file only
+        when accessed through the getter
+
+        The group for measurement list variables which map the data array onto the probe geometry (sources and detectors), data type, and wavelength. This group's datasets are arrays with size `<number of channels>`, with each position describing the corresponding column in the data matrix. (i.e. the values at `measurementLists/sourceIndex(3)` and `measurementLists/detectorIndex(3)` correspond to `dataTimeSeries(:,3)`).
+
+        This group is required only if the indexed-group format `/nirs(i)/data(j)/measurementList(k)` is not used to encode the measurement list. `measurementLists` is an alternative that may offer better performance for larger probes.
+
+        The arrays of `measurementLists` are:
+
+        """
+        if self._measurementLists is _AbsentGroup:
+            return None
+        return self._measurementLists
+
+    @measurementLists.setter
+    def measurementLists(self, value):
+        if isinstance(value, MeasurementLists):
+            self._measurementLists = _recursive_hdf5_copy(
+                self._measurementLists, value)
+        else:
+            raise ValueError(
+                "Only a Group of type MeasurementLists can be assigned to measurementLists."
+            )
+        # self._cfg.logger.info('Assignment to %s/measurementLists in %s', self.location, self.filename)
+
+    @measurementLists.deleter
+    def measurementLists(self):
+        self._measurementLists = _AbsentGroup
+        self._cfg.logger.info('Deleted %s/measurementLists from %s',
+                              self.location, self.filename)
+
     def _save(self, *args):
         if len(args) > 0 and type(args[0]) is h5py.File:
             file = args[0]
@@ -3873,9 +4703,7 @@ class DataElement(Group):
                                  self.__class__.__name__ +
                                  ' instance without a filename')
         name = self.location + '/dataTimeSeries'
-        if type(self._dataTimeSeries) not in [
-                type(_AbsentDataset), type(None)
-        ]:
+        if not self._dataTimeSeries is _AbsentDataset:
             data = self.dataTimeSeries  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -3885,8 +4713,19 @@ class DataElement(Group):
             if name in file:
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
+        name = self.location + '/dataOffset'
+        if not self._dataOffset is _AbsentDataset:
+            data = self.dataOffset  # Use loader function via getter
+            if name in file:
+                del file[name]
+            _create_dataset_float_array(file, name, data, ndim=1)
+            # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
+        else:
+            if name in file:
+                del file[name]
+                self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/time'
-        if type(self._time) not in [type(_AbsentDataset), type(None)]:
+        if not self._time is _AbsentDataset:
             data = self.time  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -3896,15 +4735,27 @@ class DataElement(Group):
             if name in file:
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
+        name = self.location + '/measurementList'
         self.measurementList._save(*args)
+        name = self.location + '/measurementLists'
+        if self._measurementLists is _AbsentGroup or self._measurementLists.is_empty(
+        ):
+            if name in file:
+                del file[name]
+                self._cfg.logger.info(
+                    'Deleted Group %s/measurementLists from %s', self.location,
+                    file)
+        else:
+            self.measurementLists._save(*args)
 
     def _validate(self, result: ValidationResult):
         # Validate unwritten datasets after writing them to this tempfile
-        with h5py.File(TemporaryFile(), 'w') as tmp:
+        with h5py.File(str(uuid.uuid4()),
+                       'w',
+                       driver='core',
+                       backing_store=False) as tmp:
             name = self.location + '/dataTimeSeries'
-            if type(self._dataTimeSeries) in [
-                    type(_AbsentDataset), type(None)
-            ]:
+            if self._dataTimeSeries is _AbsentDataset:
                 result._add(name, 'REQUIRED_DATASET_MISSING')
             else:
                 try:
@@ -3918,8 +4769,23 @@ class DataElement(Group):
                                                             ndims=[2]))
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
+            name = self.location + '/dataOffset'
+            if self._dataOffset is _AbsentDataset:
+                result._add(name, 'OPTIONAL_DATASET_MISSING')
+            else:
+                try:
+                    if type(self._dataOffset) is type(
+                            _PresentDataset) or 'dataOffset' in self._h:
+                        dataset = self._h['dataOffset']
+                    else:
+                        dataset = _create_dataset_float_array(
+                            tmp, 'dataOffset', self._dataOffset)
+                    result._add(name, _validate_float_array(dataset,
+                                                            ndims=[1]))
+                except ValueError:  # If the _create_dataset function can't convert the data
+                    result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/time'
-            if type(self._time) in [type(_AbsentDataset), type(None)]:
+            if self._time is _AbsentDataset:
                 result._add(name, 'REQUIRED_DATASET_MISSING')
             else:
                 try:
@@ -3938,6 +4804,14 @@ class DataElement(Group):
                 result._add(name, 'REQUIRED_INDEXED_GROUP_EMPTY')
             else:
                 self.measurementList._validate(result)
+            name = self.location + '/measurementLists'
+            # If Group is not present in file and empty in the wrapper, it is missing
+            if self._measurementLists is _AbsentGroup or (
+                    'measurementLists' not in self._h
+                    and self._measurementLists.is_empty()):
+                result._add(name, 'REQUIRED_GROUP_MISSING')
+            else:
+                self._measurementLists._validate(result)
             for key in self._h.keys():
                 if not any(
                     [key.startswith(name) for name in self._snirf_names]):
@@ -3974,6 +4848,7 @@ class Data(IndexedGroup):
 
 class MeasurementListElement(Group):
     """Wrapper for an element of indexed group `MeasurementList`."""
+
     def __init__(self, gid: h5py.h5g.GroupID, cfg: SnirfConfig):
         super().__init__(gid, cfg)
         self._sourceIndex = _AbsentDataset  # <i>*
@@ -3987,9 +4862,6 @@ class MeasurementListElement(Group):
         self._dataTypeIndex = _AbsentDataset  # <i>*
         self._sourcePower = _AbsentDataset  # <f>
         self._detectorGain = _AbsentDataset  # <f>
-        self._moduleIndex = _AbsentDataset  # <i>
-        self._sourceModuleIndex = _AbsentDataset  # <i>
-        self._detectorModuleIndex = _AbsentDataset  # <i>
         self._snirf_names = [
             'sourceIndex',
             'detectorIndex',
@@ -4002,9 +4874,6 @@ class MeasurementListElement(Group):
             'dataTypeIndex',
             'sourcePower',
             'detectorGain',
-            'moduleIndex',
-            'sourceModuleIndex',
-            'detectorModuleIndex',
         ]
 
         self._indexed_groups = []
@@ -4087,29 +4956,6 @@ class MeasurementListElement(Group):
                 self._detectorGain = _PresentDataset
         else:  # if the dataset is not found on disk
             self._detectorGain = _AbsentDataset
-        if 'moduleIndex' in self._h:
-            if not self._cfg.dynamic_loading:
-                self._moduleIndex = _read_int(self._h['moduleIndex'])
-            else:  # if the dataset is found on disk but dynamic_loading=True
-                self._moduleIndex = _PresentDataset
-        else:  # if the dataset is not found on disk
-            self._moduleIndex = _AbsentDataset
-        if 'sourceModuleIndex' in self._h:
-            if not self._cfg.dynamic_loading:
-                self._sourceModuleIndex = _read_int(
-                    self._h['sourceModuleIndex'])
-            else:  # if the dataset is found on disk but dynamic_loading=True
-                self._sourceModuleIndex = _PresentDataset
-        else:  # if the dataset is not found on disk
-            self._sourceModuleIndex = _AbsentDataset
-        if 'detectorModuleIndex' in self._h:
-            if not self._cfg.dynamic_loading:
-                self._detectorModuleIndex = _read_int(
-                    self._h['detectorModuleIndex'])
-            else:  # if the dataset is found on disk but dynamic_loading=True
-                self._detectorModuleIndex = _PresentDataset
-        else:  # if the dataset is not found on disk
-            self._detectorModuleIndex = _AbsentDataset
 
     @property
     def sourceIndex(self):
@@ -4121,7 +4967,7 @@ class MeasurementListElement(Group):
         Index of the source.
          
         """
-        if type(self._sourceIndex) is type(_AbsentDataset):
+        if self._sourceIndex is _AbsentDataset:
             return None
         if type(self._sourceIndex) is type(_PresentDataset):
             return _read_int(self._h['sourceIndex'])
@@ -4150,7 +4996,7 @@ class MeasurementListElement(Group):
         Index of the detector.
 
         """
-        if type(self._detectorIndex) is type(_AbsentDataset):
+        if self._detectorIndex is _AbsentDataset:
             return None
         if type(self._detectorIndex) is type(_PresentDataset):
             return _read_int(self._h['detectorIndex'])
@@ -4180,7 +5026,7 @@ class MeasurementListElement(Group):
         Index of the "nominal" wavelength (in `probe.wavelengths`).
 
         """
-        if type(self._wavelengthIndex) is type(_AbsentDataset):
+        if self._wavelengthIndex is _AbsentDataset:
             return None
         if type(self._wavelengthIndex) is type(_PresentDataset):
             return _read_int(self._h['wavelengthIndex'])
@@ -4210,7 +5056,7 @@ class MeasurementListElement(Group):
         Actual (measured) wavelength in nm, if available, for the source in a given channel.
 
         """
-        if type(self._wavelengthActual) is type(_AbsentDataset):
+        if self._wavelengthActual is _AbsentDataset:
             return None
         if type(self._wavelengthActual) is type(_PresentDataset):
             return _read_float(self._h['wavelengthActual'])
@@ -4240,7 +5086,7 @@ class MeasurementListElement(Group):
         Actual (measured) emission wavelength in nm, if available, for the source in a given channel.
          
         """
-        if type(self._wavelengthEmissionActual) is type(_AbsentDataset):
+        if self._wavelengthEmissionActual is _AbsentDataset:
             return None
         if type(self._wavelengthEmissionActual) is type(_PresentDataset):
             return _read_float(self._h['wavelengthEmissionActual'])
@@ -4270,7 +5116,7 @@ class MeasurementListElement(Group):
         Data-type identifier. See Appendix for list possible values.
 
         """
-        if type(self._dataType) is type(_AbsentDataset):
+        if self._dataType is _AbsentDataset:
             return None
         if type(self._dataType) is type(_PresentDataset):
             return _read_int(self._h['dataType'])
@@ -4299,7 +5145,7 @@ class MeasurementListElement(Group):
         International System of Units (SI units) identifier for the given channel. Encoding should follow the [CMIXF-12 standard](https://people.csail.mit.edu/jaffer/MIXF/CMIXF-12), avoiding special unicode symbols like U+03BC (m) or U+00B5 (u) and using '/' rather than 'per' for units such as `V/us`. The recommended export format is in unscaled units such as V, s, Mole.
 
         """
-        if type(self._dataUnit) is type(_AbsentDataset):
+        if self._dataUnit is _AbsentDataset:
             return None
         if type(self._dataUnit) is type(_PresentDataset):
             return _read_string(self._h['dataUnit'])
@@ -4329,7 +5175,7 @@ class MeasurementListElement(Group):
         for list of possible values.
 
         """
-        if type(self._dataTypeLabel) is type(_AbsentDataset):
+        if self._dataTypeLabel is _AbsentDataset:
             return None
         if type(self._dataTypeLabel) is type(_PresentDataset):
             return _read_string(self._h['dataTypeLabel'])
@@ -4356,12 +5202,10 @@ class MeasurementListElement(Group):
         If dynamic_loading=True, the data is loaded from the SNIRF file only
         when accessed through the getter
 
-        Data-type specific parameter indices. The data type index specifies additional data type specific parameters that are further elaborated by other fields in the probe structure, as detailed below. Note that the Time Domain and Diffuse Correlation Spectroscopy data types have two additional parameters and so the data type index must be a vector with 2 elements that index the additional parameters. One use of this parameter is as a 
-        stimulus condition index when `measurementList(k).dataType = 99999` (i.e, `processed` and 
-        `measurementList(k).dataTypeLabel = 'HRF ...'` .
+        Data-type specific parameter index. The data type index specifies additional data type specific parameters that are further elaborated by other fields in the probe structure, as detailed below. Note that where multiple parameters are required, the same index must be used into each (examples include data types such as Time Domain and Diffuse Correlation Spectroscopy). One use of this parameter is as a stimulus condition index when `measurementList(k).dataType = 99999` (i.e, `processed` and `measurementList(k).dataTypeLabel = 'HRF ...'` .
 
         """
-        if type(self._dataTypeIndex) is type(_AbsentDataset):
+        if self._dataTypeIndex is _AbsentDataset:
             return None
         if type(self._dataTypeIndex) is type(_PresentDataset):
             return _read_int(self._h['dataTypeIndex'])
@@ -4391,7 +5235,7 @@ class MeasurementListElement(Group):
         The units are not defined, unless the user takes the option of using a `metaDataTag` as described below.
 
         """
-        if type(self._sourcePower) is type(_AbsentDataset):
+        if self._sourcePower is _AbsentDataset:
             return None
         if type(self._sourcePower) is type(_PresentDataset):
             return _read_float(self._h['sourcePower'])
@@ -4418,106 +5262,6 @@ class MeasurementListElement(Group):
         when accessed through the getter
 
         Detector gain
-
-        """
-        if type(self._detectorGain) is type(_AbsentDataset):
-            return None
-        if type(self._detectorGain) is type(_PresentDataset):
-            return _read_float(self._h['detectorGain'])
-            self._cfg.logger.info('Dynamically loaded %s/detectorGain from %s',
-                                  self.location, self.filename)
-        return self._detectorGain
-
-    @detectorGain.setter
-    def detectorGain(self, value):
-        self._detectorGain = value
-        # self._cfg.logger.info('Assignment to %s/detectorGain in %s', self.location, self.filename)
-
-    @detectorGain.deleter
-    def detectorGain(self):
-        self._detectorGain = _AbsentDataset
-        self._cfg.logger.info('Deleted %s/detectorGain from %s', self.location,
-                              self.filename)
-
-    @property
-    def moduleIndex(self):
-        """SNIRF field `moduleIndex`.
-
-        If dynamic_loading=True, the data is loaded from the SNIRF file only
-        when accessed through the getter
-
-        Index of a repeating module. If `moduleIndex` is provided while `useLocalIndex`
-        is set to `true`, then, both `measurementList(k).sourceIndex` and 
-        `measurementList(k).detectorIndex` are assumed to be the local indices
-        of the same module specified by `moduleIndex`. If the source and
-        detector are located on different modules, one must use `sourceModuleIndex`
-        and `detectorModuleIndex` instead to specify separate parent module 
-        indices. See below.
-
-
-        """
-        if type(self._moduleIndex) is type(_AbsentDataset):
-            return None
-        if type(self._moduleIndex) is type(_PresentDataset):
-            return _read_int(self._h['moduleIndex'])
-            self._cfg.logger.info('Dynamically loaded %s/moduleIndex from %s',
-                                  self.location, self.filename)
-        return self._moduleIndex
-
-    @moduleIndex.setter
-    def moduleIndex(self, value):
-        self._moduleIndex = value
-        # self._cfg.logger.info('Assignment to %s/moduleIndex in %s', self.location, self.filename)
-
-    @moduleIndex.deleter
-    def moduleIndex(self):
-        self._moduleIndex = _AbsentDataset
-        self._cfg.logger.info('Deleted %s/moduleIndex from %s', self.location,
-                              self.filename)
-
-    @property
-    def sourceModuleIndex(self):
-        """SNIRF field `sourceModuleIndex`.
-
-        If dynamic_loading=True, the data is loaded from the SNIRF file only
-        when accessed through the getter
-
-        Index of the module that contains the source of the channel. 
-        This index must be used together with `detectorModuleIndex`, and 
-        can not be used when `moduleIndex` presents.
-
-        """
-        if type(self._sourceModuleIndex) is type(_AbsentDataset):
-            return None
-        if type(self._sourceModuleIndex) is type(_PresentDataset):
-            return _read_int(self._h['sourceModuleIndex'])
-            self._cfg.logger.info(
-                'Dynamically loaded %s/sourceModuleIndex from %s',
-                self.location, self.filename)
-        return self._sourceModuleIndex
-
-    @sourceModuleIndex.setter
-    def sourceModuleIndex(self, value):
-        self._sourceModuleIndex = value
-        # self._cfg.logger.info('Assignment to %s/sourceModuleIndex in %s', self.location, self.filename)
-
-    @sourceModuleIndex.deleter
-    def sourceModuleIndex(self):
-        self._sourceModuleIndex = _AbsentDataset
-        self._cfg.logger.info('Deleted %s/sourceModuleIndex from %s',
-                              self.location, self.filename)
-
-    @property
-    def detectorModuleIndex(self):
-        """SNIRF field `detectorModuleIndex`.
-
-        If dynamic_loading=True, the data is loaded from the SNIRF file only
-        when accessed through the getter
-
-        Index of the module that contains the detector of the channel. 
-        This index must be used together with `sourceModuleIndex`, and 
-        can not be used when `moduleIndex` presents.
-
 
         For example, if `measurementList5` is a structure with `sourceIndex=2`, 
         `detectorIndex=3`, `wavelengthIndex=1`, `dataType=1`, `dataTypeIndex=1` would 
@@ -4553,25 +5297,24 @@ class MeasurementListElement(Group):
         label for sources and detectors.
 
         """
-        if type(self._detectorModuleIndex) is type(_AbsentDataset):
+        if self._detectorGain is _AbsentDataset:
             return None
-        if type(self._detectorModuleIndex) is type(_PresentDataset):
-            return _read_int(self._h['detectorModuleIndex'])
-            self._cfg.logger.info(
-                'Dynamically loaded %s/detectorModuleIndex from %s',
-                self.location, self.filename)
-        return self._detectorModuleIndex
+        if type(self._detectorGain) is type(_PresentDataset):
+            return _read_float(self._h['detectorGain'])
+            self._cfg.logger.info('Dynamically loaded %s/detectorGain from %s',
+                                  self.location, self.filename)
+        return self._detectorGain
 
-    @detectorModuleIndex.setter
-    def detectorModuleIndex(self, value):
-        self._detectorModuleIndex = value
-        # self._cfg.logger.info('Assignment to %s/detectorModuleIndex in %s', self.location, self.filename)
+    @detectorGain.setter
+    def detectorGain(self, value):
+        self._detectorGain = value
+        # self._cfg.logger.info('Assignment to %s/detectorGain in %s', self.location, self.filename)
 
-    @detectorModuleIndex.deleter
-    def detectorModuleIndex(self):
-        self._detectorModuleIndex = _AbsentDataset
-        self._cfg.logger.info('Deleted %s/detectorModuleIndex from %s',
-                              self.location, self.filename)
+    @detectorGain.deleter
+    def detectorGain(self):
+        self._detectorGain = _AbsentDataset
+        self._cfg.logger.info('Deleted %s/detectorGain from %s', self.location,
+                              self.filename)
 
     def _save(self, *args):
         if len(args) > 0 and type(args[0]) is h5py.File:
@@ -4591,7 +5334,7 @@ class MeasurementListElement(Group):
                                  self.__class__.__name__ +
                                  ' instance without a filename')
         name = self.location + '/sourceIndex'
-        if type(self._sourceIndex) not in [type(_AbsentDataset), type(None)]:
+        if not self._sourceIndex is _AbsentDataset:
             data = self.sourceIndex  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -4602,7 +5345,7 @@ class MeasurementListElement(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/detectorIndex'
-        if type(self._detectorIndex) not in [type(_AbsentDataset), type(None)]:
+        if not self._detectorIndex is _AbsentDataset:
             data = self.detectorIndex  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -4613,9 +5356,7 @@ class MeasurementListElement(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/wavelengthIndex'
-        if type(self._wavelengthIndex) not in [
-                type(_AbsentDataset), type(None)
-        ]:
+        if not self._wavelengthIndex is _AbsentDataset:
             data = self.wavelengthIndex  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -4626,9 +5367,7 @@ class MeasurementListElement(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/wavelengthActual'
-        if type(self._wavelengthActual) not in [
-                type(_AbsentDataset), type(None)
-        ]:
+        if not self._wavelengthActual is _AbsentDataset:
             data = self.wavelengthActual  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -4639,9 +5378,7 @@ class MeasurementListElement(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/wavelengthEmissionActual'
-        if type(self._wavelengthEmissionActual) not in [
-                type(_AbsentDataset), type(None)
-        ]:
+        if not self._wavelengthEmissionActual is _AbsentDataset:
             data = self.wavelengthEmissionActual  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -4652,7 +5389,7 @@ class MeasurementListElement(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/dataType'
-        if type(self._dataType) not in [type(_AbsentDataset), type(None)]:
+        if not self._dataType is _AbsentDataset:
             data = self.dataType  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -4663,7 +5400,7 @@ class MeasurementListElement(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/dataUnit'
-        if type(self._dataUnit) not in [type(_AbsentDataset), type(None)]:
+        if not self._dataUnit is _AbsentDataset:
             data = self.dataUnit  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -4674,7 +5411,7 @@ class MeasurementListElement(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/dataTypeLabel'
-        if type(self._dataTypeLabel) not in [type(_AbsentDataset), type(None)]:
+        if not self._dataTypeLabel is _AbsentDataset:
             data = self.dataTypeLabel  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -4685,7 +5422,7 @@ class MeasurementListElement(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/dataTypeIndex'
-        if type(self._dataTypeIndex) not in [type(_AbsentDataset), type(None)]:
+        if not self._dataTypeIndex is _AbsentDataset:
             data = self.dataTypeIndex  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -4696,7 +5433,7 @@ class MeasurementListElement(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/sourcePower'
-        if type(self._sourcePower) not in [type(_AbsentDataset), type(None)]:
+        if not self._sourcePower is _AbsentDataset:
             data = self.sourcePower  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -4707,7 +5444,7 @@ class MeasurementListElement(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/detectorGain'
-        if type(self._detectorGain) not in [type(_AbsentDataset), type(None)]:
+        if not self._detectorGain is _AbsentDataset:
             data = self.detectorGain  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -4717,49 +5454,15 @@ class MeasurementListElement(Group):
             if name in file:
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
-        name = self.location + '/moduleIndex'
-        if type(self._moduleIndex) not in [type(_AbsentDataset), type(None)]:
-            data = self.moduleIndex  # Use loader function via getter
-            if name in file:
-                del file[name]
-            _create_dataset_int(file, name, data)
-            # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
-        else:
-            if name in file:
-                del file[name]
-                self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
-        name = self.location + '/sourceModuleIndex'
-        if type(self._sourceModuleIndex) not in [
-                type(_AbsentDataset), type(None)
-        ]:
-            data = self.sourceModuleIndex  # Use loader function via getter
-            if name in file:
-                del file[name]
-            _create_dataset_int(file, name, data)
-            # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
-        else:
-            if name in file:
-                del file[name]
-                self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
-        name = self.location + '/detectorModuleIndex'
-        if type(self._detectorModuleIndex) not in [
-                type(_AbsentDataset), type(None)
-        ]:
-            data = self.detectorModuleIndex  # Use loader function via getter
-            if name in file:
-                del file[name]
-            _create_dataset_int(file, name, data)
-            # self._cfg.logger.info('Creating Dataset %s in %s', name, file)
-        else:
-            if name in file:
-                del file[name]
-                self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
 
     def _validate(self, result: ValidationResult):
         # Validate unwritten datasets after writing them to this tempfile
-        with h5py.File(TemporaryFile(), 'w') as tmp:
+        with h5py.File(str(uuid.uuid4()),
+                       'w',
+                       driver='core',
+                       backing_store=False) as tmp:
             name = self.location + '/sourceIndex'
-            if type(self._sourceIndex) in [type(_AbsentDataset), type(None)]:
+            if self._sourceIndex is _AbsentDataset:
                 result._add(name, 'REQUIRED_DATASET_MISSING')
             else:
                 try:
@@ -4779,7 +5482,7 @@ class MeasurementListElement(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/detectorIndex'
-            if type(self._detectorIndex) in [type(_AbsentDataset), type(None)]:
+            if self._detectorIndex is _AbsentDataset:
                 result._add(name, 'REQUIRED_DATASET_MISSING')
             else:
                 try:
@@ -4799,9 +5502,7 @@ class MeasurementListElement(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/wavelengthIndex'
-            if type(self._wavelengthIndex) in [
-                    type(_AbsentDataset), type(None)
-            ]:
+            if self._wavelengthIndex is _AbsentDataset:
                 result._add(name, 'REQUIRED_DATASET_MISSING')
             else:
                 try:
@@ -4821,9 +5522,7 @@ class MeasurementListElement(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/wavelengthActual'
-            if type(self._wavelengthActual) in [
-                    type(_AbsentDataset), type(None)
-            ]:
+            if self._wavelengthActual is _AbsentDataset:
                 result._add(name, 'OPTIONAL_DATASET_MISSING')
             else:
                 try:
@@ -4837,9 +5536,7 @@ class MeasurementListElement(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/wavelengthEmissionActual'
-            if type(self._wavelengthEmissionActual) in [
-                    type(_AbsentDataset), type(None)
-            ]:
+            if self._wavelengthEmissionActual is _AbsentDataset:
                 result._add(name, 'OPTIONAL_DATASET_MISSING')
             else:
                 try:
@@ -4855,7 +5552,7 @@ class MeasurementListElement(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/dataType'
-            if type(self._dataType) in [type(_AbsentDataset), type(None)]:
+            if self._dataType is _AbsentDataset:
                 result._add(name, 'REQUIRED_DATASET_MISSING')
             else:
                 try:
@@ -4869,7 +5566,7 @@ class MeasurementListElement(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/dataUnit'
-            if type(self._dataUnit) in [type(_AbsentDataset), type(None)]:
+            if self._dataUnit is _AbsentDataset:
                 result._add(name, 'OPTIONAL_DATASET_MISSING')
             else:
                 try:
@@ -4883,7 +5580,7 @@ class MeasurementListElement(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/dataTypeLabel'
-            if type(self._dataTypeLabel) in [type(_AbsentDataset), type(None)]:
+            if self._dataTypeLabel is _AbsentDataset:
                 result._add(name, 'OPTIONAL_DATASET_MISSING')
             else:
                 try:
@@ -4897,7 +5594,7 @@ class MeasurementListElement(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/dataTypeIndex'
-            if type(self._dataTypeIndex) in [type(_AbsentDataset), type(None)]:
+            if self._dataTypeIndex is _AbsentDataset:
                 result._add(name, 'REQUIRED_DATASET_MISSING')
             else:
                 try:
@@ -4917,7 +5614,7 @@ class MeasurementListElement(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/sourcePower'
-            if type(self._sourcePower) in [type(_AbsentDataset), type(None)]:
+            if self._sourcePower is _AbsentDataset:
                 result._add(name, 'OPTIONAL_DATASET_MISSING')
             else:
                 try:
@@ -4931,7 +5628,7 @@ class MeasurementListElement(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/detectorGain'
-            if type(self._detectorGain) in [type(_AbsentDataset), type(None)]:
+            if self._detectorGain is _AbsentDataset:
                 result._add(name, 'OPTIONAL_DATASET_MISSING')
             else:
                 try:
@@ -4942,72 +5639,6 @@ class MeasurementListElement(Group):
                         dataset = _create_dataset_float(
                             tmp, 'detectorGain', self._detectorGain)
                     result._add(name, _validate_float(dataset))
-                except ValueError:  # If the _create_dataset function can't convert the data
-                    result._add(name, 'INVALID_DATASET_TYPE')
-            name = self.location + '/moduleIndex'
-            if type(self._moduleIndex) in [type(_AbsentDataset), type(None)]:
-                result._add(name, 'OPTIONAL_DATASET_MISSING')
-            else:
-                try:
-                    if type(self._moduleIndex) is type(
-                            _PresentDataset) or 'moduleIndex' in self._h:
-                        dataset = self._h['moduleIndex']
-                    else:
-                        dataset = _create_dataset_int(tmp, 'moduleIndex',
-                                                      self._moduleIndex)
-                    err_code = _validate_int(dataset)
-                    if _read_int(dataset) < 0 and err_code == 'OK':
-                        result._add(name, 'NEGATIVE_INDEX')
-                    elif _read_int(dataset) == 0 and err_code == 'OK':
-                        result._add(name, 'INDEX_OF_ZERO')
-                    else:
-                        result._add(name, err_code)
-                except ValueError:  # If the _create_dataset function can't convert the data
-                    result._add(name, 'INVALID_DATASET_TYPE')
-            name = self.location + '/sourceModuleIndex'
-            if type(self._sourceModuleIndex) in [
-                    type(_AbsentDataset), type(None)
-            ]:
-                result._add(name, 'OPTIONAL_DATASET_MISSING')
-            else:
-                try:
-                    if type(self._sourceModuleIndex) is type(
-                            _PresentDataset) or 'sourceModuleIndex' in self._h:
-                        dataset = self._h['sourceModuleIndex']
-                    else:
-                        dataset = _create_dataset_int(tmp, 'sourceModuleIndex',
-                                                      self._sourceModuleIndex)
-                    err_code = _validate_int(dataset)
-                    if _read_int(dataset) < 0 and err_code == 'OK':
-                        result._add(name, 'NEGATIVE_INDEX')
-                    elif _read_int(dataset) == 0 and err_code == 'OK':
-                        result._add(name, 'INDEX_OF_ZERO')
-                    else:
-                        result._add(name, err_code)
-                except ValueError:  # If the _create_dataset function can't convert the data
-                    result._add(name, 'INVALID_DATASET_TYPE')
-            name = self.location + '/detectorModuleIndex'
-            if type(self._detectorModuleIndex) in [
-                    type(_AbsentDataset), type(None)
-            ]:
-                result._add(name, 'OPTIONAL_DATASET_MISSING')
-            else:
-                try:
-                    if type(self._detectorModuleIndex) is type(
-                            _PresentDataset
-                    ) or 'detectorModuleIndex' in self._h:
-                        dataset = self._h['detectorModuleIndex']
-                    else:
-                        dataset = _create_dataset_int(
-                            tmp, 'detectorModuleIndex',
-                            self._detectorModuleIndex)
-                    err_code = _validate_int(dataset)
-                    if _read_int(dataset) < 0 and err_code == 'OK':
-                        result._add(name, 'NEGATIVE_INDEX')
-                    elif _read_int(dataset) == 0 and err_code == 'OK':
-                        result._add(name, 'INDEX_OF_ZERO')
-                    else:
-                        result._add(name, err_code)
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             for key in self._h.keys():
@@ -5049,6 +5680,7 @@ class MeasurementList(IndexedGroup):
 
 class StimElement(Group):
     """Wrapper for an element of indexed group `Stim`."""
+
     def __init__(self, gid: h5py.h5g.GroupID, cfg: SnirfConfig):
         super().__init__(gid, cfg)
         self._name = _AbsentDataset  # "s"+
@@ -5094,7 +5726,7 @@ class StimElement(Group):
 
 
         """
-        if type(self._name) is type(_AbsentDataset):
+        if self._name is _AbsentDataset:
             return None
         if type(self._name) is type(_PresentDataset):
             return _read_string(self._h['name'])
@@ -5135,7 +5767,7 @@ class StimElement(Group):
         used to annotate the meanings of each data column. 
 
         """
-        if type(self._data) is type(_AbsentDataset):
+        if self._data is _AbsentDataset:
             return None
         if type(self._data) is type(_PresentDataset):
             return _read_float_array(self._h['data'])
@@ -5145,7 +5777,8 @@ class StimElement(Group):
 
     @data.setter
     def data(self, value):
-        self._data = value
+        if value is not None and any([v is not None for v in value]):
+            self._data = np.array(value)
         # self._cfg.logger.info('Assignment to %s/data in %s', self.location, self.filename)
 
     @data.deleter
@@ -5167,7 +5800,7 @@ class StimElement(Group):
         of `/nirs(i)/stim(j)/data`, including the first 3 required columns.
 
         """
-        if type(self._dataLabels) is type(_AbsentDataset):
+        if self._dataLabels is _AbsentDataset:
             return None
         if type(self._dataLabels) is type(_PresentDataset):
             return _read_string_array(self._h['dataLabels'])
@@ -5177,7 +5810,8 @@ class StimElement(Group):
 
     @dataLabels.setter
     def dataLabels(self, value):
-        self._dataLabels = value
+        if value is not None and any([v is not None for v in value]):
+            self._dataLabels = np.array(value)
         # self._cfg.logger.info('Assignment to %s/dataLabels in %s', self.location, self.filename)
 
     @dataLabels.deleter
@@ -5204,7 +5838,7 @@ class StimElement(Group):
                                  self.__class__.__name__ +
                                  ' instance without a filename')
         name = self.location + '/name'
-        if type(self._name) not in [type(_AbsentDataset), type(None)]:
+        if not self._name is _AbsentDataset:
             data = self.name  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -5215,7 +5849,7 @@ class StimElement(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/data'
-        if type(self._data) not in [type(_AbsentDataset), type(None)]:
+        if not self._data is _AbsentDataset:
             data = self.data  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -5226,7 +5860,7 @@ class StimElement(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/dataLabels'
-        if type(self._dataLabels) not in [type(_AbsentDataset), type(None)]:
+        if not self._dataLabels is _AbsentDataset:
             data = self.dataLabels  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -5239,9 +5873,12 @@ class StimElement(Group):
 
     def _validate(self, result: ValidationResult):
         # Validate unwritten datasets after writing them to this tempfile
-        with h5py.File(TemporaryFile(), 'w') as tmp:
+        with h5py.File(str(uuid.uuid4()),
+                       'w',
+                       driver='core',
+                       backing_store=False) as tmp:
             name = self.location + '/name'
-            if type(self._name) in [type(_AbsentDataset), type(None)]:
+            if self._name is _AbsentDataset:
                 result._add(name, 'OPTIONAL_DATASET_MISSING')
             else:
                 try:
@@ -5255,7 +5892,7 @@ class StimElement(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/data'
-            if type(self._data) in [type(_AbsentDataset), type(None)]:
+            if self._data is _AbsentDataset:
                 result._add(name, 'OPTIONAL_DATASET_MISSING')
             else:
                 try:
@@ -5270,7 +5907,7 @@ class StimElement(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/dataLabels'
-            if type(self._dataLabels) in [type(_AbsentDataset), type(None)]:
+            if self._dataLabels is _AbsentDataset:
                 result._add(name, 'OPTIONAL_DATASET_MISSING')
             else:
                 try:
@@ -5316,6 +5953,7 @@ class Stim(IndexedGroup):
 
 class AuxElement(Group):
     """Wrapper for an element of indexed group `Aux`."""
+
     def __init__(self, gid: h5py.h5g.GroupID, cfg: SnirfConfig):
         super().__init__(gid, cfg)
         self._name = _AbsentDataset  # "s"+
@@ -5379,7 +6017,7 @@ class AuxElement(Group):
         This is string describing the j<sup>th</sup> auxiliary data timecourse. While auxiliary data can be given any title, standard names for commonly used auxiliary channels (i.e. accelerometer data) are specified in the appendix.
 
         """
-        if type(self._name) is type(_AbsentDataset):
+        if self._name is _AbsentDataset:
             return None
         if type(self._name) is type(_PresentDataset):
             return _read_string(self._h['name'])
@@ -5409,7 +6047,7 @@ class AuxElement(Group):
         time points> x <number of channels>`. If multiple channels of related data are generated by a system, they may be encoded in the multiple columns of the time series (i.e. complex numbers). For example, a system containing more than one accelerometer may output this data as a set of `ACCEL_X`/`ACCEL_Y`/`ACCEL_Z` auxiliary time series, where each has the dimension of `<number of time points> x <number of accelerometers>`. Note that it is NOT recommended to encode the various accelerometer dimensions as multiple channels of the same `aux` Group: instead follow the `"ACCEL_X"`, `"ACCEL_Y"`, `"ACCEL_Z"` naming conventions described in the appendix. Chunked data is allowed to support real-time data streaming.
 
         """
-        if type(self._dataTimeSeries) is type(_AbsentDataset):
+        if self._dataTimeSeries is _AbsentDataset:
             return None
         if type(self._dataTimeSeries) is type(_PresentDataset):
             return _read_float_array(self._h['dataTimeSeries'])
@@ -5420,7 +6058,8 @@ class AuxElement(Group):
 
     @dataTimeSeries.setter
     def dataTimeSeries(self, value):
-        self._dataTimeSeries = value
+        if value is not None and any([v is not None for v in value]):
+            self._dataTimeSeries = np.array(value)
         # self._cfg.logger.info('Assignment to %s/dataTimeSeries in %s', self.location, self.filename)
 
     @dataTimeSeries.deleter
@@ -5439,7 +6078,7 @@ class AuxElement(Group):
         International System of Units (SI units) identifier for the given channel. Encoding should follow the [CMIXF-12 standard](https://people.csail.mit.edu/jaffer/MIXF/CMIXF-12), avoiding special unicode symbols like U+03BC (m) or U+00B5 (u) and using '/' rather than 'per' for units such as `V/us`. The recommended export format is in unscaled units such as V, s, Mole.
 
         """
-        if type(self._dataUnit) is type(_AbsentDataset):
+        if self._dataUnit is _AbsentDataset:
             return None
         if type(self._dataUnit) is type(_PresentDataset):
             return _read_string(self._h['dataUnit'])
@@ -5475,7 +6114,7 @@ class AuxElement(Group):
         Chunked data is allowed to support real-time data streaming
 
         """
-        if type(self._time) is type(_AbsentDataset):
+        if self._time is _AbsentDataset:
             return None
         if type(self._time) is type(_PresentDataset):
             return _read_float_array(self._h['time'])
@@ -5485,7 +6124,8 @@ class AuxElement(Group):
 
     @time.setter
     def time(self, value):
-        self._time = value
+        if value is not None and any([v is not None for v in value]):
+            self._time = np.array(value)
         # self._cfg.logger.info('Assignment to %s/time in %s', self.location, self.filename)
 
     @time.deleter
@@ -5507,7 +6147,7 @@ class AuxElement(Group):
 
 
         """
-        if type(self._timeOffset) is type(_AbsentDataset):
+        if self._timeOffset is _AbsentDataset:
             return None
         if type(self._timeOffset) is type(_PresentDataset):
             return _read_float_array(self._h['timeOffset'])
@@ -5517,7 +6157,8 @@ class AuxElement(Group):
 
     @timeOffset.setter
     def timeOffset(self, value):
-        self._timeOffset = value
+        if value is not None and any([v is not None for v in value]):
+            self._timeOffset = np.array(value)
         # self._cfg.logger.info('Assignment to %s/timeOffset in %s', self.location, self.filename)
 
     @timeOffset.deleter
@@ -5544,7 +6185,7 @@ class AuxElement(Group):
                                  self.__class__.__name__ +
                                  ' instance without a filename')
         name = self.location + '/name'
-        if type(self._name) not in [type(_AbsentDataset), type(None)]:
+        if not self._name is _AbsentDataset:
             data = self.name  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -5555,9 +6196,7 @@ class AuxElement(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/dataTimeSeries'
-        if type(self._dataTimeSeries) not in [
-                type(_AbsentDataset), type(None)
-        ]:
+        if not self._dataTimeSeries is _AbsentDataset:
             data = self.dataTimeSeries  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -5568,7 +6207,7 @@ class AuxElement(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/dataUnit'
-        if type(self._dataUnit) not in [type(_AbsentDataset), type(None)]:
+        if not self._dataUnit is _AbsentDataset:
             data = self.dataUnit  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -5579,7 +6218,7 @@ class AuxElement(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/time'
-        if type(self._time) not in [type(_AbsentDataset), type(None)]:
+        if not self._time is _AbsentDataset:
             data = self.time  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -5590,7 +6229,7 @@ class AuxElement(Group):
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
         name = self.location + '/timeOffset'
-        if type(self._timeOffset) not in [type(_AbsentDataset), type(None)]:
+        if not self._timeOffset is _AbsentDataset:
             data = self.timeOffset  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -5603,9 +6242,12 @@ class AuxElement(Group):
 
     def _validate(self, result: ValidationResult):
         # Validate unwritten datasets after writing them to this tempfile
-        with h5py.File(TemporaryFile(), 'w') as tmp:
+        with h5py.File(str(uuid.uuid4()),
+                       'w',
+                       driver='core',
+                       backing_store=False) as tmp:
             name = self.location + '/name'
-            if type(self._name) in [type(_AbsentDataset), type(None)]:
+            if self._name is _AbsentDataset:
                 result._add(name, 'OPTIONAL_DATASET_MISSING')
             else:
                 try:
@@ -5619,9 +6261,7 @@ class AuxElement(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/dataTimeSeries'
-            if type(self._dataTimeSeries) in [
-                    type(_AbsentDataset), type(None)
-            ]:
+            if self._dataTimeSeries is _AbsentDataset:
                 result._add(name, 'OPTIONAL_DATASET_MISSING')
             else:
                 try:
@@ -5636,7 +6276,7 @@ class AuxElement(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/dataUnit'
-            if type(self._dataUnit) in [type(_AbsentDataset), type(None)]:
+            if self._dataUnit is _AbsentDataset:
                 result._add(name, 'OPTIONAL_DATASET_MISSING')
             else:
                 try:
@@ -5650,7 +6290,7 @@ class AuxElement(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/time'
-            if type(self._time) in [type(_AbsentDataset), type(None)]:
+            if self._time is _AbsentDataset:
                 result._add(name, 'OPTIONAL_DATASET_MISSING')
             else:
                 try:
@@ -5665,7 +6305,7 @@ class AuxElement(Group):
                 except ValueError:  # If the _create_dataset function can't convert the data
                     result._add(name, 'INVALID_DATASET_TYPE')
             name = self.location + '/timeOffset'
-            if type(self._timeOffset) in [type(_AbsentDataset), type(None)]:
+            if self._timeOffset is _AbsentDataset:
                 result._add(name, 'OPTIONAL_DATASET_MISSING')
             else:
                 try:
@@ -5720,6 +6360,7 @@ class Snirf(Group):
         self._cfg = SnirfConfig()
         self._cfg.dynamic_loading = dynamic_loading
         self._cfg.fmode = ''
+        self._f = None  # handle for filelikes and temporary files
         if len(args) > 0:
             path = args[0]
             if enable_logging:
@@ -5746,6 +6387,7 @@ class Snirf(Group):
                 warn(
                     'Use `Snirf(<path>, <mode>)` to open SNIRF file from path. Path-only construction is deprecated.',
                     DeprecationWarning)
+                # fmode is ''
             if type(path) is str:
                 if not path.endswith('.snirf'):
                     path.replace('.', '')
@@ -5764,7 +6406,8 @@ class Snirf(Group):
                 self._cfg.logger.info('Loading from filelike object')
                 if self._cfg.fmode == '':
                     self._cfg.fmode = 'r'
-                self._h = h5py.File(path, 'r')
+                self._f = args[0]
+                self._h = h5py.File(self._f, 'r', backing_store=False)
             else:
                 raise TypeError(str(path) + ' is not a valid filename')
         else:
@@ -5776,7 +6419,10 @@ class Snirf(Group):
                 self._cfg.logger = _create_logger('',
                                                   None)  # Do not log to file
             self._cfg.fmode = 'w'
-            self._h = h5py.File(TemporaryFile(), 'w')
+            self._h = h5py.File(str(uuid.uuid4()),
+                                'w',
+                                driver='core',
+                                backing_store=False)
         self._formatVersion = _AbsentDataset  # "s"*
         self._nirs = _AbsentDataset  # {i}*
         self._snirf_names = [
@@ -5806,7 +6452,7 @@ class Snirf(Group):
         describes format version "1.0"
          
         """
-        if type(self._formatVersion) is type(_AbsentDataset):
+        if self._formatVersion is _AbsentDataset:
             return None
         if type(self._formatVersion) is type(_PresentDataset):
             return _read_string(self._h['formatVersion'])
@@ -5876,7 +6522,7 @@ class Snirf(Group):
                                  self.__class__.__name__ +
                                  ' instance without a filename')
         name = self.location + '/formatVersion'
-        if type(self._formatVersion) not in [type(_AbsentDataset), type(None)]:
+        if not self._formatVersion is _AbsentDataset:
             data = self.formatVersion  # Use loader function via getter
             if name in file:
                 del file[name]
@@ -5886,13 +6532,17 @@ class Snirf(Group):
             if name in file:
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
+        name = self.location + '/nirs'
         self.nirs._save(*args)
 
     def _validate(self, result: ValidationResult):
         # Validate unwritten datasets after writing them to this tempfile
-        with h5py.File(TemporaryFile(), 'w') as tmp:
+        with h5py.File(str(uuid.uuid4()),
+                       'w',
+                       driver='core',
+                       backing_store=False) as tmp:
             name = self.location + '/formatVersion'
-            if type(self._formatVersion) in [type(_AbsentDataset), type(None)]:
+            if self._formatVersion is _AbsentDataset:
                 result._add(name, 'REQUIRED_DATASET_MISSING')
             else:
                 try:
@@ -5941,6 +6591,58 @@ _RECOGNIZED_COORDINATE_SYSTEM_NAMES = [
     'UNCInfant',
 ]
 
+_RECOGNIZED_AUX_NAMES = [
+    'ACCEL_X',
+    'ACCEL_Y',
+    'ACCEL_Z',
+    'GYRO_X',
+    'GYRO_Y',
+    'GYRO_Z',
+    'MAGN_X',
+    'MAGN_Y',
+    'MAGN_Z',
+]
+
+_RECOGNIZED_DATA_TYPES = [
+    1,
+    51,
+    101,
+    102,
+    151,
+    152,
+    201,
+    251,
+    301,
+    351,
+    401,
+    410,
+    99999,
+]
+
+_RECOGNIZED_DATA_TYPE_LABELS = [
+    'dOD',
+    'dMean',
+    'dVar',
+    'dSkew',
+    'mua',
+    'musp',
+    'HbO',
+    'HbR',
+    'HbT',
+    'H2O',
+    'Lipid',
+    'StO2',
+    'BFi',
+    'HRF dOD',
+    'HRF dMean',
+    'HRF dVar',
+    'HRF dSkew',
+    'HRF HbO',
+    'HRF HbR',
+    'HRF HbT',
+    'HRF BFi',
+]
+
 # <<< END TEMPLATE INSERT >>>
 # ================================================================================
 # DO NOT EDIT THE ABOVE CODE! IT IS GENERATED VIA TEMPLATE. SEE README FOR DETAILS
@@ -5950,6 +6652,7 @@ _RECOGNIZED_COORDINATE_SYSTEM_NAMES = [
 
 
 class MetaDataTags(MetaDataTags):
+
     def add(self, name, value):
         """Add a new tag to the list.
         
@@ -5985,6 +6688,7 @@ class MetaDataTags(MetaDataTags):
 
 
 class StimElement(StimElement):
+
     def _validate(self, result: ValidationResult):
         super()._validate(result)
 
@@ -6002,6 +6706,7 @@ class Stim(Stim):
 
 
 class AuxElement(AuxElement):
+
     def _validate(self, result: ValidationResult):
         super()._validate(result)
 
@@ -6015,15 +6720,114 @@ class Aux(Aux):
 
 
 class DataElement(DataElement):
-    def _validate(self, result: ValidationResult):
-        super()._validate(result)
 
+    def measurementList_to_measurementLists(self):
+        """Converts `measurementList` to a `measurementLists` structure if it is present.
+
+        This method will populate the `measurementLists` Group structure with the contents of the `measurementList` indexed Group.
+
+        The `measurementList` indexedGroup is not be removed.
+        """
+        if len(self.measurementList) > 0:
+            for dataset_name in self.measurementList[0]._snirf_names:
+                vals = [
+                    getattr(ml, dataset_name) for ml in self.measurementList
+                ]
+                if all(val is not None for val in vals):
+                    setattr(self.measurementLists, dataset_name, vals)
+
+    def measurementLists_to_measurementList(self):
+        """Converts `measurementLists` to a `measurementList` indexed Group structure if it is present.
+
+        This method will create new `measurementList` indexed Group entries populated with the contents
+        of the `measurementLists` Group.
+
+        The `measurementList` Group is not removed.
+        """
+        values = {}
+        for dataset_name in self.measurementLists._snirf_names:
+            val = getattr(self.measurementLists, dataset_name)
+            if val is not None:
+                values[dataset_name] = val
+        if len(self.measurementList) > 0:
+            del self.measurementList[:]
+        n = max(len(v)
+                for v in values.values())  # Number of measurementList entries
+        [self.measurementList.appendGroup() for i in range(n)]
+        for i in range(n):
+            row = {k: v[i] for k, v in values.items()}
+            for k, v in row.items():
+                setattr(self.measurementList[i], k, v)
+
+    def _validate(self, result: ValidationResult):
+
+        # Override measurementList/measurementLists validation, only one is required
+        ml = self.measurementList is not None
+        mls = self.measurementLists is not None
+        if (ml and mls):
+            result._add(self.location + '/measurementList', 'OK')
+            result._add(self.location + '/measurementLists', 'OK')
+        elif (ml or mls):
+            result._add(self.location + '/measurementList',
+                        ['OPTIONAL_DATASET_MISSING', 'OK'][int(ml)])
+            result._add(self.location + '/measurementLists',
+                        ['OPTIONAL_DATASET_MISSING', 'OK'][int(mls)])
+        else:
+            result._add(self.location + '/measurementList',
+                        ['REQUIRED_DATASET_MISSING', 'OK'][int(ml)])
+            result._add(self.location + '/measurementLists',
+                        ['REQUIRED_DATASET_MISSING', 'OK'][int(mls)])
+
+        # Check time/dataTimeSeries length agreement
         if all(attr is not None for attr in [self.time, self.dataTimeSeries]):
             if self.time.size != np.shape(self.dataTimeSeries)[0]:
                 result._add(self.location + '/time', 'INVALID_TIME')
 
-            if len(self.measurementList) != np.shape(self.dataTimeSeries)[1]:
+            # Check measurementList(s) length depending on which exist
+            n = np.shape(self.dataTimeSeries)[1]
+            ml_valid = (len(self.measurementList) == n)
+            if self.measurementLists is not None and not self.measurementLists.is_empty(
+            ):  # if measurementLists exists
+                mls_valid = self.measurementLists is not None and (
+                    not self.measurementLists.is_empty() and not any([
+                        len(getattr(self.measurementLists, k)) != n
+                        for k in self.measurementLists._snirf_names
+                        if getattr(self.measurementLists, k) is not None
+                    ]))
+                if not mls_valid:
+                    result._add(self.location, 'INVALID_MEASUREMENTLISTS')
+                    if not ml_valid:
+                        result._add(self.location, 'INVALID_MEASUREMENTLIST')
+            elif not ml_valid:
                 result._add(self.location, 'INVALID_MEASUREMENTLIST')
+
+        # Validate dataType and dataTypeLabel
+        if self.measurementLists is not None and not self.measurementLists.is_empty(
+        ):
+            if self.measurementLists.dataType is not None:
+                for value in self.measurementLists.dataType:
+                    if value not in _RECOGNIZED_DATA_TYPES:
+                        result._add(
+                            self.location + '/measurementLists/dataType',
+                            'UNRECOGNIZED_DATA_TYPE')
+                    elif value == 99999:
+                        if self.measurementLists.dataTypeLabel is not None:
+                            for label in self.measurementLists.dataTypeLabel:
+                                if label not in _RECOGNIZED_DATA_TYPE_LABELS:
+                                    result._add(
+                                        self.location +
+                                        '/measurementLists/dataTypeLabel',
+                                        'UNRECOGNIZED_DATA_TYPE_LABEL')
+        for ml in self.measurementList:
+            if ml.dataType is not None and ml.dataType not in _RECOGNIZED_DATA_TYPES:
+                result._add(ml.location + '/dataType',
+                            'UNRECOGNIZED_DATA_TYPE')
+            elif ml.dataType == 99999:
+                if ml.dataTypeLabel is not None and ml.dataTypeLabel not in _RECOGNIZED_DATA_TYPE_LABELS:
+                    result._add(ml.location + '/dataTypeLabel',
+                                'UNRECOGNIZED_DATA_TYPE_LABEL')
+
+        super()._validate(result)
 
 
 class Data(Data):
@@ -6031,10 +6835,14 @@ class Data(Data):
 
 
 class Probe(Probe):
+
     def _validate(self, result: ValidationResult):
 
         # Override sourceLabels validation, can be 1D or 2D
-        with h5py.File(TemporaryFile(), 'w') as tmp:
+        with h5py.File(str(uuid.uuid4()),
+                       'w',
+                       driver='core',
+                       backing_store=False) as tmp:
             if type(self._sourceLabels) in [type(_AbsentDataset), type(None)]:
                 result._add(self.location + '/sourceLabels',
                             'OPTIONAL_DATASET_MISSING')
@@ -6091,6 +6899,13 @@ class Probe(Probe):
         # The above will supersede the errors from the template code because
         # duplicate names cannot be added to the issues list
         super()._validate(result)
+
+
+class MeasurementLists(MeasurementLists):
+
+    def _validate(self, result):
+
+        return super()._validate(result)
 
 
 class Snirf(Snirf):
@@ -6155,6 +6970,27 @@ class Snirf(Snirf):
         self._validate(result)
         return result
 
+    def measurementList_to_measurementLists(self):
+        """Convert the `measurementList` field of all `Data` elements to `measurementLists`.
+
+        Does not delete the measurementList Dataset.
+        """
+        for nirs in self.nirs:
+            for data in nirs.data:
+                data.measurementList_to_measurementLists()
+
+    def measurementLists_to_measurementList(self):
+        """Converts `measurementLists` to a `measurementList` indexed Group structure if it is present.
+
+        This method will create new `measurementList` indexed Group entries populated with the contents
+        of the `measurementLists` Group.
+
+        The `measurementList` Group is not removed.
+        """
+        for nirs in self.nirs:
+            for data in nirs.data:
+                data.measurementLists_to_measurementList()
+
     # overload
     @property
     def filename(self):
@@ -6175,6 +7011,14 @@ class Snirf(Snirf):
         self._cfg.logger.info('Closing Snirf file %s', self.filename)
         _close_logger(self._cfg.logger)
         self._h.close()
+        if self._f is not None:
+            self._f.close()
+
+    def __del__(self):
+        try:
+            self.close()
+        except:
+            pass  # Was already closed
 
     def __enter__(self):
         return self
@@ -6191,38 +7035,89 @@ class Snirf(Snirf):
             return None
 
     def _validate(self, result: ValidationResult):
-        super()._validate(result)
 
         # TODO INVALID_FILENAME, INVALID_FILE detection
 
+        # Compare measurement list to probe
         for nirs in self.nirs:
             if type(nirs.probe) not in [type(None), type(_AbsentGroup)]:
+                lenSourceLabels = None
+                lenDetectorLabels = None
+                lenWavelengths = None
+                lenSources = None
+                lenDetectors = None
+                # todo label validation of length against probe
                 if nirs.probe.sourceLabels is not None:
-                    lenSourceLabels = nirs.probe.sourceLabels.size
-                else:
-                    lenSourceLabels = 0
+                    lenSourceLabels = len(nirs.probe.sourceLabels)
                 if nirs.probe.detectorLabels is not None:
-                    lenDetectorLabels = nirs.probe.detectorLabels.size
-                else:
-                    lenDetectorLabels = 0
+                    lenDetectorLabels = len(nirs.probe.detectorLabels)
                 if nirs.probe.wavelengths is not None:
-                    lenWavelengths = nirs.probe.wavelengths.size
-                else:
-                    lenWavelengths = 0
+                    lenWavelengths = len(nirs.probe.wavelengths)
+                if nirs.probe.sourcePos2D is not None:
+                    lenSources = nirs.probe.sourcePos2D.shape[0]
+                elif nirs.probe.sourcePos3D is not None:
+                    lenSources = nirs.probe.sourcePos3D.shape[0]
+                if nirs.probe.detectorPos2D is not None:
+                    lenDetectors = nirs.probe.detectorPos2D.shape[0]
+                elif nirs.probe.detectorPos3D is not None:
+                    lenDetectors = nirs.probe.detectorPos3D.shape[0]
                 for data in nirs.data:
+                    if data.measurementLists is not None:
+                        if lenSourceLabels is not None and data.measurementLists.sourceIndex is not None and not np.all(
+                            [
+                                0 < x <= lenSourceLabels
+                                for x in data.measurementLists.sourceIndex
+                            ]):
+                            result._add(
+                                data.measurementLists.location +
+                                '/sourceIndex', 'INVALID_SOURCE_INDEX')
+                        if lenSources is not None and data.measurementLists.sourceIndex is not None and not np.all(
+                            [
+                                0 < x <= lenSources
+                                for x in data.measurementLists.sourceIndex
+                            ]):
+                            result._add(
+                                data.measurementLists.location +
+                                '/sourceIndex', 'INVALID_SOURCE_INDEX')
+                        if lenDetectorLabels is not None and data.measurementLists.detectorIndex is not None and not np.all(
+                            [
+                                0 < x <= lenDetectorLabels
+                                for x in data.measurementLists.detectorIndex
+                            ]):
+                            result._add(
+                                data.measurementLists.location +
+                                '/detectorIndex', 'INVALID_DETECTOR_INDEX')
+                        if lenDetectors is not None and data.measurementLists.detectorIndex is not None and not np.all(
+                            [
+                                0 < x <= lenDetectors
+                                for x in data.measurementLists.detectorIndex
+                            ]):
+                            result._add(
+                                data.measurementLists.location +
+                                '/detectorIndex', 'INVALID_DETECTOR_INDEX')
+                        if lenWavelengths is not None and data.measurementLists.wavelengthIndex is not None and not np.all(
+                            [
+                                0 < x <= lenWavelengths
+                                for x in data.measurementLists.wavelengthIndex
+                            ]):  # No wavelengths should raise a missing issue
+                            result._add(
+                                data.measurementLists.location +
+                                '/wavelengthIndex', 'INVALID_WAVELENGTH_INDEX')
                     for ml in data.measurementList:
-                        if ml.sourceIndex is not None:
-                            if ml.sourceIndex > lenSourceLabels:
+                        if ml.sourceIndex is not None and lenSources is not None:
+                            if not 0 < ml.sourceIndex <= lenSources:
                                 result._add(ml.location + '/sourceIndex',
                                             'INVALID_SOURCE_INDEX')
-                        if ml.detectorIndex is not None:
-                            if ml.detectorIndex > lenDetectorLabels:
+                        if ml.detectorIndex is not None and lenDetectors is not None:
+                            if not 0 < ml.detectorIndex <= lenDetectors:
                                 result._add(ml.location + '/detectorIndex',
                                             'INVALID_DETECTOR_INDEX')
-                        if ml.wavelengthIndex is not None:
-                            if ml.wavelengthIndex > lenWavelengths:
+                        if ml.wavelengthIndex is not None and lenWavelengths is not None:
+                            if not 0 < ml.wavelengthIndex <= lenWavelengths:
                                 result._add(ml.location + '/wavelengthIndex',
                                             'INVALID_WAVELENGTH_INDEX')
+
+        super()._validate(result)
 
 
 # -- Interface functions ----------------------------------------------------

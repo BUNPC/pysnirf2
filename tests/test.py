@@ -1,6 +1,4 @@
 import unittest
-import snirf
-from snirf import Snirf, validateSnirf, loadSnirf, saveSnirf
 import h5py
 import os
 import sys
@@ -10,6 +8,13 @@ from collections import deque
 from collections.abc import Set, Mapping
 import numpy as np
 import shutil
+try:
+    import snirf
+    from snirf import Snirf, validateSnirf, loadSnirf, saveSnirf
+except ImportError:
+    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+    import snirf
+    from snirf import Snirf, validateSnirf, loadSnirf, saveSnirf
 
 VERBOSE = True  # Additional print statements in each test
 
@@ -147,6 +152,111 @@ def _print_keys(group):
 
 class PySnirf2_Test(unittest.TestCase):
 
+    def test_validate_datatypes(self):
+        """
+        Test validation methods for dataType and dataType labels
+        """
+        for i, mode in enumerate([False, True]):
+            for file in self._test_files:
+                with Snirf(file, 'r+', dynamic_loading=mode) as s:
+                    if len(s.nirs[0].data) == 1 and len(s.nirs[0].data[0].measurementList) > 1:
+                        s.nirs[0].data[0].measurementList[0].dataType = -100
+                        if VERBOSE:
+                            s.validate().display(severity=3)
+                        self.assertTrue('UNRECOGNIZED_DATA_TYPE' in [err.name for err in s.validate().errors], msg='Failed to raise dataType error')
+                        s.nirs[0].data[0].measurementList[0].dataType = 99999
+                        s.nirs[0].data[0].measurementList[0].dataTypeLabel = 'bar'
+                        if VERBOSE:
+                            s.validate().display(severity=3)
+                        self.assertTrue('UNRECOGNIZED_DATA_TYPE_LABEL' in [err.name for err in s.validate().errors], msg='Failed to raise dataTypeLabel error')        
+                        s.measurementList_to_measurementLists()
+                        if VERBOSE:
+                            s.validate().display(severity=3)
+                        self.assertTrue('UNRECOGNIZED_DATA_TYPE_LABEL' in [err.name for err in s.validate().errors], msg='Failed to raise dataTypeLabel error after converting to measurementLists')
+                        s.nirs[0].data[0].measurementLists.dataType[-1] = -100
+                        self.assertTrue('UNRECOGNIZED_DATA_TYPE' in [err.name for err in s.validate().errors], msg='Failed to raise dataType error after converting to measurementLists')
+        
+    def test_validate_measurementList_dimensions(self):
+        """
+        Test validation that measurementList dimensions are consistent with dataTimeSeries
+        """
+        for i, mode in enumerate([False, True]):
+            for file in self._test_files:
+                # Test measurementList(s) length validation
+                with Snirf(file, 'r+', dynamic_loading=mode) as s:
+                    if len(s.nirs[0].data) == 1 and len(s.nirs[0].data[0].measurementList) > 1:
+                        self.assertTrue(s.validate(), msg="Failed to validate SNIRF object")
+                        s.nirs[0].data[0].measurementList.appendGroup()
+                        if VERBOSE:
+                            s.validate().display(severity=3)
+                        self.assertTrue('INVALID_MEASUREMENTLIST' in [err.name for err in s.validate().errors], msg='Failed to raise measurementList length error')
+                        new_path = file.split('.')[0] + '_invalid_ml.snirf'
+                        s.save(new_path)
+                    self.assertTrue('INVALID_MEASUREMENTLIST' in [err.name for err in validateSnirf(new_path).errors], msg='Failed to raise measurementList length error')
+                with Snirf(file, 'r+', dynamic_loading=mode) as s:
+                    if len(s.nirs[0].data) >= 1 and len(s.nirs[0].data[0].measurementList) > 0:
+                        s.measurementList_to_measurementLists()
+                        wli = s.nirs[0].data[0].measurementLists.wavelengthIndex
+                        s.nirs[0].data[0].measurementLists.wavelengthIndex = np.concatenate([wli, [0]])
+                        self.assertTrue('INVALID_MEASUREMENTLISTS' in [err.name for err in s.validate().errors], msg='Failed to raise measurementList length error')
+                # Test measurementList(s) value validation
+                with Snirf(file, 'r+', dynamic_loading=mode) as s:
+                    if len(s.nirs[0].data) >= 1 and len(s.nirs[0].data[0].measurementList) > 0:
+                        s.nirs[0].data[0].measurementList[0].wavelengthIndex = 999_999_999_999  # Unreasonable values
+                        s.nirs[0].data[0].measurementList[0].sourceIndex = -1
+                        s.nirs[0].data[0].measurementList[0].detectorIndex = 999_999_999_999
+                        if VERBOSE:
+                            s.validate().display(severity=3)
+                        errs = [err.name for err in s.validate().errors]
+                        self.assertTrue('INVALID_WAVELENGTH_INDEX' in errs, msg='Failed to raise wavelengthIndex error')
+                        self.assertTrue('INVALID_SOURCE_INDEX' in errs, msg='Failed to raise sourceIndex error')
+                        self.assertTrue('INVALID_DETECTOR_INDEX' in errs, msg='Failed to raise detectorIndex error')
+                with Snirf(file, 'r+', dynamic_loading=mode) as s:
+                    if len(s.nirs[0].data) >= 1 and len(s.nirs[0].data[0].measurementList) > 0:
+                        s.measurementList_to_measurementLists()
+                        s.nirs[0].data[0].measurementLists.wavelengthIndex[0] = 999_999_999_999
+                        s.nirs[0].data[0].measurementLists.sourceIndex[0] = -1
+                        s.nirs[0].data[0].measurementLists.detectorIndex[0] = 999_999_999_999
+                        if VERBOSE:
+                            s.validate().display(severity=3)
+                        errs = [err.name for err in s.validate().errors]
+                        self.assertTrue('INVALID_WAVELENGTH_INDEX' in errs, msg='Failed to raise wavelengthIndex error')
+                        self.assertTrue('INVALID_SOURCE_INDEX' in errs, msg='Failed to raise sourceIndex error')
+                        self.assertTrue('INVALID_DETECTOR_INDEX' in errs, msg='Failed to raise detectorIndex error')
+
+
+    def test_validate_measurementList_conversion(self):
+        """
+        Validate that measurementList can be converted to measurementLists and back
+
+        Also tests that Groups can be deleted from files on disk
+        """
+        for i, mode in enumerate([False, True]):
+            for file in self._test_files:
+                with Snirf(file, dynamic_loading=mode) as s:
+                    if len(s.nirs[0].data) >= 1 and len(s.nirs[0].data[0].measurementList) > 0:  # Subset of test data?
+                        if VERBOSE:
+                            print('Converting measurementList', file, 'to measurementLists')
+                        s.nirs[0].data[0].measurementList_to_measurementLists()
+                        del s.nirs[0].data[0].measurementList[:]
+                        new_path = file.split('.')[0] + '_converted_to_measurementLists.snirf'
+                        if VERBOSE:
+                            s.validate().display(severity=3)
+                        self.assertTrue(s.validate(), msg="Failed to validate SNIRF object after conversion to measurementLists")
+                        if VERBOSE:
+                            print('Writing file to', new_path)
+                        s.save(new_path)
+                self.assertTrue(validateSnirf(new_path), msg="Failed to validate file on disk after conversion to measurementLists")
+                with Snirf(new_path, dynamic_loading=mode) as s:
+                    if VERBOSE:
+                        print('Converting measurementLists in', new_path, 'back to measurementList')
+                    s.nirs[0].data[0].measurementLists_to_measurementList()
+                    del s.nirs[0].data[0].measurementLists
+                    self.assertTrue(s.validate(), msg="Failed to validate file after conversion back to measurementList")
+                    s.save()
+                print('Checking to see if conversion is reversible...')
+                dataset_equal_test(self, file, new_path)
+
     def test_multidimensional_aux(self):
         """
         Test to ensure the validator permits multidimensional aux
@@ -163,10 +273,9 @@ class PySnirf2_Test(unittest.TestCase):
                         print("Created new aux channel:", s.nirs[0].aux[-1])
                     s.save()
                     if VERBOSE:
-
                         s.validate().display()
-                    self.assertTrue(s.validate(), msg="Incorrectly invalidated multidimensional aux signal!")
-                self.assertTrue(validateSnirf(file), msg="Incorrectly invalidated multidimensional aux signal in file on disk!")
+                    self.assertTrue(s.validate(), msg="Incorrectly invalidated multidimensional aux signal")
+                self.assertTrue(validateSnirf(file), msg="Incorrectly invalidated multidimensional aux signal in file on disk")
 
     def test_assignment(self):
         """
@@ -182,6 +291,8 @@ class PySnirf2_Test(unittest.TestCase):
                     print('Loading', file, 'with dynamic_loading=' + str(mode))
                 # Reassignment of same probe
                 with Snirf(file, 'r+', dynamic_loading=mode) as s:
+                    if len(s.nirs[0].data[0].measurementList) < 1:
+                        continue  # skip cases without measurementList
                     same_probe = s.nirs[0].probe
                     self.assertTrue(isinstance(same_probe, snirf.Probe), msg="Could not assign Probe reference")
                     same_probe.sourcePos3D = np.random.random([31, 3])
@@ -385,7 +496,7 @@ class PySnirf2_Test(unittest.TestCase):
                     s.nirs[0].metaDataTags.add('foo', 'Hello')
                     s.nirs[0].metaDataTags.add('Bar', 'World')
                     s.nirs[0].metaDataTags.add('_array_of_strings', ['foo', 'bar'])
-                    self.assertTrue(s.validate(), msg='adding the unspecified metaDataTags resulted in an INVALID file...')
+                    self.assertTrue(s.validate(), msg='adding the unspecified metaDataTags resulted in an INVALID file')
                     self.assertTrue(s.nirs[0].metaDataTags.foo == 'Hello', msg='Failed to set the unspecified metadatatags')
                     self.assertTrue(s.nirs[0].metaDataTags.Bar == 'World', msg='Failed to set the unspecified metadatatags')
                     self.assertTrue(s.nirs[0].metaDataTags._array_of_strings[0] == 'foo', msg='Failed to set the unspecified metadatatags')
@@ -540,6 +651,9 @@ class PySnirf2_Test(unittest.TestCase):
                 if VERBOSE:
                     print('Loading', file + '.snirf', 'with dynamic_loading=' + str(mode))
                 s = Snirf(file, 'r+', dynamic_loading=mode)
+                if len(s.nirs[0].data[0].measurementList) < 1:
+                    s.close()
+                    continue  # skip cases without measurementList
                 s.nirs[0].data[0].measurementList.appendGroup()  # Add extra ml
                 if VERBOSE:
                     print('Performing local validation on invalid ml', s)
@@ -580,11 +694,9 @@ class PySnirf2_Test(unittest.TestCase):
                                               'S5_A', 'S6_A', 'S7_A', 'S8_A',
                                               'S9_A', 'S10_A', 'S11_A', 'S12_A',
                                               'S13_A', 'S14_A', 'S15_A']
-                desired_probe_uselocalindex = 1
                 desired_probe_sourcepos3d = np.random.random([31, 3])
 
                 s.nirs[0].probe.sourceLabels = desired_probe_sourcelabels
-                s.nirs[0].probe.useLocalIndex = desired_probe_uselocalindex
                 s.nirs[0].probe.sourcePos3D = desired_probe_sourcepos3d
 
                 snirf_save_file = file.split('.')[0] + '_edited_snirf_save.snirf'
@@ -602,7 +714,6 @@ class PySnirf2_Test(unittest.TestCase):
                     s2 = Snirf(edited_filename, 'r+', dynamic_loading=mode)
 
                     self.assertTrue((s2.nirs[0].probe.sourceLabels == desired_probe_sourcelabels).all(), msg='Failed to edit sourceLabels properly in ' + edited_filename)
-                    self.assertTrue(s2.nirs[0].probe.useLocalIndex == desired_probe_uselocalindex, msg='Failed to edit sourceLabels properly in ' + edited_filename)
                     self.assertTrue((s2.nirs[0].probe.sourcePos3D == desired_probe_sourcepos3d).all(), msg='Failed to edit sourceLabels properly in ' + edited_filename)
 
                     s2.close()

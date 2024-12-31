@@ -1,5 +1,5 @@
-SPEC_SRC = 'https://raw.githubusercontent.com/fNIRS/snirf/v1.1/snirf_specification.md'
-SPEC_VERSION = 'v1.1'  # Version of the spec linked above
+SPEC_SRC = 'https://raw.githubusercontent.com/sstucker/snirf/refs/heads/master/snirf_specification.md'
+SPEC_VERSION = '1.2-development'  # Version of the spec linked above
 
 """
 These types are fragments of the string codes used to describe the types of
@@ -37,6 +37,15 @@ TABLE_DELIM_END = '[//]: # (SCHEMA END)'
 
 DEFINITIONS_DELIM_START = '### SNIRF data container definitions'
 DEFINITIONS_DELIM_END = '## Appendix'
+
+DATA_TYPE_DELIM_START = '### Supported `measurementList(k).dataType` values in `dataTimeSeries`'
+DATA_TYPE_DELIM_END = '### Supported `measurementList(k).dataTypeLabel` values in `dataTimeSeries`'
+
+DATA_TYPE_LABEL_TABLE_START = '### Supported `measurementList(k).dataTypeLabel` values in `dataTimeSeries`'
+DATA_TYPE_LABEL_TABLE_END = '### Supported `/nirs(i)/aux(j)/name` values'
+
+AUX_NAME_TABLE_START = '### Supported `/nirs(i)/aux(j)/name` values'
+AUX_NAME_TABLE_END = '### Examples of stimulus waveforms'
 
 # -- BIDS Probe name identifiers ---------------------------------------------
 
