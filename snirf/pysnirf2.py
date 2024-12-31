@@ -6977,33 +6977,23 @@ class Snirf(Snirf):
                     lenDetectors = nirs.probe.detectorPos3D.shape[0]
                 for data in nirs.data:
                     if data.measurementLists is not None:
-                        if lenSourceLabels is not None and data.measurementLists.sourceIndex is not None and not 0 < np.max(
-                                data.measurementLists.sourceIndex
-                        ) <= lenSourceLabels:
+                        if lenSourceLabels is not None and data.measurementLists.sourceIndex is not None and not np.all([0 < x <= lenSourceLabels for x in data.measurementLists.sourceIndex]):
                             result._add(
                                 data.measurementLists.location +
                                 '/sourceIndex', 'INVALID_SOURCE_INDEX')
-                        if lenSources is not None and data.measurementLists.sourceIndex is not None and not 0 < np.max(
-                                data.measurementLists.sourceIndex
-                        ) <= lenSources:
+                        if lenSources is not None and data.measurementLists.sourceIndex is not None and not np.all([0 < x <= lenSources for x in data.measurementLists.sourceIndex]):
                             result._add(
                                 data.measurementLists.location +
                                 '/sourceIndex', 'INVALID_SOURCE_INDEX')
-                        if lenDetectorLabels is not None and data.measurementLists.detectorIndex is not None and not 0 < np.max(
-                                data.measurementLists.detectorIndex
-                        ) <= lenDetectorLabels:
+                        if lenDetectorLabels is not None and data.measurementLists.detectorIndex is not None and not np.all([0 < x <= lenDetectorLabels for x in data.measurementLists.detectorIndex])
                             result._add(
                                 data.measurementLists.location +
                                 '/detectorIndex', 'INVALID_DETECTOR_INDEX')
-                        if lenDetectors is not None and data.measurementLists.detectorIndex is not None and not 0 < np.max(
-                                data.measurementLists.detectorIndex
-                        ) <= lenDetectors:
+                        if lenDetectors is not None and data.measurementLists.detectorIndex is not None and not np.all([0 < x <= lenDetectors for x in data.measurementLists.detectorIndex])
                             result._add(
                                 data.measurementLists.location +
                                 '/detectorIndex', 'INVALID_DETECTOR_INDEX')
-                        if lenWavelengths is not None and data.measurementLists.wavelengthIndex is not None and not 0 < np.max(
-                                data.measurementLists.wavelengthIndex
-                        ) <= lenWavelengths:  # No wavelengths should raise a missing issue
+                        if lenWavelengths is not None and data.measurementLists.wavelengthIndex is not None and not np.all([0 < x <= lenWavelengths for x in data.measurementLists.wavelengthIndex]):  # No wavelengths should raise a missing issue
                             result._add(
                                 data.measurementLists.location +
                                 '/wavelengthIndex', 'INVALID_WAVELENGTH_INDEX')
