@@ -512,7 +512,8 @@ _CODES = {
     'INVALID_MEASUREMENTLIST':
     (8, 3,
      'The number of measurementList elements does not match the second dimension of dataTimeSeries'
-     ),    'INVALID_MEASUREMENTLISTS':
+     ),
+    'INVALID_MEASUREMENTLISTS':
     (9, 3,
      'The length of at least one measurementLists element does not match the second dimension of dataTimeSeries'
      ),
@@ -543,13 +544,13 @@ _CODES = {
     'UNRECOGNIZED_DATASET':
     (18, 2,
      'An unspecified Dataset is a part of the file in an unexpected place'),
-    'UNRECOGNIZED_DATATYPELABEL':
-    (19, 2,
-     'measurementList/dataTypeLabel is not one of the recognized values listed in the Appendix'
+    'UNRECOGNIZED_DATA_TYPE_LABEL':
+    (19, 3,
+     'measurementList(s)/dataTypeLabel is not one of the recognized values listed in the Appendix'
      ),
-    'UNRECOGNIZED_DATATYPE':
-    (20, 2,
-     'measurementList/dataType is not one of the recognized values listed in the Appendix'
+    'UNRECOGNIZED_DATA_TYPE':
+    (20, 3,
+     'measurementList(s)/dataType is not one of the recognized values listed in the Appendix'
      ),
     'INT_64':
     (21, 2,
@@ -6590,6 +6591,58 @@ _RECOGNIZED_COORDINATE_SYSTEM_NAMES = [
     'UNCInfant',
 ]
 
+_RECOGNIZED_AUX_NAMES = [
+    'ACCEL_X',
+    'ACCEL_Y',
+    'ACCEL_Z',
+    'GYRO_X',
+    'GYRO_Y',
+    'GYRO_Z',
+    'MAGN_X',
+    'MAGN_Y',
+    'MAGN_Z',
+]
+
+_RECOGNIZED_DATA_TYPES = [
+    1,
+    51,
+    101,
+    102,
+    151,
+    152,
+    201,
+    251,
+    301,
+    351,
+    401,
+    410,
+    99999,
+]
+
+_RECOGNIZED_DATA_TYPE_LABELS = [
+    'dOD',
+    'dMean',
+    'dVar',
+    'dSkew',
+    'mua',
+    'musp',
+    'HbO',
+    'HbR',
+    'HbT',
+    'H2O',
+    'Lipid',
+    'StO2',
+    'BFi',
+    'HRF dOD',
+    'HRF dMean',
+    'HRF dVar',
+    'HRF dSkew',
+    'HRF HbO',
+    'HRF HbR',
+    'HRF HbT',
+    'HRF BFi',
+]
+
 # <<< END TEMPLATE INSERT >>>
 # ================================================================================
 # DO NOT EDIT THE ABOVE CODE! IT IS GENERATED VIA TEMPLATE. SEE README FOR DETAILS
@@ -6725,6 +6778,7 @@ class DataElement(DataElement):
             result._add(self.location + '/measurementLists',
                         ['REQUIRED_DATASET_MISSING', 'OK'][int(mls)])
 
+        # Check time/dataTimeSeries length agreement
         if all(attr is not None for attr in [self.time, self.dataTimeSeries]):
             if self.time.size != np.shape(self.dataTimeSeries)[0]:
                 result._add(self.location + '/time', 'INVALID_TIME')
@@ -6732,14 +6786,45 @@ class DataElement(DataElement):
             # Check measurementList(s) length depending on which exist
             n = np.shape(self.dataTimeSeries)[1]
             ml_valid = (len(self.measurementList) == n)
-            if self.measurementLists is not None and not self.measurementLists.is_empty():  # if measurementLists exists
-                mls_valid = self.measurementLists is not None and (not self.measurementLists.is_empty() and not any([len(getattr(self.measurementLists, k)) != n for k in self.measurementLists._snirf_names if getattr(self.measurementLists, k) is not None]))
+            if self.measurementLists is not None and not self.measurementLists.is_empty(
+            ):  # if measurementLists exists
+                mls_valid = self.measurementLists is not None and (
+                    not self.measurementLists.is_empty() and not any([
+                        len(getattr(self.measurementLists, k)) != n
+                        for k in self.measurementLists._snirf_names
+                        if getattr(self.measurementLists, k) is not None
+                    ]))
                 if not mls_valid:
                     result._add(self.location, 'INVALID_MEASUREMENTLISTS')
                     if not ml_valid:
                         result._add(self.location, 'INVALID_MEASUREMENTLIST')
             elif not ml_valid:
                 result._add(self.location, 'INVALID_MEASUREMENTLIST')
+
+        # Validate dataType and dataTypeLabel
+        if self.measurementLists is not None and not self.measurementLists.is_empty(
+        ):
+            if self.measurementLists.dataType is not None:
+                for value in self.measurementLists.dataType:
+                    if value not in _RECOGNIZED_DATA_TYPES:
+                        result._add(
+                            self.location + '/measurementLists/dataType',
+                            'UNRECOGNIZED_DATA_TYPE')
+                    elif value == 99999:
+                        for label in self.measurementLists.dataTypeLabel:
+                            if label not in _RECOGNIZED_DATA_TYPE_LABELS:
+                                result._add(
+                                    self.location +
+                                    '/measurementLists/dataTypeLabel',
+                                    'UNRECOGNIZED_DATA_TYPE_LABEL')
+        for ml in self.measurementList:
+            if ml.dataType is not None and ml.dataType not in _RECOGNIZED_DATA_TYPES:
+                result._add(ml.location + '/dataType',
+                            'UNRECOGNIZED_DATA_TYPE')
+            elif ml.dataType == 99999:
+                if ml.dataTypeLabel is not None and ml.dataTypeLabel not in _RECOGNIZED_DATA_TYPE_LABELS:
+                    result._add(ml.location + '/dataTypeLabel',
+                                'UNRECOGNIZED_DATA_TYPE_LABEL')
 
         super()._validate(result)
 
@@ -6977,23 +7062,43 @@ class Snirf(Snirf):
                     lenDetectors = nirs.probe.detectorPos3D.shape[0]
                 for data in nirs.data:
                     if data.measurementLists is not None:
-                        if lenSourceLabels is not None and data.measurementLists.sourceIndex is not None and not np.all([0 < x <= lenSourceLabels for x in data.measurementLists.sourceIndex]):
+                        if lenSourceLabels is not None and data.measurementLists.sourceIndex is not None and not np.all(
+                            [
+                                0 < x <= lenSourceLabels
+                                for x in data.measurementLists.sourceIndex
+                            ]):
                             result._add(
                                 data.measurementLists.location +
                                 '/sourceIndex', 'INVALID_SOURCE_INDEX')
-                        if lenSources is not None and data.measurementLists.sourceIndex is not None and not np.all([0 < x <= lenSources for x in data.measurementLists.sourceIndex]):
+                        if lenSources is not None and data.measurementLists.sourceIndex is not None and not np.all(
+                            [
+                                0 < x <= lenSources
+                                for x in data.measurementLists.sourceIndex
+                            ]):
                             result._add(
                                 data.measurementLists.location +
                                 '/sourceIndex', 'INVALID_SOURCE_INDEX')
-                        if lenDetectorLabels is not None and data.measurementLists.detectorIndex is not None and not np.all([0 < x <= lenDetectorLabels for x in data.measurementLists.detectorIndex]):
+                        if lenDetectorLabels is not None and data.measurementLists.detectorIndex is not None and not np.all(
+                            [
+                                0 < x <= lenDetectorLabels
+                                for x in data.measurementLists.detectorIndex
+                            ]):
                             result._add(
                                 data.measurementLists.location +
                                 '/detectorIndex', 'INVALID_DETECTOR_INDEX')
-                        if lenDetectors is not None and data.measurementLists.detectorIndex is not None and not np.all([0 < x <= lenDetectors for x in data.measurementLists.detectorIndex]):
+                        if lenDetectors is not None and data.measurementLists.detectorIndex is not None and not np.all(
+                            [
+                                0 < x <= lenDetectors
+                                for x in data.measurementLists.detectorIndex
+                            ]):
                             result._add(
                                 data.measurementLists.location +
                                 '/detectorIndex', 'INVALID_DETECTOR_INDEX')
-                        if lenWavelengths is not None and data.measurementLists.wavelengthIndex is not None and not np.all([0 < x <= lenWavelengths for x in data.measurementLists.wavelengthIndex]):  # No wavelengths should raise a missing issue
+                        if lenWavelengths is not None and data.measurementLists.wavelengthIndex is not None and not np.all(
+                            [
+                                0 < x <= lenWavelengths
+                                for x in data.measurementLists.wavelengthIndex
+                            ]):  # No wavelengths should raise a missing issue
                             result._add(
                                 data.measurementLists.location +
                                 '/wavelengthIndex', 'INVALID_WAVELENGTH_INDEX')

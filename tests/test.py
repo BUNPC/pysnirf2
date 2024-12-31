@@ -152,9 +152,27 @@ def _print_keys(group):
 
 class PySnirf2_Test(unittest.TestCase):
 
+    def test_validate_datatypes(self):
+        """
+        Test validation methods for dataType and dataType labels
+        """
+        for i, mode in enumerate([False, True]):
+            for file in self._test_files:
+                with Snirf(file, 'r+', dynamic_loading=mode) as s:
+                    if len(s.nirs[0].data) == 1 and len(s.nirs[0].data[0].measurementList) > 1:
+                        s.nirs[0].data[0].measurementList[0].dataType = -100
+                        if VERBOSE:
+                            s.validate().display(severity=3)
+                        self.assertTrue('UNRECOGNIZED_DATA_TYPE' in [err.name for err in s.validate().errors], msg='Failed to raise dataType error')
+                        s.nirs[0].data[0].measurementList[0].dataType = 99999
+                        s.nirs[0].data[0].measurementList[0].dataTypeLabel = 'bar'
+                        if VERBOSE:
+                            s.validate().display(severity=3)
+                        self.assertTrue('UNRECOGNIZED_DATA_TYPE_LABEL' in [err.name for err in s.validate().errors], msg='Failed to raise dataTypeLabel error')        
+
     def test_validate_measurementList_dimensions(self):
         """
-        Validate that measurementList dimensions are consistent with dataTimeSeries
+        Test validation that measurementList dimensions are consistent with dataTimeSeries
         """
         for i, mode in enumerate([False, True]):
             for file in self._test_files:
@@ -164,7 +182,7 @@ class PySnirf2_Test(unittest.TestCase):
                         self.assertTrue(s.validate(), msg="Failed to validate SNIRF object")
                         s.nirs[0].data[0].measurementList.appendGroup()
                         if VERBOSE:
-                            s.validate().display()
+                            s.validate().display(severity=3)
                         self.assertTrue('INVALID_MEASUREMENTLIST' in [err.name for err in s.validate().errors], msg='Failed to raise measurementList length error')
                         new_path = file.split('.')[0] + '_invalid_ml.snirf'
                         s.save(new_path)
@@ -182,7 +200,7 @@ class PySnirf2_Test(unittest.TestCase):
                         s.nirs[0].data[0].measurementList[0].sourceIndex = -1
                         s.nirs[0].data[0].measurementList[0].detectorIndex = 999_999_999_999
                         if VERBOSE:
-                            s.validate().display()
+                            s.validate().display(severity=3)
                         errs = [err.name for err in s.validate().errors]
                         self.assertTrue('INVALID_WAVELENGTH_INDEX' in errs, msg='Failed to raise wavelengthIndex error')
                         self.assertTrue('INVALID_SOURCE_INDEX' in errs, msg='Failed to raise sourceIndex error')
@@ -194,7 +212,7 @@ class PySnirf2_Test(unittest.TestCase):
                         s.nirs[0].data[0].measurementLists.sourceIndex[0] = -1
                         s.nirs[0].data[0].measurementLists.detectorIndex[0] = 999_999_999_999
                         if VERBOSE:
-                            s.validate().display()
+                            s.validate().display(severity=3)
                         errs = [err.name for err in s.validate().errors]
                         self.assertTrue('INVALID_WAVELENGTH_INDEX' in errs, msg='Failed to raise wavelengthIndex error')
                         self.assertTrue('INVALID_SOURCE_INDEX' in errs, msg='Failed to raise sourceIndex error')
@@ -217,7 +235,7 @@ class PySnirf2_Test(unittest.TestCase):
                         del s.nirs[0].data[0].measurementList[:]
                         new_path = file.split('.')[0] + '_converted_to_measurementLists.snirf'
                         if VERBOSE:
-                            s.validate().display()
+                            s.validate().display(severity=3)
                         self.assertTrue(s.validate(), msg="Failed to validate SNIRF object after conversion to measurementLists")
                         if VERBOSE:
                             print('Writing file to', new_path)
