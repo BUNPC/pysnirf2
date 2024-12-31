@@ -152,6 +152,87 @@ def _print_keys(group):
 
 class PySnirf2_Test(unittest.TestCase):
 
+    def test_validate_measurementList_dimensions(self):
+        """
+        Validate that measurementList dimensions are consistent with dataTimeSeries
+        """
+        for i, mode in enumerate([False, True]):
+            for file in self._test_files:
+                # Test measurementList(s) length validation
+                with Snirf(file, 'r+', dynamic_loading=mode) as s:
+                    if len(s.nirs[0].data) == 1 and len(s.nirs[0].data[0].measurementList) > 1:
+                        self.assertTrue(s.validate(), msg="Failed to validate SNIRF object")
+                        s.nirs[0].data[0].measurementList.appendGroup()
+                        if VERBOSE:
+                            s.validate().display()
+                        self.assertTrue('INVALID_MEASUREMENTLIST' in [err.name for err in s.validate().errors], msg='Failed to raise measurementList length error')
+                        new_path = file.split('.')[0] + '_invalid_ml.snirf'
+                        s.save(new_path)
+                    self.assertTrue('INVALID_MEASUREMENTLIST' in [err.name for err in validateSnirf(new_path).errors], msg='Failed to raise measurementList length error')
+                with Snirf(file, 'r+', dynamic_loading=mode) as s:
+                    if len(s.nirs[0].data) >= 1 and len(s.nirs[0].data[0].measurementList) > 0:
+                        s.measurementList_to_measurementLists()
+                        wli = s.nirs[0].data[0].measurementLists.wavelengthIndex
+                        s.nirs[0].data[0].measurementLists.wavelengthIndex = np.concatenate([wli, [0]])
+                        self.assertTrue('INVALID_MEASUREMENTLISTS' in [err.name for err in s.validate().errors], msg='Failed to raise measurementList length error')
+                # Test measurementList(s) value validation
+                with Snirf(file, 'r+', dynamic_loading=mode) as s:
+                    if len(s.nirs[0].data) >= 1 and len(s.nirs[0].data[0].measurementList) > 0:
+                        s.nirs[0].data[0].measurementList[0].wavelengthIndex = 999_999_999_999  # Unreasonable values
+                        s.nirs[0].data[0].measurementList[0].sourceIndex = -1
+                        s.nirs[0].data[0].measurementList[0].detectorIndex = 999_999_999_999
+                        if VERBOSE:
+                            s.validate().display()
+                        errs = [err.name for err in s.validate().errors]
+                        self.assertTrue('INVALID_WAVELENGTH_INDEX' in errs, msg='Failed to raise wavelengthIndex error')
+                        self.assertTrue('INVALID_SOURCE_INDEX' in errs, msg='Failed to raise sourceIndex error')
+                        self.assertTrue('INVALID_DETECTOR_INDEX' in errs, msg='Failed to raise detectorIndex error')
+                with Snirf(file, 'r+', dynamic_loading=mode) as s:
+                    if len(s.nirs[0].data) >= 1 and len(s.nirs[0].data[0].measurementList) > 0:
+                        s.measurementList_to_measurementLists()
+                        s.nirs[0].data[0].measurementLists.wavelengthIndex[0] = 999_999_999_999
+                        s.nirs[0].data[0].measurementLists.sourceIndex[0] = -1
+                        s.nirs[0].data[0].measurementLists.detectorIndex[0] = 999_999_999_999
+                        if VERBOSE:
+                            s.validate().display()
+                        errs = [err.name for err in s.validate().errors]
+                        self.assertTrue('INVALID_WAVELENGTH_INDEX' in errs, msg='Failed to raise wavelengthIndex error')
+                        self.assertTrue('INVALID_SOURCE_INDEX' in errs, msg='Failed to raise sourceIndex error')
+                        self.assertTrue('INVALID_DETECTOR_INDEX' in errs, msg='Failed to raise detectorIndex error')
+
+
+    def test_validate_measurementList_conversion(self):
+        """
+        Validate that measurementList can be converted to measurementLists and back
+
+        Also tests that Groups can be deleted from files on disk
+        """
+        for i, mode in enumerate([False, True]):
+            for file in self._test_files:
+                with Snirf(file, dynamic_loading=mode) as s:
+                    if len(s.nirs[0].data) >= 1 and len(s.nirs[0].data[0].measurementList) > 0:  # Subset of test data?
+                        if VERBOSE:
+                            print('Converting measurementList', file, 'to measurementLists')
+                        s.nirs[0].data[0].measurementList_to_measurementLists()
+                        del s.nirs[0].data[0].measurementList[:]
+                        new_path = file.split('.')[0] + '_converted_to_measurementLists.snirf'
+                        if VERBOSE:
+                            s.validate().display()
+                        self.assertTrue(s.validate(), msg="Failed to validate SNIRF object after conversion to measurementLists")
+                        if VERBOSE:
+                            print('Writing file to', new_path)
+                        s.save(new_path)
+                self.assertTrue(validateSnirf(new_path), msg="Failed to validate file on disk after conversion to measurementLists")
+                with Snirf(new_path, dynamic_loading=mode) as s:
+                    if VERBOSE:
+                        print('Converting measurementLists in', new_path, 'back to measurementList')
+                    s.nirs[0].data[0].measurementLists_to_measurementList()
+                    del s.nirs[0].data[0].measurementLists
+                    self.assertTrue(s.validate(), msg="Failed to validate file after conversion back to measurementList")
+                    s.save()
+                print('Checking to see if conversion is reversible...')
+                dataset_equal_test(self, file, new_path)
+
     def test_multidimensional_aux(self):
         """
         Test to ensure the validator permits multidimensional aux
