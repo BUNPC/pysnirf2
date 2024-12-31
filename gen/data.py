@@ -38,6 +38,15 @@ TABLE_DELIM_END = '[//]: # (SCHEMA END)'
 DEFINITIONS_DELIM_START = '### SNIRF data container definitions'
 DEFINITIONS_DELIM_END = '## Appendix'
 
+DATA_TYPE_DELIM_START = '### Supported `measurementList(k).dataType` values in `dataTimeSeries`'
+DATA_TYPE_DELIM_END = '### Supported `measurementList(k).dataTypeLabel` values in `dataTimeSeries`'
+
+DATA_TYPE_LABEL_TABLE_START = '### Supported `measurementList(k).dataTypeLabel` values in `dataTimeSeries`'
+DATA_TYPE_LABEL_TABLE_END = '### Supported `/nirs(i)/aux(j)/name` values'
+
+AUX_NAME_TABLE_START = '### Supported `/nirs(i)/aux(j)/name` values'
+AUX_NAME_TABLE_END = '### Examples of stimulus waveforms'
+
 # -- BIDS Probe name identifiers ---------------------------------------------
 
 BIDS_PROBE_NAMES = ['ICBM452AirSpace',

@@ -7,7 +7,7 @@ from datetime import date, datetime
 import getpass
 import os
 import sys
-import warnings
+import re
 from pylint import lint
 
 """
@@ -15,7 +15,7 @@ Generates SNIRF interface and validator from the summary table of the specificat
 hosted at SPEC_SRC.
 """
 
-LIB_VERSION = '0.8.2'  # Version for this script
+LIB_VERSION = '0.9.2'  # Version for this script
 
 if __name__ == '__main__':
     
@@ -171,18 +171,38 @@ if __name__ == '__main__':
                             'required': required
                             })
     
-    ans = input('Proceed? y/n\n')
-    if ans not in ['y', 'Y']:
+    if input('Proceed? y/n\n') not in ['y', 'Y']:
         sys.exit('pysnirf2 generation aborted.')
     
     print('Loading BIDS-specified Probe names from gen/data.py...')
     for name in BIDS_PROBE_NAMES:
         print('Found', name)
-    
-    ans = input('Proceed? y/n\n')
-    if ans not in ['y', 'Y']:
+
+    print('\nParsing specification for supported data type integer values...')
+    data_type_table = unidecode(text).split(DATA_TYPE_DELIM_START)[1].split(DATA_TYPE_DELIM_END)[0]
+    data_types = re.findall(r'(?<=\s)-\s(\d+)\s-', data_type_table)
+    data_types = [int(i) for i in data_types]
+    for i in data_types:
+        print('Found', i)
+    if input('Proceed? y/n\n') not in ['y', 'Y']:
         sys.exit('pysnirf2 generation aborted.')
-    
+
+    print('\nParsing specification for supported aux names...')
+    aux_name_table = unidecode(text).split(AUX_NAME_TABLE_START)[1].split(AUX_NAME_TABLE_END)[0]
+    aux_names = re.findall(r'"(.*?)"', aux_name_table)
+    for name in aux_names:
+        print('Found', name)
+    if input('Proceed? y/n\n') not in ['y', 'Y']:
+        sys.exit('pysnirf2 generation aborted.')
+
+    print('\nParsing specification for supported data type labels...')
+    data_type_label_table = unidecode(text).split(DATA_TYPE_LABEL_TABLE_START)[1].split(DATA_TYPE_LABEL_TABLE_END)[0]
+    data_type_labels = re.findall(r'"(.*?)"', data_type_label_table)
+    for name in data_type_labels:
+        print('Found', name)
+    if input('Proceed? y/n\n') not in ['y', 'Y']:
+        sys.exit('pysnirf2 generation aborted.')
+
     #  Generate data for template
     SNIRF = {
             'VERSION': SPEC_VERSION,
@@ -196,7 +216,10 @@ if __name__ == '__main__':
             'INDEXED_GROUPS': [], 
             'GROUPS': [], 
             'UNSPECIFIED_DATASETS_OK': UNSPECIFIED_DATASETS_OK,
-            'BIDS_COORDINATE_SYSTEM_NAMES': BIDS_PROBE_NAMES
+            'BIDS_COORDINATE_SYSTEM_NAMES': BIDS_PROBE_NAMES,
+            'AUX_NAMES': aux_names,
+            'DATA_TYPES': data_types,
+            'DATA_TYPE_LABELS': data_type_labels
             }
     
     #  Build list of groups and indexed groups
@@ -231,8 +254,7 @@ if __name__ == '__main__':
         SNIRF['FOOTER'] = TEMPLATE_INSERT_END_STR +  b.split(TEMPLATE_INSERT_END_STR, 1)[1]
         print('Loaded footer code, {} lines'.format(len(SNIRF['FOOTER'].split('\n'))))
 
-    ans = input('Proceed? LOCAL CHANGES MAY BE OVERWRITTEN OR LOST! y/n\n')
-    if ans not in ['y', 'Y']:
+    if input('Proceed? LOCAL CHANGES MAY BE OVERWRITTEN OR LOST! y/n\n') not in ['y', 'Y']:
         sys.exit('pysnirf2 generation aborted.')
     try:
         os.remove(library_path)
@@ -256,12 +278,10 @@ if __name__ == '__main__':
         if errors == 0:
             print('pysnirf2.py generated with', errors, 'errors.')
     
-    ans = input('Format the generated code? y/n\n')
-    if ans in ['y', 'Y']:
+    if input('Format the generated code? y/n\n') in ['y', 'Y']:
         FormatFile(library_path, in_place=True)[:2]
-    
-    ans = input('Lint the generated code? y/n\n')
-    if ans in ['y', 'Y']:
+
+    if input('Lint the generated code? y/n\n') in ['y', 'Y']:
         lint.Run(['--errors-only', library_path])
         
     print('\npysnirf2 generation complete.')

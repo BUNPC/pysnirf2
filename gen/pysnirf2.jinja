@@ -441,4 +441,10 @@ class Snirf(Group):
 
 _RECOGNIZED_COORDINATE_SYSTEM_NAMES = [{% for NAME in BIDS_COORDINATE_SYSTEM_NAMES %}'{{ NAME }}', {% endfor -%}]
 
+_RECOGNIZED_AUX_NAMES = [{% for NAME in AUX_NAMES %}'{{ NAME }}', {% endfor -%}]
+
+_RECOGNIZED_DATA_TYPES = [{% for VALUE in DATA_TYPES %}{{ VALUE }}, {% endfor -%}]
+
+_RECOGNIZED_DATA_TYPE_LABELS = [{% for NAME in DATA_TYPE_LABELS %}'{{ NAME }}', {% endfor -%}]
+
 {{ FOOTER }}
