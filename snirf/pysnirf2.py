@@ -512,66 +512,69 @@ _CODES = {
     'INVALID_MEASUREMENTLIST':
     (8, 3,
      'The number of measurementList elements does not match the second dimension of dataTimeSeries'
+     ),    'INVALID_MEASUREMENTLISTS':
+    (9, 3,
+     'The length of at least one measurementLists element does not match the second dimension of dataTimeSeries'
      ),
     'INVALID_TIME':
-    (9, 3,
+    (10, 3,
      'The length of the data/time vector does not match the first dimension of data/dataTimeSeries'
      ),
     'INVALID_STIM_DATALABELS':
-    (10, 3,
+    (11, 3,
      'The length of stim/dataLabels exceeds the second dimension of stim/data'
      ),
     'INVALID_SOURCE_INDEX':
-    (11, 3,
+    (12, 3,
      'measurementList(s)/sourceIndex exceeds length of probe/sourceLabels or the first axis of source position data'
      ),
     'INVALID_DETECTOR_INDEX':
-    (12, 3,
+    (13, 3,
      'measurementList(s)/detectorIndex exceeds length of probe/detectorLabels or the first axis of source position data'
      ),
     'INVALID_WAVELENGTH_INDEX':
-    (13, 3,
+    (14, 3,
      'measurementList(s)/waveLengthIndex exceeds length of probe/wavelengths'),
-    'NEGATIVE_INDEX': (14, 3, 'An index is negative'),
+    'NEGATIVE_INDEX': (15, 3, 'An index is negative'),
     # Warnings (Severity 2)
-    'INDEX_OF_ZERO': (15, 2, 'An index of zero is usually undefined'),
-    'UNRECOGNIZED_GROUP': (16, 2,
+    'INDEX_OF_ZERO': (16, 2, 'An index of zero is usually undefined'),
+    'UNRECOGNIZED_GROUP': (17, 2,
                            'An unspecified Group is a part of the file'),
     'UNRECOGNIZED_DATASET':
-    (17, 2,
+    (18, 2,
      'An unspecified Dataset is a part of the file in an unexpected place'),
     'UNRECOGNIZED_DATATYPELABEL':
-    (18, 2,
+    (19, 2,
      'measurementList/dataTypeLabel is not one of the recognized values listed in the Appendix'
      ),
     'UNRECOGNIZED_DATATYPE':
-    (19, 2,
+    (20, 2,
      'measurementList/dataType is not one of the recognized values listed in the Appendix'
      ),
     'INT_64':
-    (25, 2,
+    (21, 2,
      'The SNIRF specification limits users to the use of 32 bit native integer types'
      ),
     'UNRECOGNIZED_COORDINATE_SYSTEM':
-    (26, 2,
+    (22, 2,
      'The identifying string of the coordinate system was not recognized.'),
     'NO_COORDINATE_SYSTEM_DESCRIPTION':
-    (27, 2,
+    (23, 2,
      "The coordinate system was unrecognized or 'Other' but lacks a probe/coordinateSystemDescription"
      ),
     'FIXED_LENGTH_STRING':
-    (20, 2,
+    (24, 2,
      'The use of fixed-length strings is discouraged and may be banned by a future spec version. Rewrite this file with pysnirf2 to use variable length strings'
      ),
     # Info (Severity 1)
-    'OPTIONAL_GROUP_MISSING': (21, 1,
+    'OPTIONAL_GROUP_MISSING': (25, 1,
                                'Missing an optional Group in this location'),
-    'OPTIONAL_DATASET_MISSING': (22, 1,
+    'OPTIONAL_DATASET_MISSING': (26, 1,
                                  'Missing optional Dataset in this location'),
     'OPTIONAL_INDEXED_GROUP_EMPTY':
-    (23, 1, 'The optional indexed group has no elements'),
+    (27, 1, 'The optional indexed group has no elements'),
     # OK (Severity 0)
-    'OK': (24, 0, 'No issues detected'),
+    'OK': (28, 0, 'No issues detected'),
 }
 
 
@@ -4345,22 +4348,27 @@ class NirsElement(Group):
                 raise ValueError('Cannot save an anonymous ' +
                                  self.__class__.__name__ +
                                  ' instance without a filename')
+        name = self.location + '/metaDataTags'
         if self._metaDataTags is _AbsentGroup or self._metaDataTags.is_empty():
-            if 'metaDataTags' in file:
-                del file['metaDataTags']
+            if name in file:
+                del file[name]
                 self._cfg.logger.info('Deleted Group %s/metaDataTags from %s',
                                       self.location, file)
         else:
             self.metaDataTags._save(*args)
+        name = self.location + '/data'
         self.data._save(*args)
+        name = self.location + '/stim'
         self.stim._save(*args)
+        name = self.location + '/probe'
         if self._probe is _AbsentGroup or self._probe.is_empty():
-            if 'probe' in file:
-                del file['probe']
+            if name in file:
+                del file[name]
                 self._cfg.logger.info('Deleted Group %s/probe from %s',
                                       self.location, file)
         else:
             self.probe._save(*args)
+        name = self.location + '/aux'
         self.aux._save(*args)
 
     def _validate(self, result: ValidationResult):
@@ -4726,11 +4734,13 @@ class DataElement(Group):
             if name in file:
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
+        name = self.location + '/measurementList'
         self.measurementList._save(*args)
+        name = self.location + '/measurementLists'
         if self._measurementLists is _AbsentGroup or self._measurementLists.is_empty(
         ):
-            if 'measurementLists' in file:
-                del file['measurementLists']
+            if name in file:
+                del file[name]
                 self._cfg.logger.info(
                     'Deleted Group %s/measurementLists from %s', self.location,
                     file)
@@ -6521,6 +6531,7 @@ class Snirf(Group):
             if name in file:
                 del file[name]
                 self._cfg.logger.info('Deleted Dataset %s from %s', name, file)
+        name = self.location + '/nirs'
         self.nirs._save(*args)
 
     def _validate(self, result: ValidationResult):
@@ -6718,9 +6729,17 @@ class DataElement(DataElement):
             if self.time.size != np.shape(self.dataTimeSeries)[0]:
                 result._add(self.location + '/time', 'INVALID_TIME')
 
-            # todo validate length of measurementList/measurementLists jointly
-            # if len(self.measurementList) != np.shape(self.dataTimeSeries)[1] and not np.all([len(getattr(self.measurementLists, dataset)) for dataset in self.measurementLists._snirf_names] == np.shape(self.dataTimeSeries)[1]):
-            #     result._add(self.location, 'INVALID_MEASUREMENTLIST')
+            # Check measurementList(s) length depending on which exist
+            n = np.shape(self.dataTimeSeries)[1]
+            ml_valid = (len(self.measurementList) == n)
+            if self.measurementLists is not None and not self.measurementLists.is_empty():  # if measurementLists exists
+                mls_valid = self.measurementLists is not None and (not self.measurementLists.is_empty() and not any([len(getattr(self.measurementLists, k)) != n for k in self.measurementLists._snirf_names if getattr(self.measurementLists, k) is not None]))
+                if not mls_valid:
+                    result._add(self.location, 'INVALID_MEASUREMENTLISTS')
+                    if not ml_valid:
+                        result._add(self.location, 'INVALID_MEASUREMENTLIST')
+            elif not ml_valid:
+                result._add(self.location, 'INVALID_MEASUREMENTLIST')
 
         super()._validate(result)
 
@@ -6941,6 +6960,7 @@ class Snirf(Snirf):
                 lenWavelengths = None
                 lenSources = None
                 lenDetectors = None
+                # todo label validation of length against probe
                 if nirs.probe.sourceLabels is not None:
                     lenSourceLabels = len(nirs.probe.sourceLabels)
                 if nirs.probe.detectorLabels is not None:
@@ -6957,47 +6977,47 @@ class Snirf(Snirf):
                     lenDetectors = nirs.probe.detectorPos3D.shape[0]
                 for data in nirs.data:
                     if data.measurementLists is not None:
-                        if lenSourceLabels is not None and data.measurementLists.sourceIndex is not None and np.max(
+                        if lenSourceLabels is not None and data.measurementLists.sourceIndex is not None and not 0 < np.max(
                                 data.measurementLists.sourceIndex
-                        ) > lenSourceLabels:
+                        ) <= lenSourceLabels:
                             result._add(
                                 data.measurementLists.location +
                                 '/sourceIndex', 'INVALID_SOURCE_INDEX')
-                        if lenSources is not None and data.measurementLists.sourceIndex is not None and np.max(
+                        if lenSources is not None and data.measurementLists.sourceIndex is not None and not 0 < np.max(
                                 data.measurementLists.sourceIndex
-                        ) > lenSources:
+                        ) <= lenSources:
                             result._add(
                                 data.measurementLists.location +
                                 '/sourceIndex', 'INVALID_SOURCE_INDEX')
-                        if lenDetectorLabels is not None and data.measurementLists.detectorIndex is not None and np.max(
+                        if lenDetectorLabels is not None and data.measurementLists.detectorIndex is not None and not 0 < np.max(
                                 data.measurementLists.detectorIndex
-                        ) > lenDetectorLabels:
+                        ) <= lenDetectorLabels:
                             result._add(
                                 data.measurementLists.location +
                                 '/detectorIndex', 'INVALID_DETECTOR_INDEX')
-                        if lenDetectors is not None and data.measurementLists.detectorIndex is not None and np.max(
+                        if lenDetectors is not None and data.measurementLists.detectorIndex is not None and not 0 < np.max(
                                 data.measurementLists.detectorIndex
-                        ) > lenDetectors:
+                        ) <= lenDetectors:
                             result._add(
                                 data.measurementLists.location +
                                 '/detectorIndex', 'INVALID_DETECTOR_INDEX')
-                        if lenWavelengths is not None and data.measurementLists.wavelengthIndex is not None and np.max(
+                        if lenWavelengths is not None and data.measurementLists.wavelengthIndex is not None and not 0 < np.max(
                                 data.measurementLists.wavelengthIndex
-                        ) > lenWavelengths:  # No wavelengths should raise a missing issue
+                        ) <= lenWavelengths:  # No wavelengths should raise a missing issue
                             result._add(
                                 data.measurementLists.location +
                                 '/wavelengthIndex', 'INVALID_WAVELENGTH_INDEX')
                     for ml in data.measurementList:
-                        if ml.sourceIndex is not None and lenSourceLabels is not None:
-                            if ml.sourceIndex > lenSourceLabels:
+                        if ml.sourceIndex is not None and lenSources is not None:
+                            if not 0 < ml.sourceIndex <= lenSources:
                                 result._add(ml.location + '/sourceIndex',
                                             'INVALID_SOURCE_INDEX')
-                        if ml.detectorIndex is not None and lenDetectorLabels is not None:
-                            if ml.detectorIndex > lenDetectorLabels:
+                        if ml.detectorIndex is not None and lenDetectors is not None:
+                            if not 0 < ml.detectorIndex <= lenDetectors:
                                 result._add(ml.location + '/detectorIndex',
                                             'INVALID_DETECTOR_INDEX')
                         if ml.wavelengthIndex is not None and lenWavelengths is not None:
-                            if ml.wavelengthIndex > lenWavelengths:
+                            if not 0 < ml.wavelengthIndex <= lenWavelengths:
                                 result._add(ml.location + '/wavelengthIndex',
                                             'INVALID_WAVELENGTH_INDEX')
 

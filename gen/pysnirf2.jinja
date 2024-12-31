@@ -155,17 +155,17 @@
             else:
                 raise ValueError('Cannot save an anonymous ' + self.__class__.__name__ + ' instance without a filename')
 {% for CHILD in NODE.children %}
+        name = self.location + '/{{ CHILD.name }}'
     {% if TYPES.INDEXED_GROUP in CHILD.type %}
         self.{{ CHILD.name }}._save(*args)
     {% elif TYPES.GROUP in CHILD.type %}
         if self._{{ CHILD.name }} is _AbsentGroup or self._{{ CHILD.name }}.is_empty():
-            if '{{ CHILD.name }}' in file:
-                del file['{{ CHILD.name }}']
+            if name in file:
+                del file[name]
                 self._cfg.logger.info('Deleted Group %s/{{ CHILD.name }} from %s', self.location, file)
         else:
             self.{{ CHILD.name }}._save(*args)
     {% else %}
-        name = self.location + '/{{ CHILD.name }}'
         if not self._{{ CHILD.name }} is _AbsentDataset:
             data = self.{{ CHILD.name }}  # Use loader function via getter
             if name in file:
