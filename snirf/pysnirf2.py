@@ -6880,7 +6880,7 @@ class Probe(Probe):
             if not(s2):
                 result._add(self.location + '/sourcePos2D',
                             'OPTIONAL_DATASET_MISSING')
-            if (not(d3)):
+            if (not(d2)):
                 result._add(self.location + '/detectorPos2D',
                             'OPTIONAL_DATASET_MISSING')
             
