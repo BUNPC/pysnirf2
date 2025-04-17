@@ -6864,29 +6864,43 @@ class Probe(Probe):
         d2 = self.detectorPos2D is not None
         s3 = self.sourcePos3D is not None
         d3 = self.detectorPos3D is not None
+        
         if (s2 and d2):
             result._add(self.location + '/sourcePos2D', 'OK')
             result._add(self.location + '/detectorPos2D', 'OK')
-            result._add(self.location + '/sourcePos3D',
-                        'OPTIONAL_DATASET_MISSING')
-            result._add(self.location + '/detectorPos3D',
-                        'OPTIONAL_DATASET_MISSING')
-        elif (s3 and d3):
-            result._add(self.location + '/sourcePos2D',
-                        'OPTIONAL_DATASET_MISSING')
-            result._add(self.location + '/detectorPos2D',
-                        'OPTIONAL_DATASET_MISSING')
+
+            if not(s3):
+                result._add(self.location + '/sourcePos3D',
+                            'OPTIONAL_DATASET_MISSING')
+            if not(d3):
+                result._add(self.location + '/detectorPos3D',
+                            'OPTIONAL_DATASET_MISSING')
+                
+        if (s3 and d3):
+            if not(s2):
+                result._add(self.location + '/sourcePos2D',
+                            'OPTIONAL_DATASET_MISSING')
+            if (not(d3)):
+                result._add(self.location + '/detectorPos2D',
+                            'OPTIONAL_DATASET_MISSING')
+            
             result._add(self.location + '/sourcePos3D', 'OK')
             result._add(self.location + '/detectorPos3D', 'OK')
-        else:
-            result._add(self.location + '/sourcePos2D',
-                        ['REQUIRED_DATASET_MISSING', 'OK'][int(s2)])
-            result._add(self.location + '/detectorPos2D',
-                        ['REQUIRED_DATASET_MISSING', 'OK'][int(d2)])
-            result._add(self.location + '/sourcePos3D',
-                        ['REQUIRED_DATASET_MISSING', 'OK'][int(s3)])
-            result._add(self.location + '/detectorPos3D',
-                        ['REQUIRED_DATASET_MISSING', 'OK'][int(d3)])
+        
+        if not(s2 and d2) and not(s3 and d3):
+
+            if not(s2):
+                result._add(self.location + '/sourcePos2D',
+                            ['REQUIRED_DATASET_MISSING', 'OK'][int(s2)])
+            if not(d2):
+                result._add(self.location + '/detectorPos2D',
+                            ['REQUIRED_DATASET_MISSING', 'OK'][int(d2)])
+            if not(s3):
+                result._add(self.location + '/sourcePos3D',
+                            ['REQUIRED_DATASET_MISSING', 'OK'][int(s3)])
+            if not(d3):
+                result._add(self.location + '/detectorPos3D',
+                            ['REQUIRED_DATASET_MISSING', 'OK'][int(d3)])
 
         if self.coordinateSystem is not None:
             if not self.coordinateSystem in _RECOGNIZED_COORDINATE_SYSTEM_NAMES:
