@@ -817,6 +817,9 @@ class PySnirf2_Test(unittest.TestCase):
 
         assert sizes[1] < sizes[0], 'Dynamically-loaded files not smaller in memory'
 
+    def test_conflicting_fields(self):
+        # TODO
+        pass
 
     def setUp(self):
         if VERBOSE:

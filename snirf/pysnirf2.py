@@ -576,6 +576,9 @@ _CODES = {
     (27, 1, 'The optional indexed group has no elements'),
     # OK (Severity 0)
     'OK': (28, 0, 'No issues detected'),
+    'CONFLICTING_FIELDS_PRESENT': (
+        29, 3, 'Multiple conflicting fields are present in the same file'
+    )
 }
 
 
@@ -6764,19 +6767,19 @@ class DataElement(DataElement):
         # Override measurementList/measurementLists validation, only one is required
         ml = self.measurementList is not None
         mls = self.measurementLists is not None
-        if (ml and mls):
+        if (ml or mls):
             result._add(self.location + '/measurementList', 'OK')
             result._add(self.location + '/measurementLists', 'OK')
-        elif (ml or mls):
+        elif (ml and mls):
             result._add(self.location + '/measurementList',
-                        ['OPTIONAL_DATASET_MISSING', 'OK'][int(ml)])
+                        'CONFLICTING_FIELDS_PRESENT')
             result._add(self.location + '/measurementLists',
-                        ['OPTIONAL_DATASET_MISSING', 'OK'][int(mls)])
+                        'CONFLICTING_FIELDS_PRESENT')
         else:
             result._add(self.location + '/measurementList',
-                        ['REQUIRED_DATASET_MISSING', 'OK'][int(ml)])
+                        'REQUIRED_DATASET_MISSING')
             result._add(self.location + '/measurementLists',
-                        ['REQUIRED_DATASET_MISSING', 'OK'][int(mls)])
+                        'REQUIRED_DATASET_MISSING')
 
         # Check time/dataTimeSeries length agreement
         if all(attr is not None for attr in [self.time, self.dataTimeSeries]):
