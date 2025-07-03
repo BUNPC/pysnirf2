@@ -6765,16 +6765,24 @@ class DataElement(DataElement):
     def _validate(self, result: ValidationResult):
 
         # Override measurementList/measurementLists validation, only one is required
-        ml = self.measurementList is not None
-        mls = self.measurementLists is not None
-        if (ml or mls):
-            result._add(self.location + '/measurementList', 'OK')
-            result._add(self.location + '/measurementLists', 'OK')
-        elif (ml and mls):
+        if self.measurementList:
+            ml = True
+        else:
+            ml = False
+
+        if self.measurementLists:
+            mls = True
+        else:
+            mls = False
+        mls = self.measurementLists.sourceIndex is not None
+        if (ml and mls):
             result._add(self.location + '/measurementList',
                         'CONFLICTING_FIELDS_PRESENT')
             result._add(self.location + '/measurementLists',
                         'CONFLICTING_FIELDS_PRESENT')
+        elif (ml or mls):
+            result._add(self.location + '/measurementList', 'OK')
+            result._add(self.location + '/measurementLists', 'OK')
         else:
             result._add(self.location + '/measurementList',
                         'REQUIRED_DATASET_MISSING')
