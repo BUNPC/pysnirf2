@@ -6770,10 +6770,6 @@ class DataElement(DataElement):
         else:
             ml = False
 
-        if self.measurementLists:
-            mls = True
-        else:
-            mls = False
         mls = self.measurementLists.sourceIndex is not None
         if (ml and mls):
             result._add(self.location + '/measurementList',
