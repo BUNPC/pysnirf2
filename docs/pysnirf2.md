@@ -24,7 +24,7 @@ Maintained by the Boston University Neurophotonics Center
 
 ---
 
-<a href="../snirf/pysnirf2.py#L7126"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../snirf/pysnirf2.py#L7140"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `loadSnirf`
 
@@ -63,7 +63,7 @@ Returns a `Snirf` object loaded from path if a SNIRF file exists there. Takes th
 
 ---
 
-<a href="../snirf/pysnirf2.py#L7157"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../snirf/pysnirf2.py#L7171"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `saveSnirf`
 
@@ -83,7 +83,7 @@ Saves a SNIRF file to disk.
 
 ---
 
-<a href="../snirf/pysnirf2.py#L7171"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../snirf/pysnirf2.py#L7185"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `validateSnirf`
 
@@ -2800,7 +2800,7 @@ This group stores one set of NIRS data.  This can be extended by adding the coun
 
 ---
 
-<a href="../snirf/pysnirf2.py#L7003"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../snirf/pysnirf2.py#L7017"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `close`
 
@@ -2816,7 +2816,7 @@ After closing, the underlying SNIRF file cannot be accessed from this interface 
 
 ---
 
-<a href="../snirf/pysnirf2.py#L6949"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../snirf/pysnirf2.py#L6963"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `copy`
 
@@ -2848,7 +2848,7 @@ If the Group has no member Groups or Datasets.
 
 ---
 
-<a href="../snirf/pysnirf2.py#L6973"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../snirf/pysnirf2.py#L6987"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `measurementList_to_measurementLists`
 
@@ -2862,7 +2862,7 @@ Does not delete the measurementList Dataset.
 
 ---
 
-<a href="../snirf/pysnirf2.py#L6982"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../snirf/pysnirf2.py#L6996"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `measurementLists_to_measurementList`
 
@@ -2878,7 +2878,7 @@ The `measurementList` Group is not removed.
 
 ---
 
-<a href="../snirf/pysnirf2.py#L6914"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../snirf/pysnirf2.py#L6928"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `save`
 
@@ -2908,7 +2908,7 @@ Save a SNIRF file to disk.
 
 ---
 
-<a href="../snirf/pysnirf2.py#L6960"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../snirf/pysnirf2.py#L6974"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `validate`
 
