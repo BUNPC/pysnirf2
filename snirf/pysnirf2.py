@@ -382,7 +382,7 @@ def _read_dataset(dataset: h5py.Dataset):
         ]))
 
 
-def _read_string(dataset: h5py.Dataset) -> str:
+def _read_string(dataset: h5py.Dataset) -> str | None:
     """Reads the contents of an `h5py.Dataset` to a `str`.
 
     Args:
@@ -392,20 +392,32 @@ def _read_string(dataset: h5py.Dataset) -> str:
     """
     if type(dataset) is not h5py.Dataset:
         raise TypeError("'dataset' must be type h5py.Dataset")
+    
     # Because many SNIRF files are saved with string values in length 1 arrays
-    try:
-        if dataset.ndim > 0:
-            return str(dataset[0].decode('ascii'))
+    if dataset.ndim > 0:
+        if len(dataset) > 0:
+            tentative_str = dataset[0]
         else:
-            return str(dataset[()].decode('ascii'))
-    except AttributeError:  # If we expected a string and got something else, `decode` isn't there
+            return None
+    else:
+       tentative_str = dataset[()]
+
+    
+    if hasattr(tentative_str, 'decode'):
+        # tentative_str is a byte str -> decode
+        return str(tentative_str.decode('ascii'))
+    elif isinstance(tentative_str, np.ndarray) and tentative_str.dtype == np.dtype("S1"):
+        # tentative_str is a numpy array of bytes -> join -> decode
+        tentative_str = b''.join(tentative_str)
+        return str(tentative_str.decode('ascii'))
+    else:
         warn(
             'Expected dataset {} to be stringlike, is {} conversion may be incorrect'
             .format(dataset.name, dataset.dtype), SnirfFormatError)
-        return str(dataset[0])
+        return str(tentative_str)
 
 
-def _read_int(dataset: h5py.Dataset) -> int:
+def _read_int(dataset: h5py.Dataset) -> int | None:
     """Reads the contents of an `h5py.Dataset` to an `int`.
 
     Args:
@@ -416,12 +428,15 @@ def _read_int(dataset: h5py.Dataset) -> int:
     if type(dataset) is not h5py.Dataset:
         raise TypeError("'dataset' must be type h5py.Dataset")
     if dataset.ndim > 0:
-        return int(dataset[0])
+        if len(dataset) > 0:
+            return int(dataset[0])
+        else:
+            return None
     else:
         return int(dataset[()])
 
 
-def _read_float(dataset: h5py.Dataset) -> float:
+def _read_float(dataset: h5py.Dataset) -> float | None:
     """Reads the contents of an `h5py.Dataset` to a `float`.
 
     Args:
@@ -432,7 +447,10 @@ def _read_float(dataset: h5py.Dataset) -> float:
     if type(dataset) is not h5py.Dataset:
         raise TypeError("'dataset' must be type h5py.Dataset")
     if dataset.ndim > 0:
-        return float(dataset[0])
+        if len(dataset) > 0:
+            return float(dataset[0])
+        else:
+            return None
     else:
         return float(dataset[()])
 
